@@ -1,0 +1,106 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  WORKER
+  CUSTOMER
+}
+
+enum BookingStatus {
+  REQUESTED
+  ASSIGNED
+  ON_THE_WAY
+  STARTED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         Role      @default(CUSTOMER)
+  tenantId     String?
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  bookings     Booking[] @relation("CustomerBookings")
+  worker       Worker?
+}
+
+model Tenant {
+  id           String    @id @default(uuid())
+  name         String
+  subdomain    String    @unique
+  customDomain String?   @unique
+  plan         String    @default("starter")
+  config       Json      // Dynamic JSON config mapping to TenantConfig
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  users        User[]
+  services     Service[]
+  bookings     Booking[]
+  workers      Worker[]
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  name        String
+  category    String
+  description String
+  basePrice   Float
+  durationMin Int
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+}
+
+model Worker {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id])
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  skills       String[]
+  availability String    @default("available")
+  rating       Float     @default(5.0)
+  aadhaarValid Boolean   @default(false)
+  panValid     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  bookings     Booking[] @relation("WorkerBookings")
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  customerId    String
+  customer      User          @relation("CustomerBookings", fields: [customerId], references: [id])
+  serviceId     String
+  service       Service       @relation(fields: [serviceId], references: [id])
+  workerId      String?
+  worker        Worker?       @relation("WorkerBookings", fields: [workerId], references: [id])
+  status        BookingStatus @default(REQUESTED)
+  scheduledDate String
+  scheduledTime String
+  priceTotal    Float
+  taxTotal      Float
+  discountTotal Float
+  netTotal      Float
+  formData      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
