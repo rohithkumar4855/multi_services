@@ -158,6 +158,7 @@ export default function CmsRenderer({
       { id: 'comp-how', type: 'how_it_works', enabled: true, settings: {} },
       { id: 'comp-offers-row', type: 'offers_row', enabled: true, settings: {} },
       { id: 'comp-team', type: 'team', enabled: true, settings: {} },
+      { id: 'comp-gallery', type: 'gallery', enabled: true, settings: {} },
       { id: 'comp-testimonials', type: 'testimonials', enabled: true, settings: {} },
       { id: 'comp-trust-bar', type: 'trust_bar', enabled: true, settings: {} },
       { id: 'comp-faq', type: 'faq', enabled: true, settings: {} },
