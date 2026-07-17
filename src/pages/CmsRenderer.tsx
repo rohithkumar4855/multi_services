@@ -186,11 +186,23 @@ export default function CmsRenderer({
               >
                 {/* 🎨 Premium Animated Gradient Mesh Background */}
                 <div
-                  className="absolute inset-0 pointer-events-none opacity-40 mix-blend-screen"
+                  className="absolute inset-0 pointer-events-none opacity-45 mix-blend-screen"
                   style={{
-                    background: `radial-gradient(circle at 20% 30%, ${pc}33 0%, transparent 50%), 
-                                 radial-gradient(circle at 80% 70%, ${pc}22 0%, transparent 50%)`,
-                    filter: 'blur(60px)',
+                    background: `radial-gradient(circle at 50% 50%, ${pc}44 0%, transparent 60%), 
+                                 radial-gradient(circle at 10% 20%, ${pc}22 0%, transparent 40%),
+                                 radial-gradient(circle at 90% 80%, ${pc}22 0%, transparent 40%)`,
+                    filter: 'blur(75px)',
+                  }}
+                />
+
+                {/* ✨ Aura Glow Center Ring Effect */}
+                <div 
+                  className="absolute pointer-events-none w-[320px] h-[320px] rounded-full opacity-35 blur-[80px] animate-pulse"
+                  style={{
+                    background: pc,
+                    top: '20%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                   }}
                 />
 
@@ -199,8 +211,8 @@ export default function CmsRenderer({
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-white animate-float border"
                     style={{ 
                       background: `linear-gradient(135deg, ${pc}, ${pc}dd)`, 
-                      boxShadow: `0 8px 24px ${pc}50`,
-                      borderColor: 'rgba(255,255,255,0.15)',
+                      boxShadow: `0 8px 30px ${pc}60`,
+                      borderColor: 'rgba(255,255,255,0.25)',
                     }}>
                     <Zap className="w-3 h-3 text-amber-300 animate-pulse" />
                     {(c as any).heroArrivalGuarantee || '30 Min Arrival Guarantee'}

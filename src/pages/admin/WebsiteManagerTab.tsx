@@ -37,7 +37,8 @@ const ALL_SECTIONS = [
   { id: 'comp-services-grid', type: 'services',     label: 'Our Services Grid',     icon: '🛠️', defaultEnabled: true },
   { id: 'comp-how-it-works',  type: 'how_it_works', label: 'How It Works',          icon: '📋', defaultEnabled: true },
   { id: 'comp-offers-row',    type: 'offers_row',   label: 'Offers & Why Us Row',   icon: '🎟️', defaultEnabled: true },
-  { id: 'comp-team',          type: 'team',         label: 'Meet Our Team',         icon: '👥', defaultEnabled: true },
+  {id: 'comp-team',          type: 'team',         label: 'Meet Our Team',         icon: '👥', defaultEnabled: true },
+  { id: 'comp-gallery',       type: 'gallery',      label: 'Photo & Video Gallery', icon: '🖼️', defaultEnabled: true },
   { id: 'comp-testimonials',  type: 'testimonials', label: 'Customer Reviews',      icon: '⭐', defaultEnabled: true },
   { id: 'comp-trust-bar',     type: 'trust_bar',    label: 'Trust Assurance Bar',   icon: '🔒', defaultEnabled: true },
   { id: 'comp-founder',       type: 'founder',      label: 'About / Our Story',     icon: '👤', defaultEnabled: false },
@@ -346,6 +347,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
   const [themeRadius,     setThemeRadius]     = useState<'modern' | 'rounded' | 'square'>(c.themeRadius || 'modern');
   const [themeButtonStyle,setThemeButtonStyle]= useState<'filled' | 'outline' | 'soft'>(c.themeButtonStyle || 'filled');
   const [logoText,         setLogoText]         = useState(c.logoText || tenant.name);
+  const [techSelectionActive, setTechSelectionActive] = useState(c.allowTechnicianSelection ?? false);
 
   /* ── Hero ───────────────────────────────────────────────── */
   const [heroTitle,      setHeroTitle]      = useState(c.heroTitle || 'All Home Services One Trusted Team');
@@ -427,6 +429,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     setAnnounceText(c.announcementText || '');
     setAnnounceExpiry(c.announcementExpiry || '');
     setLogoText(c.logoText || tenant.name);
+    setTechSelectionActive(c.allowTechnicianSelection ?? false);
     setPageComponents(getInitialComponents(c));
     setPortfolio(c.portfolio || []);
     setTestimonials(c.testimonials || []);
@@ -462,6 +465,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
         logoText,
         heroTitle, heroSubtitle, announcementActive: announceActive, announcementText: announceText,
         announcementExpiry: announceExpiry,
+        allowTechnicianSelection: techSelectionActive,
         cmsPages: updatedCmsPages,
         portfolio, testimonials, faqs, campaigns,
         city: cityName, businessHours: bizHours, phone: bizPhone,
@@ -826,6 +830,18 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
           {/* ═══ TEAM ═══ */}
           {editorTab === 'team' && (
             <div className="space-y-4">
+              <SectionCard title="Technician Selection Rule" subtitle="Let customers select specific specialists during checkout">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-bold">Enable Technician Selector</span>
+                  <button 
+                    onClick={() => setTechSelectionActive(v => !v)} 
+                    className={`w-10 h-5 rounded-full transition-all relative ${techSelectionActive ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${techSelectionActive ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+              </SectionCard>
+
               <p className="text-[10px] text-slate-500">Toggle which technicians appear on your public website and set their website display title.</p>
               <div className="space-y-3">
                 {myWorkers.map(w => (

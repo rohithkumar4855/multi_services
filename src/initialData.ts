@@ -157,6 +157,7 @@ const makeConfig = (pack: typeof INDUSTRY_PACKS[0], overrides: Partial<{ heroTit
         { id: 'comp-how-it-works', type: 'how_it_works', enabled: true, settings: {} },
         { id: 'comp-offers-row', type: 'offers_row', enabled: true, settings: {} },
         { id: 'comp-team', type: 'team', enabled: true, settings: { showVerifiedBadges: true } },
+        { id: 'comp-gallery', type: 'gallery', enabled: true, settings: {} },
         { id: 'comp-testimonials', type: 'testimonials', enabled: true, settings: {} },
         { id: 'comp-trust-bar', type: 'trust_bar', enabled: true, settings: {} },
         { id: 'comp-founder', type: 'founder', enabled: true, settings: {} },

@@ -67,6 +67,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
   const [lastBookingId, setLastBookingId] = useState('');
   const [showPlatformBadgeModal, setShowPlatformBadgeModal] = useState(false);
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string>('');
 
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [paymentGatewayOpen, setPaymentGatewayOpen] = useState(false);
@@ -269,6 +270,8 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         discount: prices.discount,
         total: prices.total + 150 // Including visit/distance base
       },
+      workerId: selectedWorkerId || '',
+      workerName: selectedWorkerId ? (myWorkers.find(w => w.id === selectedWorkerId)?.name || '') : undefined,
       createdAt: new Date().toISOString()
     };
 
@@ -1074,6 +1077,26 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                       </select>
                     </div>
                   </div>
+
+                  {/* Dynamic Technician Selection Feature Flagged */}
+                  {tenant.config.allowTechnicianSelection && (
+                    <div>
+                      <label className="form-label">Select Preferred Technician (Optional)</label>
+                      <select 
+                        className="form-input" 
+                        value={selectedWorkerId} 
+                        onChange={e => setSelectedWorkerId(e.target.value)}
+                      >
+                        <option value="">Any Available Specialist</option>
+                        {myWorkers.filter(w => w.availability === 'available').map(w => (
+                          <option key={w.id} value={w.id}>
+                            ⭐ {w.name} (Rating: {w.rating}/5)
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[9px] text-slate-500 mt-1">Choosing a specific specialist may impact scheduling windows.</p>
+                    </div>
+                  )}
 
                   {/* Promo Coupon application */}
                   <div>
