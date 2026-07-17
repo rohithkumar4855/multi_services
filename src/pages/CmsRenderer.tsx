@@ -178,57 +178,80 @@ export default function CmsRenderer({
               <section
                 key={comp.id}
                 id="hero"
-                className="relative overflow-hidden flex items-center justify-center py-20 px-6 sm:py-32"
+                className="relative overflow-hidden flex items-center justify-center py-24 px-6 sm:py-36"
                 style={{
                   backgroundColor: localDark ? '#0b0f19' : '#0f172a',
-                  minHeight: '480px',
+                  minHeight: '520px',
                 }}
               >
-                {/* Brand color tint */}
+                {/* 🎨 Premium Animated Gradient Mesh Background */}
                 <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{ background: `radial-gradient(circle, ${pc}15 0%, transparent 70%)` }}
+                  className="absolute inset-0 pointer-events-none opacity-40 mix-blend-screen"
+                  style={{
+                    background: `radial-gradient(circle at 20% 30%, ${pc}33 0%, transparent 50%), 
+                                 radial-gradient(circle at 80% 70%, ${pc}22 0%, transparent 50%)`,
+                    filter: 'blur(60px)',
+                  }}
                 />
 
-                <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
-                  {/* Arrival guarantee badge */}
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white"
-                    style={{ background: `linear-gradient(135deg, ${pc}, ${pc}cc)`, boxShadow: `0 4px 14px ${pc}40` }}>
-                    <Zap className="w-3 h-3" />
+                <div className="relative z-10 max-w-4xl mx-auto text-center space-y-8 animate-fadeIn">
+                  {/* Arrival guarantee badge with float and pulse effects */}
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-white animate-float border"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${pc}, ${pc}dd)`, 
+                      boxShadow: `0 8px 24px ${pc}50`,
+                      borderColor: 'rgba(255,255,255,0.15)',
+                    }}>
+                    <Zap className="w-3 h-3 text-amber-300 animate-pulse" />
                     {(c as any).heroArrivalGuarantee || '30 Min Arrival Guarantee'}
                   </div>
 
-                  {/* Main Headline */}
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight tracking-tight text-white max-w-3xl mx-auto">
-                    {activeCampaign ? activeCampaign.title : (c.heroTitle || 'All Home Services One Trusted Team')}
+                  {/* Main Headline with dual-color gradient accentuation */}
+                  <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight text-white max-w-3xl mx-auto">
+                    {activeCampaign ? activeCampaign.title : (
+                      <>
+                        <span className="opacity-95">All Home Services</span>
+                        <br />
+                        <span 
+                          style={{
+                            background: `linear-gradient(135deg, #fff 30%, ${pc} 100%)`,
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                          }}
+                        >
+                          One Trusted Team
+                        </span>
+                      </>
+                    )}
                   </h1>
 
-                  {/* Subtitle */}
-                  <p className="text-base sm:text-lg text-slate-300 max-w-xl leading-relaxed font-medium mx-auto">
+                  {/* Subtitle with premium line height */}
+                  <p className="text-base sm:text-lg text-slate-300 max-w-xl leading-relaxed font-medium mx-auto opacity-90">
                     {activeCampaign?.subtitle || c.heroSubtitle || 'Professional. Verified. On-time. Making homes better, every day.'}
                   </p>
 
-                  {/* CTA Buttons */}
-                  <div className="flex flex-wrap justify-center gap-3 pt-2">
+                  {/* CTA Buttons with hover scaling and shadow depth */}
+                  <div className="flex flex-wrap justify-center gap-4 pt-2">
                     <button
                       onClick={scrollToServices}
-                      className="group flex items-center gap-2.5 px-8 py-3.5 rounded-xl font-black text-xs transition-all hover:scale-[1.02]"
+                      className="group flex items-center gap-2.5 px-8 py-4 rounded-xl font-black text-xs transition-all duration-300 hover:scale-[1.05] hover:shadow-2xl"
                       style={{
-                        background: `linear-gradient(135deg, ${pc}, ${pc}cc)`,
+                        background: `linear-gradient(135deg, ${pc}, ${pc}dd)`,
                         color: getTextColorForBg(pc),
-                        boxShadow: `0 6px 20px ${pc}40`,
+                        boxShadow: `0 10px 30px ${pc}60`,
                         borderRadius: 'var(--border-radius)',
                       }}
                     >
                       Book Service Now
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                     </button>
                     <a
                       href={`tel:${c.phone}`}
-                      className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-xs border text-white transition-all hover:scale-[1.02]"
+                      className="flex items-center gap-2 px-7 py-4 rounded-xl font-bold text-xs border text-white transition-all duration-300 hover:scale-[1.02] hover:bg-white/10"
                       style={{
                         borderColor: 'rgba(255,255,255,0.2)',
                         background: 'rgba(255,255,255,0.06)',
+                        backdropFilter: 'blur(8px)',
                         borderRadius: 'var(--border-radius)',
                       }}
                     >
@@ -236,8 +259,8 @@ export default function CmsRenderer({
                     </a>
                   </div>
 
-                  {/* Trust Badge Row */}
-                  <div className="flex flex-wrap justify-center gap-3 pt-4">
+                  {/* Trust Badge Row with enhanced glass design */}
+                  <div className="flex flex-wrap justify-center gap-3 pt-6">
                     {[
                       { icon: '🪪', title: 'Aadhaar Verified' },
                       { icon: '🛡️', title: 'Police Verified' },
@@ -245,7 +268,11 @@ export default function CmsRenderer({
                       { icon: '💰', title: 'No Hidden Costs' },
                     ].map((b, i) => (
                       <div key={i}
-                        className="flex items-center gap-1.5 px-3 py-1 bg-slate-900/40 border border-slate-800 rounded-full text-[10px] font-bold text-slate-400">
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-bold text-slate-300 border backdrop-blur-md"
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderColor: 'rgba(255, 255, 255, 0.08)',
+                        }}>
                         <span>{b.icon}</span>
                         <span>{b.title}</span>
                       </div>
