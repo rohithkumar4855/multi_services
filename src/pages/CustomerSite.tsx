@@ -73,6 +73,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   const [paymentGatewayOpen, setPaymentGatewayOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'upi' | 'card' | 'cod'>('upi');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [invoiceModalBooking, setInvoiceModalBooking] = useState<Booking | null>(null);
 
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerSession, setCustomerSession] = useState<{ phone: string; name: string } | null>(null);
@@ -143,6 +144,11 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       .rounded-3xl { border-radius: calc(var(--border-radius) * 1.5) !important; }
       .rounded-md { border-radius: calc(var(--border-radius) * 0.5) !important; }
       .rounded-full { border-radius: 9999px !important; }
+      @media print {
+        body { background: #fff !important; color: #000 !important; }
+        header, footer, nav, button, .modal-overlay { display: none !important; }
+        .print-invoice-container { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+      }
     `;
     styleEl.textContent = cssString;
   }, [tokens]);
@@ -702,7 +708,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                             )}
                             
                             <button
-                              onClick={() => alert(`Invoice details generated for ${b.id}:\n- Base price: ₹${b.priceDetails.baseVisit}\n- Surcharges: ₹150\n- Tax (GST): ₹${b.priceDetails.tax}\n- Discount: -₹${b.priceDetails.discount}\n- Grand Total: ₹${b.priceDetails.total}`)}
+                              onClick={() => setInvoiceModalBooking(b)}
                               className="px-4 py-2 rounded-lg text-xs font-bold border transition-all"
                               style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)', background: 'transparent', borderRadius: 'var(--border-radius)' }}
                             >
@@ -1731,6 +1737,101 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 <p className="mt-0.5">Contact operations support desk directly at {c.phone}.</p>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== PRINTABLE INVOICE MODAL ===== */}
+      {invoiceModalBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto font-sans print-invoice-container">
+          <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity print:hidden" onClick={() => setInvoiceModalBooking(null)} />
+          <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-8 text-slate-200 shadow-2xl animate-scaleIn text-left space-y-6 print:border-0 print:bg-white print:text-black print:p-0">
+            
+            {/* Header info */}
+            <div className="flex justify-between items-start border-b pb-4 border-slate-800 print:border-black">
+              <div>
+                <h3 className="text-lg font-black text-white print:text-black flex items-center gap-2">
+                  <span>📄</span> {c.logoText || tenant.name} Invoice
+                </h3>
+                <p className="text-[10px] text-slate-500 mt-1">Gst Registration: {c.gstNumber || '37AAAAA0000A1Z5'}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{c.address || 'Nellore, AP'}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-mono font-bold bg-slate-800 px-2.5 py-1 rounded-lg print:border print:border-black print:bg-transparent">INVOICE: #{invoiceModalBooking.id}</span>
+                <p className="text-[10px] text-slate-505 mt-2">Date: {invoiceModalBooking.scheduledDate}</p>
+              </div>
+            </div>
+
+            {/* Billing details */}
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div>
+                <p className="text-[9px] text-slate-500 uppercase font-black">Billed To:</p>
+                <p className="font-bold text-white print:text-black mt-1">{invoiceModalBooking.customerName}</p>
+                <p className="text-slate-400 mt-0.5">{invoiceModalBooking.customerPhone}</p>
+                <p className="text-slate-400 mt-0.5 truncate max-w-xs">{invoiceModalBooking.customerAddress}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] text-slate-550 uppercase font-black">Payment Details:</p>
+                <p className="font-bold text-white print:text-black mt-1">Status: Paid ✓</p>
+                <p className="text-slate-400 mt-0.5">Method: Online UPI/Card Gateway</p>
+              </div>
+            </div>
+
+            {/* Line items Table */}
+            <table className="w-full text-left text-xs border-collapse font-sans">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-405 print:border-black print:text-black">
+                  <th className="py-2">Item Description</th>
+                  <th className="py-2 text-right">Base Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-slate-850/60 print:border-black">
+                  <td className="py-3">
+                    <p className="font-bold text-white print:text-black">{invoiceModalBooking.serviceName}</p>
+                    <p className="text-[10px] text-slate-550">Professional service execution on scheduled slot</p>
+                  </td>
+                  <td className="py-3 text-right">₹{invoiceModalBooking.priceDetails.baseVisit}</td>
+                </tr>
+                <tr className="text-slate-400">
+                  <td className="py-1.5 pt-3">Visit, Travel & Tool Surcharges</td>
+                  <td className="py-1.5 pt-3 text-right">₹150</td>
+                </tr>
+                {invoiceModalBooking.priceDetails.discount > 0 && (
+                  <tr className="text-emerald-450">
+                    <td className="py-1.5">Promo Discount ({invoiceModalBooking.couponCode || 'PROMO'})</td>
+                    <td className="py-1.5 text-right">-₹{invoiceModalBooking.priceDetails.discount}</td>
+                  </tr>
+                )}
+                <tr className="text-slate-400">
+                  <td className="py-1.5">GST Tax (18% standard IGST)</td>
+                  <td className="py-1.5 text-right">₹{invoiceModalBooking.priceDetails.tax}</td>
+                </tr>
+                <tr className="border-t border-slate-800 font-black text-sm text-white print:border-black print:text-black">
+                  <td className="py-3">Grand Total (Net amount charged)</td>
+                  <td className="py-3 text-right" style={{ color: pc }}>₹{invoiceModalBooking.priceDetails.total}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Print action CTAs */}
+            <div className="flex gap-2 pt-2 print:hidden">
+              <button 
+                onClick={() => window.print()}
+                className="flex-1 py-2.5 rounded-xl font-bold text-xs text-white text-center shadow-lg"
+                style={{ background: pc }}
+              >
+                🖨️ Print Receipt
+              </button>
+              <button 
+                onClick={() => setInvoiceModalBooking(null)}
+                className="px-5 py-2.5 rounded-xl font-bold text-xs border text-slate-350"
+                style={{ borderColor: 'var(--color-border)', background: 'transparent' }}
+              >
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
       )}
