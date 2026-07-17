@@ -1089,15 +1089,13 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
           {/* Right Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Track Booking */}
-            {(c as any).showTrackButton !== false && (
-              <button
-                onClick={() => setShowTrackModal(true)}
-                className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg border transition-all hover:border-slate-600"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-              >
-                <Search className="w-3.5 h-3.5" /> {(c as any).trackButtonText || 'Track Booking'}
-              </button>
-            )}
+            <button
+              onClick={() => setShowTrackModal(true)}
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg border transition-all"
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+            >
+              <Search className="w-3.5 h-3.5" /> Track Booking
+            </button>
 
             {/* Basket */}
             <button
@@ -2526,6 +2524,58 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
                 </p>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== TRACK BOOKING CODE INPUT MODAL ===== */}
+      {showTrackModal && (
+        <div className="modal-overlay z-50" onClick={() => setShowTrackModal(false)}>
+          <div onClick={e => e.stopPropagation()} className="bg-slate-900 rounded-3xl w-full max-w-sm p-6 border border-slate-800 text-slate-200 animate-scaleIn font-sans text-left space-y-4">
+            <div className="text-center pb-2 border-b border-slate-800">
+              <span className="text-4xl">🔎</span>
+              <h3 className="text-base font-black text-white mt-2">Track Booking</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Enter your Booking ID to view live progress status</p>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="form-label">Booking ID / Code</label>
+                <input
+                  type="text"
+                  placeholder="e.g. BK-123456"
+                  className="form-input uppercase font-mono"
+                  value={trackInputCode}
+                  onChange={e => setTrackInputCode(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const code = trackInputCode.trim().toUpperCase();
+                  const found = bookings.find(b => b.id.toUpperCase() === code && b.tenantId === tenant.id);
+                  if (found) {
+                    setTrackedBooking(found);
+                    setShowTrackModal(false);
+                    setTrackInputCode('');
+                  } else {
+                    showToast('Booking ID not found. Please verify the code.', 'error');
+                  }
+                }}
+                className="w-full py-2.5 rounded-xl font-bold text-white text-center text-xs"
+                style={{ background: pc }}
+              >
+                Track Live Operations
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowTrackModal(false)}
+              className="w-full text-center text-slate-500 hover:text-slate-400 font-bold text-xs"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

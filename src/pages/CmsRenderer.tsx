@@ -174,67 +174,25 @@ export default function CmsRenderer({
     }, 50);
   };
 
-  const getActiveComponents = () => {
-    // Check if custom page is configured
-    const customPage = (c.cmsPages || []).find(p => p.slug === activePageSlug);
-    if (customPage && activePageSlug !== 'home') return customPage.components;
-
-    switch (activePageSlug) {
-      case 'services':
-        return [
-          { id: 'comp-services-full', type: 'services', enabled: true, settings: { showAll: true } },
-        ];
-      case 'offers':
-        return [
-          { id: 'comp-offers-row', type: 'offers_row', enabled: true, settings: {} },
-        ];
-      case 'team':
-        return [
-          { id: 'comp-team', type: 'team', enabled: true, settings: {} },
-        ];
-      case 'gallery':
-        return [
-          { id: 'comp-gallery', type: 'gallery', enabled: true, settings: {} },
-        ];
-      case 'reviews':
-      case 'testimonials':
-        return [
-          { id: 'comp-testimonials', type: 'testimonials', enabled: true, settings: {} },
-        ];
-      case 'faqs':
-      case 'faq':
-        return [
-          { id: 'comp-faq', type: 'faq', enabled: true, settings: {} },
-        ];
-      case 'coverage':
-      case 'contact':
-      case 'map':
-        return [
-          { id: 'comp-map', type: 'map', enabled: true, settings: {} },
-        ];
-      case 'home':
-      case 'hero':
-      default: {
-        const homePage = (c.cmsPages || []).find(p => p.slug === 'home');
-        if (homePage) return homePage.components;
-        return [
-          { id: 'comp-hero', type: 'hero', enabled: true, settings: {} },
-          { id: 'comp-stats', type: 'stats', enabled: true, settings: {} },
-          { id: 'comp-services-grid', type: 'services', enabled: true, settings: {} },
-          { id: 'comp-how', type: 'how_it_works', enabled: true, settings: {} },
-          { id: 'comp-offers-row', type: 'offers_row', enabled: true, settings: {} },
-          { id: 'comp-team', type: 'team', enabled: true, settings: {} },
-          { id: 'comp-gallery', type: 'gallery', enabled: true, settings: {} },
-          { id: 'comp-testimonials', type: 'testimonials', enabled: true, settings: {} },
-          { id: 'comp-trust-bar', type: 'trust_bar', enabled: true, settings: {} },
-          { id: 'comp-faq', type: 'faq', enabled: true, settings: {} },
-          { id: 'comp-map', type: 'map', enabled: true, settings: {} },
-        ];
-      }
-    }
+  /* Resolve page */
+  const activePage = (c.cmsPages || []).find(p => p.slug === activePageSlug) || (c.cmsPages?.[0]) || {
+    id: 'home', title: 'Home', slug: 'home',
+    components: [
+      { id: 'comp-hero', type: 'hero', enabled: true, settings: {} },
+      { id: 'comp-stats', type: 'stats', enabled: true, settings: {} },
+      { id: 'comp-services-grid', type: 'services', enabled: true, settings: {} },
+      { id: 'comp-how', type: 'how_it_works', enabled: true, settings: {} },
+      { id: 'comp-offers-row', type: 'offers_row', enabled: true, settings: {} },
+      { id: 'comp-team', type: 'team', enabled: true, settings: {} },
+      { id: 'comp-gallery', type: 'gallery', enabled: true, settings: {} },
+      { id: 'comp-testimonials', type: 'testimonials', enabled: true, settings: {} },
+      { id: 'comp-trust-bar', type: 'trust_bar', enabled: true, settings: {} },
+      { id: 'comp-faq', type: 'faq', enabled: true, settings: {} },
+      { id: 'comp-map', type: 'map', enabled: true, settings: {} },
+    ]
   };
 
-  const activeComponents = getActiveComponents();
+  const activeComponents = activePage.components;
 
   return (
     <>
