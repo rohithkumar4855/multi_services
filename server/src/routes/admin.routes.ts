@@ -1,11 +1,13 @@
 import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { authenticate, authorize, AuthenticatedRequest } from '../middlewares/auth';
+import { tenantContextMiddleware } from '../middlewares/tenant';
 import { sendResponse } from '../utils/response';
 import { AppError } from '../utils/errors';
 
 const router = Router();
 router.use(authenticate);
+router.use(tenantContextMiddleware);
 
 // 1. SERVICES CRUD
 router.post('/services', authorize('TENANT_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

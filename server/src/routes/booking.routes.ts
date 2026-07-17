@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { BookingController } from '../controllers/booking.controller';
 import { authenticate, authorize } from '../middlewares/auth';
+import { tenantContextMiddleware } from '../middlewares/tenant';
 import { validateRequest } from '../middlewares/validation';
 import { createBookingSchema, assignWorkerSchema } from '../utils/validators';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(tenantContextMiddleware);
 
 router.post(
   '/',
