@@ -126,6 +126,7 @@ export interface TenantConfig {
   seoKeywords?: string;
   announcementActive?: boolean;
   announcementText?: string;
+  announcementExpiry?: string; // ISO date string or YYYY-MM-DD
   navLinks?: Array<{ label: string; url: string }>;
   trustBadgesActive?: boolean;
   branches?: Array<{ id: string; name: string; city: string; manager: string; serviceAreaRadius: number }>;

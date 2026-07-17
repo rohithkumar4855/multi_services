@@ -352,6 +352,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
   const [heroBadge,      setHeroBadge]      = useState((c as any).heroArrivalGuarantee || '30 MIN ARRIVAL GUARANTEE');
   const [announceActive, setAnnounceActive] = useState(c.announcementActive ?? true);
   const [announceText,   setAnnounceText]   = useState(c.announcementText || '🎉 Special offer: Book online and save!');
+  const [announceExpiry, setAnnounceExpiry] = useState(c.announcementExpiry || '');
   const [primaryCta,     setPrimaryCta]     = useState('Book Service Now');
   const [secondaryCta,   setSecondaryCta]   = useState('Call Now');
 
@@ -423,6 +424,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     setHeroSubtitle(c.heroSubtitle || '');
     setAnnounceActive(c.announcementActive ?? true);
     setAnnounceText(c.announcementText || '');
+    setAnnounceExpiry(c.announcementExpiry || '');
     setPageComponents(getInitialComponents(c));
     setPortfolio(c.portfolio || []);
     setTestimonials(c.testimonials || []);
@@ -456,6 +458,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
         ...t.config,
         primaryColor, themeMode, themeFont, themeRadius, themeButtonStyle,
         heroTitle, heroSubtitle, announcementActive: announceActive, announcementText: announceText,
+        announcementExpiry: announceExpiry,
         cmsPages: updatedCmsPages,
         portfolio, testimonials, faqs, campaigns,
         city: cityName, businessHours: bizHours, phone: bizPhone,
@@ -661,7 +664,19 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                   </button>
                 </div>
                 {announceActive && (
-                  <><FieldLabel>Announcement Text</FieldLabel><FieldInput value={announceText} onChange={e => setAnnounceText(e.target.value)} /></>
+                  <>
+                    <FieldLabel>Announcement Text</FieldLabel>
+                    <FieldInput value={announceText} onChange={e => setAnnounceText(e.target.value)} />
+                    
+                    <FieldLabel>Expiry Date (Automatically Disappears)</FieldLabel>
+                    <input 
+                      type="date" 
+                      value={announceExpiry} 
+                      onChange={e => setAnnounceExpiry(e.target.value)} 
+                      className="form-input text-xs w-full mt-1.5" 
+                    />
+                    <p className="text-[9px] text-slate-500 mt-1">If set, the banner automatically disappears after this date. If blank, it remains indefinitely.</p>
+                  </>
                 )}
               </SectionCard>
 

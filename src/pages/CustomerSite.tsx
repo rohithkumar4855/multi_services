@@ -443,11 +443,32 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       {/* Utility Top Bar Removed */}
 
       {/* ===== ANNOUNCEMENT BAR ===== */}
-      {tenant.config.announcementActive && (
-        <div className="py-2.5 px-4 text-center text-xs font-bold transition-all font-sans" style={{ background: pc, color: getTextColorForBg(pc) }}>
-          {tenant.config.announcementText}
-        </div>
-      )}
+      {(() => {
+        if (!tenant.config.announcementActive) return null;
+        if (tenant.config.announcementExpiry) {
+          const nowStr = new Date().toISOString().split('T')[0];
+          if (nowStr > tenant.config.announcementExpiry) return null;
+        }
+        // State storage for local closed action
+        const isClosed = sessionStorage.getItem(`announcement_closed_${tenant.id}`);
+        if (isClosed === 'true') return null;
+
+        return (
+          <div className="relative py-2.5 px-10 text-center text-xs font-bold transition-all font-sans flex items-center justify-center animate-fadeIn" style={{ background: pc, color: getTextColorForBg(pc) }}>
+            <span>{tenant.config.announcementText}</span>
+            <button
+              onClick={(e) => {
+                sessionStorage.setItem(`announcement_closed_${tenant.id}`, 'true');
+                e.currentTarget.parentElement?.remove(); // Instantly hide element
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 hover:opacity-80 p-1 font-bold text-sm"
+              title="Close Announcement"
+            >
+              ✕
+            </button>
+          </div>
+        );
+      })()}
 
       {/* ===== HEADER ===== */}
       <header 
