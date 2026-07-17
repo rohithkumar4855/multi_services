@@ -460,17 +460,19 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
           const nowStr = new Date().toISOString().split('T')[0];
           if (nowStr > tenant.config.announcementExpiry) return null;
         }
-        // State storage for local closed action
+        // Use sessionStorage directly or fall back safely
         const isClosed = sessionStorage.getItem(`announcement_closed_${tenant.id}`);
         if (isClosed === 'true') return null;
 
         return (
-          <div className="relative py-2.5 px-10 text-center text-xs font-bold transition-all font-sans flex items-center justify-center animate-fadeIn" style={{ background: pc, color: getTextColorForBg(pc) }}>
+          <div id="announcement-banner-wrapper" className="relative py-2.5 px-10 text-center text-xs font-bold transition-all font-sans flex items-center justify-center animate-fadeIn" style={{ background: pc, color: getTextColorForBg(pc) }}>
             <span>{tenant.config.announcementText}</span>
             <button
-              onClick={(e) => {
+              type="button"
+              onClick={() => {
                 sessionStorage.setItem(`announcement_closed_${tenant.id}`, 'true');
-                e.currentTarget.parentElement?.remove(); // Instantly hide element
+                const el = document.getElementById('announcement-banner-wrapper');
+                if (el) el.style.display = 'none'; // Safe display style override
               }}
               className="absolute right-4 top-1/2 -translate-y-1/2 hover:opacity-80 p-1 font-bold text-sm"
               title="Close Announcement"
