@@ -345,6 +345,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
   const [themeFont,       setThemeFont]       = useState(c.themeFont || 'Inter, sans-serif');
   const [themeRadius,     setThemeRadius]     = useState<'modern' | 'rounded' | 'square'>(c.themeRadius || 'modern');
   const [themeButtonStyle,setThemeButtonStyle]= useState<'filled' | 'outline' | 'soft'>(c.themeButtonStyle || 'filled');
+  const [logoText,         setLogoText]         = useState(c.logoText || tenant.name);
 
   /* ── Hero ───────────────────────────────────────────────── */
   const [heroTitle,      setHeroTitle]      = useState(c.heroTitle || 'All Home Services One Trusted Team');
@@ -425,6 +426,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     setAnnounceActive(c.announcementActive ?? true);
     setAnnounceText(c.announcementText || '');
     setAnnounceExpiry(c.announcementExpiry || '');
+    setLogoText(c.logoText || tenant.name);
     setPageComponents(getInitialComponents(c));
     setPortfolio(c.portfolio || []);
     setTestimonials(c.testimonials || []);
@@ -457,6 +459,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
       config: {
         ...t.config,
         primaryColor, themeMode, themeFont, themeRadius, themeButtonStyle,
+        logoText,
         heroTitle, heroSubtitle, announcementActive: announceActive, announcementText: announceText,
         announcementExpiry: announceExpiry,
         cmsPages: updatedCmsPages,
@@ -580,6 +583,14 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
           {/* ═══ APPEARANCE ═══ */}
           {editorTab === 'appearance' && (
             <div className="space-y-4">
+              <SectionCard title="Brand Logo" subtitle="Sets the primary text logo in the site header">
+                <FieldLabel>Logo Text</FieldLabel>
+                <FieldInput 
+                  value={logoText} 
+                  onChange={e => setLogoText(e.target.value)} 
+                  placeholder="e.g. 🏪 CleanPro Pro"
+                />
+              </SectionCard>
               <SectionCard title="Brand Color" subtitle="Drives buttons, accents, and highlights">
                 <div className="flex items-center gap-3">
                   <div className="relative">
