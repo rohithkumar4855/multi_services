@@ -1015,6 +1015,7 @@ export default function CmsRenderer({
                   <div className="text-center mb-12">
                     <SectionLabel text="Our Work" color={pc} />
                     <SectionTitle color={textPrimary}>Before & After Transformations</SectionTitle>
+                    <p className="text-sm mt-3 text-slate-400 max-w-md mx-auto">Browse real results from recent works, completed projects, and video walkthroughs.</p>
                   </div>
                   {(() => {
                     const portfolio = c.portfolio || [];
@@ -1033,30 +1034,86 @@ export default function CmsRenderer({
                           ))}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {filtered.map((item: any) => (
-                            <div key={item.id}
-                              className="rounded-3xl overflow-hidden group transition-all hover:-translate-y-1 hover:shadow-2xl"
-                              style={{
-                                backgroundColor: localDark ? '#1e293b' : '#fff',
-                                border: `1px solid ${localDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
-                                borderRadius: '24px',
-                              }}>
-                              <div className="flex h-40">
-                                <div className="flex-1 flex flex-col items-center justify-center border-r border-dashed" style={{ background: `${pc}08`, borderColor: localDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
-                                  <span className="text-5xl">{item.icon}</span>
-                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/20 text-red-500 mt-1">BEFORE</span>
-                                </div>
-                                <div className="flex-1 flex flex-col items-center justify-center" style={{ background: `${pc}08` }}>
-                                  <span className="text-5xl">{item.icon}</span>
-                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full border mt-1" style={{ borderColor: pc, color: pc }}>AFTER ✓</span>
+                          {filtered.map((item: any) => {
+                            // Extract video ID from youtube URL if it exists
+                            const getYoutubeEmbedUrl = (url?: string) => {
+                              if (!url) return null;
+                              const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                              const match = url.match(regExp);
+                              return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+                            };
+                            const embedUrl = getYoutubeEmbedUrl(item.youtubeUrl);
+
+                            return (
+                              <div key={item.id}
+                                className="rounded-3xl overflow-hidden group transition-all duration-350 hover:-translate-y-1.5 hover:shadow-2xl flex flex-col"
+                                style={{
+                                  backgroundColor: localDark ? '#1e293b' : '#fff',
+                                  border: `1px solid ${localDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
+                                  borderRadius: '24px',
+                                }}>
+                                
+                                {embedUrl ? (
+                                  /* 📺 YouTube Video Embed Player Component */
+                                  <div className="relative aspect-video w-full overflow-hidden bg-black shrink-0">
+                                    <iframe 
+                                      className="w-full h-full border-0"
+                                      src={embedUrl}
+                                      title={item.title}
+                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                      allowFullScreen
+                                    />
+                                  </div>
+                                ) : item.instagramUrl ? (
+                                  /* 📸 Instagram Video Overlay Card Trigger */
+                                  <a 
+                                    href={item.instagramUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="relative aspect-video w-full overflow-hidden bg-slate-950 shrink-0 flex items-center justify-center group"
+                                  >
+                                    <div className="absolute inset-0 bg-cover bg-center opacity-70 group-hover:scale-105 transition-transform duration-500" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&q=80')` }} />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent" />
+                                    
+                                    <div className="relative z-10 flex flex-col items-center gap-1.5 text-center">
+                                      <div className="w-12 h-12 rounded-full bg-pink-600 flex items-center justify-center text-white shadow-lg animate-pulse">
+                                        📸
+                                      </div>
+                                      <p className="text-[10px] font-black text-white tracking-widest uppercase">Watch Video on Instagram</p>
+                                    </div>
+                                  </a>
+                                ) : (
+                                  /* 🖼️ Standard Before/After Transformation slider Card */
+                                  <div className="flex h-44 shrink-0">
+                                    <div className="flex-1 flex flex-col items-center justify-center border-r border-dashed" style={{ background: `${pc}08`, borderColor: localDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+                                      <span className="text-5xl">{item.icon}</span>
+                                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-red-500/20 text-red-500 mt-1">BEFORE</span>
+                                    </div>
+                                    <div className="flex-1 flex flex-col items-center justify-center" style={{ background: `${pc}08` }}>
+                                      <span className="text-5xl">{item.icon}</span>
+                                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full border mt-1" style={{ borderColor: pc, color: pc }}>AFTER ✓</span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="p-5 flex-1 flex flex-col justify-between space-y-2">
+                                  <div>
+                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full" style={{ background: `${pc}15`, color: pc }}>
+                                      {item.category}
+                                    </span>
+                                    <h4 className="font-black text-sm mt-2 leading-tight" style={{ color: textPrimary }}>{item.title}</h4>
+                                    <p className="text-[10px] text-slate-400 mt-1">{item.description}</p>
+                                  </div>
+                                  <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: localDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
+                                    <p className="text-[10px] font-bold" style={{ color: textMuted }}>By {item.workerName}</p>
+                                    <div className="flex gap-0.5">
+                                      {[...Array(item.rating)].map((_, i) => <Star key={i} className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />)}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="p-4">
-                                <h4 className="font-black text-sm" style={{ color: textPrimary }}>{item.title}</h4>
-                                <p className="text-[10px] mt-1" style={{ color: textMuted }}>By {item.workerName}</p>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </>
                     );

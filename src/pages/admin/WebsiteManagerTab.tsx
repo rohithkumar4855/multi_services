@@ -489,14 +489,19 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
       return next;
     });
 
+  const [newPortYoutube,   setNewPortYoutube]   = useState('');
+  const [newPortInstagram, setNewPortInstagram] = useState('');
+
   const addPortfolioItem = () => {
     if (!newPortTitle.trim()) return;
     const item = {
       id: `port-${Date.now()}`, title: newPortTitle, category: newPortCategory,
       icon: newPortIcon, workerName: newPortWorker || 'Our Team',
+      youtubeUrl: newPortYoutube.trim() || undefined,
+      instagramUrl: newPortInstagram.trim() || undefined,
     };
     setPortfolio(prev => [...prev, item]);
-    setNewPortTitle(''); setNewPortWorker('');
+    setNewPortTitle(''); setNewPortWorker(''); setNewPortYoutube(''); setNewPortInstagram('');
     showToast('Portfolio item added!');
   };
 
@@ -787,6 +792,18 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                 </div>
                 <FieldLabel>Technician Name (optional)</FieldLabel>
                 <FieldInput value={newPortWorker} onChange={e => setNewPortWorker(e.target.value)} placeholder="Ramesh Kumar" />
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <FieldLabel>YouTube Video Link</FieldLabel>
+                    <FieldInput value={newPortYoutube} onChange={e => setNewPortYoutube(e.target.value)} placeholder="https://youtube.com/..." />
+                  </div>
+                  <div>
+                    <FieldLabel>Instagram Video Link</FieldLabel>
+                    <FieldInput value={newPortInstagram} onChange={e => setNewPortInstagram(e.target.value)} placeholder="https://instagram.com/..." />
+                  </div>
+                </div>
+                
                 <button onClick={addPortfolioItem} className="btn-primary w-full py-2 text-xs font-bold">+ Add to Portfolio</button>
               </SectionCard>
 

@@ -91,6 +91,8 @@ export interface TenantConfig {
     workerName: string;
     clientInitials: string;
     rating: number;
+    youtubeUrl?: string;
+    instagramUrl?: string;
   }>;
   awards?: Array<{
     id: string;
