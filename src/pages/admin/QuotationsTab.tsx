@@ -133,6 +133,37 @@ export default function QuotationsTab({ tenantId, tenantName, tenantPhone, tenan
             </div>
           </div>
 
+          {/* Predefined Switchgear Templates Selector */}
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+            <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">⚡ Predefined Switchgear Presets</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: 'APFC Capacitor Panel (100 kVAr)', desc: '100 kVAr steel automatic capacitor panel with harmonized controller', price: 65000 },
+                { label: '11KV Vacuum Circuit Breaker (VCB)', desc: '630A VCB switchgear engineering supply & testing', price: 45000 },
+                { label: '250 KVA Copper Transformer', desc: 'Outdoor copper wound distribution transformer fitting & oil filtration', price: 180000 },
+                { label: 'Substation Pole Fitting & Assembly', desc: '11KV pole structures assembly, lightning arresters & cable termination', price: 250000 },
+                { label: '95 sq.mm Aluminium Armoured Cable (100m)', desc: 'Cable trench laying, glands termination and trial tests', price: 12000 }
+              ].map((tpl, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    const newItem = { description: tpl.label, quantity: 1, unitPrice: tpl.price, amount: tpl.price };
+                    setItems(prev => {
+                      const list = prev.filter(it => it.description || it.unitPrice > 0);
+                      return [...list, newItem];
+                    });
+                    setNotes(prev => `${prev}\n- Includes: ${tpl.desc}.`);
+                    showToast(`Loaded Preset: ${tpl.label}`);
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-[10px] font-bold text-slate-300 bg-slate-950 hover:bg-slate-900 hover:border-slate-700 transition-all"
+                >
+                  ➕ {tpl.label} (₹{tpl.price.toLocaleString()})
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Line items */}
           <div>
             <p className="form-label mb-2">Line Items</p>
