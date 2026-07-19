@@ -89,6 +89,7 @@ interface CmsRendererProps {
   setActivePageSlug: (val: string) => void;
   setViewMode: (val: 'website' | 'dashboard') => void;
   setBookingService: (service: Service | null) => void;
+  setDetailService?: (service: Service | null) => void;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -123,7 +124,8 @@ export default function CmsRenderer({
   setCoverageEmail,
   setActivePageSlug,
   setViewMode,
-  setBookingService
+  setBookingService,
+  setDetailService
 }: CmsRendererProps) {
   const c = tenant.config;
   const [techPage, setTechPage] = useState(0);
@@ -393,6 +395,7 @@ export default function CmsRenderer({
                               borderRadius: 'var(--border-radius)',
                               transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
                             }}
+                            onClick={() => setDetailService && setDetailService(svc)}
                             onMouseEnter={() => setHoveredService(svc.id)}
                             onMouseLeave={() => setHoveredService(null)}
                           >

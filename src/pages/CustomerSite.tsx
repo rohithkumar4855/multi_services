@@ -60,6 +60,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   const myCoupons = coupons.filter(cp => cp.tenantId === tenant.id && cp.status === 'active');
 
   const [bookingService, setBookingService] = useState<null | typeof myServices[0]>(null);
+  const [detailService, setDetailService] = useState<null | typeof myServices[0]>(null);
   const [tempBooking, setTempBooking] = useState<Booking | null>(null);
   const [formData, setFormData] = useState<BookingFormData>({ name: '', phone: '', address: '', date: '', time: '', notes: '' });
   const [couponCode, setCouponCode] = useState('');
@@ -907,6 +908,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
           setActivePageSlug={setActivePageSlug}
           setViewMode={setViewMode}
           setBookingService={setBookingService}
+          setDetailService={setDetailService}
         />
       )}
 
@@ -1175,6 +1177,87 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 </form>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== SERVICE DETAILS MODAL (B2B SPECIFIC & GENERAL) ===== */}
+      {detailService && (
+        <div className="modal-overlay z-50 animate-fadeIn" onClick={() => setDetailService(null)}>
+          <div onClick={e => e.stopPropagation()} className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden border border-slate-800 text-slate-200 animate-scaleIn font-sans text-left flex flex-col max-h-[85vh]">
+            
+            {/* Banner/Header */}
+            <div className="relative h-44 bg-slate-950 flex-shrink-0">
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-10" />
+              <div className="absolute bottom-4 left-6 z-20 flex items-center gap-3">
+                <span className="text-4xl">{detailService.icon || '🛠️'}</span>
+                <div>
+                  <span className="text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">{detailService.category}</span>
+                  <h3 className="text-lg font-black text-white mt-1">{detailService.name}</h3>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDetailService(null)} 
+                className="absolute right-4 top-4 z-20 text-slate-400 hover:text-white font-bold text-xs p-1.5 rounded-lg border border-slate-800 bg-slate-950/40"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Content Details */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs leading-relaxed text-slate-400">
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase font-black">Description & Scope:</p>
+                <p className="mt-1 text-slate-300 font-sans">{detailService.description}</p>
+              </div>
+
+              {detailService.variants && detailService.variants.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase font-black">Equipment / Service Options:</p>
+                  <div className="space-y-2 mt-2">
+                    {detailService.variants.map((v: any) => (
+                      <div key={v.id} className="p-3 rounded-xl border border-slate-800 bg-slate-950/40 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <strong className="text-white font-bold">{v.name}</strong>
+                          {tenant.config.enableB2bEnquiry ? (
+                            <span className="text-[9px] font-bold text-blue-400">Enquiry Only</span>
+                          ) : (
+                            <strong style={{ color: pc }}>₹{v.price.toLocaleString()}</strong>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-normal">{v.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Technical Specifications */}
+              <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-850 space-y-2">
+                <p className="text-[9px] text-slate-450 font-black uppercase tracking-wider">🛠️ Commissioning Specifications</p>
+                <ul className="space-y-1 list-disc list-inside text-slate-400">
+                  <li>Standard 30-Day execution and warranty support active</li>
+                  <li>Industrial site safety inspection required before commissioning</li>
+                  <li>Compliance documents (GST, test reports) shared upon delivery</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Actions footer */}
+            <div className="p-6 border-t border-slate-800 flex-shrink-0 bg-slate-950/40 flex gap-3">
+              <button
+                onClick={() => {
+                  setBookingService(detailService);
+                  setDetailService(null);
+                  setBookingSubmitted(false);
+                }}
+                className="flex-1 py-3 rounded-xl font-bold text-white text-center text-xs shadow-lg hover:scale-[1.01] transition-transform"
+                style={{ background: pc }}
+              >
+                {tenant.config.enableB2bEnquiry ? '📋 Request Project Quotation' : '📅 Book Service Now'}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
