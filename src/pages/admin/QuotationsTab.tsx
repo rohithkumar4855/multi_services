@@ -353,12 +353,40 @@ export default function QuotationsTab({ tenantId, tenantName, tenantPhone, tenan
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-2 print:hidden">
+                <button className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-blue-600" onClick={() => window.print()}>
+                  🖨️ Print / Save PDF
+                </button>
                 <button className="flex-1 py-3 rounded-xl text-sm font-bold text-white" style={{ background: primaryColor }} onClick={() => { showToast('Quotation sent via WhatsApp!'); setPreviewQ(null); }}>
                   📱 Send via WhatsApp
                 </button>
                 <button className="btn-secondary flex-1 text-sm" onClick={() => setPreviewQ(null)}>Close</button>
               </div>
+
+              {/* Print Media style blocks overrides */}
+              <style>{`
+                @media print {
+                  body * {
+                    visibility: hidden;
+                  }
+                  .modal-overlay, .modal-overlay * {
+                    visibility: visible;
+                  }
+                  .modal-overlay {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    background: white !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    border: none !important;
+                  }
+                  .print\\:hidden {
+                    display: none !important;
+                  }
+                }
+              `}</style>
             </div>
           </div>
         </div>

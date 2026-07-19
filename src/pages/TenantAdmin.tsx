@@ -613,6 +613,30 @@ Manager Signature: ________________________
               ======================================================= */}
           {tab === 'dashboard' && (
             <div className="space-y-6 animate-fadeIn">
+              
+              {/* Intelligent B2B Enquiry Live Tracker Alarm */}
+              {myBookings.filter(b => b.status === 'requested').length > 0 && (
+                <div className="bg-gradient-to-r from-blue-950/80 to-slate-900 border border-blue-800 rounded-3xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-pulse">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                      </span>
+                      <p className="text-[10px] text-blue-400 uppercase tracking-widest font-black">⚡ Real-time Request Pipeline</p>
+                    </div>
+                    <h3 className="text-sm font-black text-white">You have {myBookings.filter(b => b.status === 'requested').length} new incoming project design & commission requests!</h3>
+                    <p className="text-[10px] text-slate-400">Dispatch controllers must inspect technical logs and issue custom estimates immediately.</p>
+                  </div>
+                  <button
+                    onClick={() => { setTab('bookings'); setBkSubTab('requests'); }}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors shadow-md"
+                  >
+                    🔍 Launch Pipeline Dispatcher ➔
+                  </button>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="kpi-card blue">
                   <div className="flex justify-between items-start">
