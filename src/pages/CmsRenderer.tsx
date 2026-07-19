@@ -220,19 +220,19 @@ export default function CmsRenderer({
                   </div>
 
                   {/* Main Headline with dual-color gradient accentuation */}
-                  <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight text-white max-w-3xl mx-auto">
+                  <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight text-white max-w-4xl mx-auto font-sans">
                     {activeCampaign ? activeCampaign.title : (
                       <>
-                        <span className="opacity-95">All Home Services</span>
+                        <span className="opacity-95">SV Power Systems</span>
                         <br />
                         <span 
                           style={{
-                            background: `linear-gradient(135deg, #fff 30%, ${pc} 100%)`,
+                            background: `linear-gradient(135deg, #38bdf8 30%, ${pc} 100%)`,
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                           }}
                         >
-                          One Trusted Team
+                          Industrial Panels & substations
                         </span>
                       </>
                     )}
