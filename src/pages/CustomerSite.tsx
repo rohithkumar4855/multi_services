@@ -1164,6 +1164,50 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     </div>
                   </div>
 
+                  {/* Render Custom Service Specific FormFields (e.g. B2B breaker rating / B2C bathroom parameters) */}
+                  {bookingService.formFields && bookingService.formFields.length > 0 && (
+                    <div className="bg-slate-950/40 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                      <p className="text-[9px] text-slate-500 uppercase font-black tracking-wider">🔧 Service Specifications Details</p>
+                      {bookingService.formFields.map(f => (
+                        <div key={f.key}>
+                          <label className="form-label">{f.label} {f.required ? '*' : ''}</label>
+                          {f.type === 'select' ? (
+                            <select
+                              className="form-input"
+                              required={f.required}
+                              onChange={e => {
+                                setFormData(d => ({ ...d, notes: `${d.notes}\n- ${f.label}: ${e.target.value}` }));
+                              }}
+                            >
+                              <option value="">Choose Option</option>
+                              {f.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          ) : f.type === 'textarea' ? (
+                            <textarea
+                              className="form-input resize-none"
+                              rows={2}
+                              required={f.required}
+                              placeholder={f.label}
+                              onChange={e => {
+                                setFormData(d => ({ ...d, notes: `${d.notes}\n- ${f.label}: ${e.target.value}` }));
+                              }}
+                            />
+                          ) : (
+                            <input
+                              className="form-input"
+                              type={f.type === 'number' ? 'number' : 'text'}
+                              required={f.required}
+                              placeholder={f.label}
+                              onChange={e => {
+                                setFormData(d => ({ ...d, notes: `${d.notes}\n- ${f.label}: ${e.target.value}` }));
+                              }}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Dynamic Technician Selection Feature Flagged */}
                   {tenant.config.allowTechnicianSelection && (
                     <div>
