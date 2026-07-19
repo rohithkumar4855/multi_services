@@ -23,7 +23,7 @@ interface BookingFormData {
 }
 
 export default function CustomerSite({ session, store, navigateTo }: Props) {
-  const { tenants, services, workers, bookings, setBookings, coupons, leads, setLeads } = store;
+  const { tenants, services, workers, bookings, setBookings, coupons, leads, setLeads, quotations, setQuotations } = store;
 
   // Use active session tenant or first tenant for demo
   const initialTenantId = session.tenantId || tenants[0]?.id || '';
@@ -79,7 +79,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerSession, setCustomerSession] = useState<{ phone: string; name: string } | null>(null);
   const [showCustomerLoginModal, setShowCustomerLoginModal] = useState(false);
-  const [customerActiveTab, setCustomerActiveTab] = useState<'bookings' | 'book_service' | 'warranties' | 'rewards' | 'support'>('bookings');
+  const [customerActiveTab, setCustomerActiveTab] = useState<'bookings' | 'book_service' | 'warranties' | 'rewards' | 'support' | 'quotations'>('bookings');
   const [viewMode, setViewMode] = useState<'website' | 'dashboard'>('website');
 
   // Auto pre-fill customer checkout details when logged in
@@ -637,6 +637,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
           <div className="flex flex-wrap gap-2 border-b pb-4 border-slate-850 font-sans">
             {[
               { id: 'bookings', label: '📅 My Bookings' },
+              ...(tenant.config.enableB2bEnquiry ? [{ id: 'quotations', label: '📋 Switchgear Estimates' }] : []),
               { id: 'book_service', label: '🔧 Book New Service' },
               { id: 'warranties', label: '🛡️ Warranties & Claims' },
               { id: 'rewards', label: '🎁 Loyalty Rewards' },
@@ -830,6 +831,76 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {customerActiveTab === 'quotations' && (
+              <div className="space-y-4 font-sans">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">Switchgear Engineering Estimates</p>
+                {(quotations || []).filter(q => q.customerPhone === customerSession.phone && q.tenantId === tenant.id).length === 0 ? (
+                  <div className="text-center py-16 border border-dashed border-slate-800 rounded-2xl text-slate-500 text-sm">
+                    No active switchgear quotations found for your phone number. Submit a quote enquiry from the homepage!
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {(quotations || [])
+                      .filter(q => q.customerPhone === customerSession.phone && q.tenantId === tenant.id)
+                      .map(q => (
+                        <div key={q.id} className="p-6 rounded-2xl border transition-all space-y-4" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+                          <div className="flex justify-between items-center pb-2 border-b border-slate-850">
+                            <div>
+                              <span className="font-mono text-sm font-black text-white">{q.id}</span>
+                              <span className="text-[10px] text-slate-500 ml-3">Valid: {q.validDays} days</span>
+                            </div>
+                            <span className="badge text-[9px] uppercase font-bold" style={{
+                              color: q.status === 'accepted' ? '#22c55e' : q.status === 'rejected' ? '#ef4444' : '#38bdf8',
+                              background: q.status === 'accepted' ? '#22c55e15' : q.status === 'rejected' ? '#ef444415' : '#38bdf815'
+                            }}>{q.status}</span>
+                          </div>
+
+                          <div className="space-y-2 text-xs">
+                            <p className="font-bold text-white">Line Items Breakdown:</p>
+                            <div className="space-y-1.5 pl-2 border-l border-slate-800">
+                              {q.items.map((item, idx) => (
+                                <div key={idx} className="flex justify-between text-slate-400">
+                                  <span>{item.description} (x{item.quantity})</span>
+                                  <span>₹{item.amount.toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex justify-between border-t border-slate-850 pt-2 font-bold text-white">
+                              <span>Grand Total (incl. GST):</span>
+                              <span style={{ color: pc }}>₹{q.total.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          {q.status === 'sent' && (
+                            <div className="flex gap-2 pt-2 border-t border-slate-850/60">
+                              <button
+                                onClick={() => {
+                                  setQuotations(prev => prev.map(item => item.id === q.id ? { ...item, status: 'accepted' } : item));
+                                  showToast('Quotation accepted! Our engineering dispatch controllers will schedule execution slots.', 'success');
+                                }}
+                                className="flex-1 py-2 rounded-lg text-xs font-bold text-center text-white"
+                                style={{ background: pc }}
+                              >
+                                ✓ Accept Estimate
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setQuotations(prev => prev.map(item => item.id === q.id ? { ...item, status: 'rejected' } : item));
+                                  showToast('Quotation rejected.');
+                                }}
+                                className="px-4 py-2 rounded-lg text-xs font-bold border border-slate-800 text-slate-450 hover:bg-slate-900"
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             )}
 
