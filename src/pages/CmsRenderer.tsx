@@ -433,29 +433,43 @@ export default function CmsRenderer({
                               </div>
 
                               {/* Add to Cart */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (inBasket) {
-                                    setBasket(prev => prev.filter(item => item.serviceId !== svc.id));
-                                  } else {
-                                    setBasket(prev => [...prev, {
-                                      serviceId: svc.id, serviceName: svc.name,
-                                      variantId: `${svc.id}-default`, variantName: 'Standard',
-                                      price: svc.basePrice, quantity: 1
-                                    }]);
-                                    setIsBasketOpen(true);
+                              {c.enableB2bEnquiry ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setBookingService(svc);
+                                    setBookingSubmitted(false);
+                                  }}
+                                  className="w-full py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1"
+                                  style={{ background: 'var(--color-button)', color: 'var(--color-button-text)', borderRadius: 'calc(var(--border-radius) * 0.5)' }}
+                                >
+                                  <span>📋</span> Request Quote
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (inBasket) {
+                                      setBasket(prev => prev.filter(item => item.serviceId !== svc.id));
+                                    } else {
+                                      setBasket(prev => [...prev, {
+                                        serviceId: svc.id, serviceName: svc.name,
+                                        variantId: `${svc.id}-default`, variantName: 'Standard',
+                                        price: svc.basePrice, quantity: 1
+                                      }]);
+                                      setIsBasketOpen(true);
+                                    }
+                                  }}
+                                  className="w-full py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1"
+                                  style={inBasket
+                                    ? { background: '#dc2626', color: '#fff', borderRadius: 'calc(var(--border-radius) * 0.5)' }
+                                    : { background: 'var(--color-button)', color: 'var(--color-button-text)', borderRadius: 'calc(var(--border-radius) * 0.5)' }
                                   }
-                                }}
-                                className="w-full py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1"
-                                style={inBasket
-                                  ? { background: '#dc2626', color: '#fff', borderRadius: 'calc(var(--border-radius) * 0.5)' }
-                                  : { background: 'var(--color-button)', color: 'var(--color-button-text)', borderRadius: 'calc(var(--border-radius) * 0.5)' }
-                                }
-                              >
-                                <ShoppingCart className="w-3 h-3" />
-                                {inBasket ? 'Remove' : 'Add to Cart'}
-                              </button>
+                                >
+                                  <ShoppingCart className="w-3 h-3" />
+                                  {inBasket ? 'Remove' : 'Add to Cart'}
+                                </button>
+                              )}
                             </div>
                           </div>
                         );

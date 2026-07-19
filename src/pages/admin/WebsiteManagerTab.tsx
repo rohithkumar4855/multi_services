@@ -348,6 +348,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
   const [themeButtonStyle,setThemeButtonStyle]= useState<'filled' | 'outline' | 'soft'>(c.themeButtonStyle || 'filled');
   const [logoText,         setLogoText]         = useState(c.logoText || tenant.name);
   const [techSelectionActive, setTechSelectionActive] = useState(c.allowTechnicianSelection ?? false);
+  const [b2bEnquiryActive, setB2bEnquiryActive] = useState(c.enableB2bEnquiry ?? false);
 
   /* ── Hero ───────────────────────────────────────────────── */
   const [heroTitle,      setHeroTitle]      = useState(c.heroTitle || 'All Home Services One Trusted Team');
@@ -430,6 +431,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     setAnnounceExpiry(c.announcementExpiry || '');
     setLogoText(c.logoText || tenant.name);
     setTechSelectionActive(c.allowTechnicianSelection ?? false);
+    setB2bEnquiryActive(c.enableB2bEnquiry ?? false);
     setPageComponents(getInitialComponents(c));
     setPortfolio(c.portfolio || []);
     setTestimonials(c.testimonials || []);
@@ -466,6 +468,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
         heroTitle, heroSubtitle, announcementActive: announceActive, announcementText: announceText,
         announcementExpiry: announceExpiry,
         allowTechnicianSelection: techSelectionActive,
+        enableB2bEnquiry: b2bEnquiryActive,
         cmsPages: updatedCmsPages,
         portfolio, testimonials, faqs, campaigns,
         city: cityName, businessHours: bizHours, phone: bizPhone,
@@ -665,13 +668,23 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                     <button key={opt.val} onClick={() => setThemeButtonStyle(opt.val)}
                       className={`py-2.5 rounded-lg text-[10px] font-black transition-all ${themeButtonStyle === opt.val ? 'text-white' : 'border border-slate-800 text-slate-500 bg-slate-900'}`}
                       style={themeButtonStyle === opt.val ? { background: primaryColor } : {}}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </SectionCard>
+                  {opt.label}
+                </button>
+              ))}
             </div>
-          )}
+          </SectionCard>
+
+          <SectionCard title="B2B Switchgear Mode" subtitle="Swaps online checkout baskets with professional quotes/industrial enquiry sheets">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-slate-400 font-bold">Request Quote Enquiry</span>
+              <button onClick={() => setB2bEnquiryActive(v => !v)} className={`w-10 h-5 rounded-full transition-all relative ${b2bEnquiryActive ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${b2bEnquiryActive ? 'left-5' : 'left-0.5'}`} />
+              </button>
+            </div>
+            <p className="text-[9px] text-slate-500 leading-relaxed mt-1">When enabled, clients submit engineering details instead of executing immediate pricing checkout transactions.</p>
+          </SectionCard>
+        </div>
+      )}
 
           {/* ═══ HERO ═══ */}
           {editorTab === 'hero' && (

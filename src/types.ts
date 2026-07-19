@@ -130,6 +130,7 @@ export interface TenantConfig {
   announcementText?: string;
   announcementExpiry?: string; // ISO date string or YYYY-MM-DD
   allowTechnicianSelection?: boolean; // Select worker feature flag
+  enableB2bEnquiry?: boolean; // B2B quote enquiry instead of direct purchase
   navLinks?: Array<{ label: string; url: string }>;
   trustBadgesActive?: boolean;
   branches?: Array<{ id: string; name: string; city: string; manager: string; serviceAreaRadius: number }>;

@@ -41,7 +41,7 @@ export const INDUSTRY_PACKS: IndustryPack[] = [
 // ============================================================
 // INITIAL TENANTS
 // ============================================================
-const makeConfig = (pack: typeof INDUSTRY_PACKS[0], overrides: Partial<{ heroTitle: string; heroSubtitle: string; logoText: string; phone: string; email: string; whatsApp: string; gst: string; about: string; city: string; address: string; testimonials: Array<{ id: string; author: string; role: string; text: string; rating: number; service?: string; verified?: boolean }>; seoTitle: string; seoDescription: string; seoKeywords: string; announcementActive: boolean; announcementText: string; navLinks: Array<{ label: string; url: string }>; trustBadgesActive: boolean; }> = {}) => ({
+const makeConfig = (pack: typeof INDUSTRY_PACKS[0], overrides: Partial<{ heroTitle: string; heroSubtitle: string; logoText: string; phone: string; email: string; whatsApp: string; gst: string; about: string; city: string; address: string; enableB2bEnquiry: boolean; testimonials: Array<{ id: string; author: string; role: string; text: string; rating: number; service?: string; verified?: boolean }>; seoTitle: string; seoDescription: string; seoKeywords: string; announcementActive: boolean; announcementText: string; navLinks: Array<{ label: string; url: string }>; trustBadgesActive: boolean; }> = {}) => ({
   primaryColor: pack.color,
   secondaryColor: pack.color,
   logoText: overrides.logoText || `${pack.icon} ${pack.name} Pro`,
@@ -55,6 +55,7 @@ const makeConfig = (pack: typeof INDUSTRY_PACKS[0], overrides: Partial<{ heroTit
   refundPolicy: 'Refunds processed within 3–5 working days if cancelled per our terms.',
   warrantyPolicy: 'We provide 30 days warranty on all completed services. Same fault recurrence fixed free of charge.',
   gstNumber: overrides.gst || '',
+  enableB2bEnquiry: overrides.enableB2bEnquiry ?? false,
   aboutText: overrides.about || `We are professional ${pack.name.toLowerCase()} service providers with verified, trained technicians serving ${overrides.city || 'your city'} since 2020.`,
   address: overrides.address || 'Main Road, City Centre',
   city: overrides.city || 'Nellore, AP',
@@ -274,6 +275,7 @@ export const INITIAL_TENANTS: Tenant[] = [
       about: 'SV Power Systems is Nellore\'s premier manufacturer and supplier of industrial panel boards, HT breakers, 11KV substations, and energy-saving APFC systems. Powered by Anarav Technologies.',
       city: 'Nellore, AP',
       address: 'Plot 45-B, Industrial Estate, Nellore',
+      enableB2bEnquiry: true,
       testimonials: [
         { id: '1', author: 'Narayana Hatcheries', role: 'Plant Manager', text: 'Installed 3 APFC panels. Our electricity costs dropped by 18% from the next billing cycle.', rating: 5, service: 'APFC Panels Commissioning', verified: true },
         { id: '2', author: 'Sri Rama Rice Mill', role: 'Owner', text: '11KV Substation commissioning completed ahead of schedule. Professional engineering crew.', rating: 5, service: '11KV Substation Setup', verified: true },

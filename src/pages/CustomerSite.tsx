@@ -1053,12 +1053,14 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                   <span className="text-3xl">{bookingService.icon}</span>
                   <div>
                     <h3 className="font-black text-white text-base">{bookingService.name}</h3>
-                    <p className="text-xs font-bold" style={{ color: pc }}>Starting ₹{bookingService.basePrice.toLocaleString()}</p>
+                    <p className="text-xs font-bold" style={{ color: pc }}>{tenant.config.enableB2bEnquiry ? 'Request Commercial Quotation' : `Starting ₹${bookingService.basePrice.toLocaleString()}`}</p>
                   </div>
                 </div>
                 <div className="px-5 pt-3">
-                  <div className="bg-blue-950/30 border border-blue-900/60 p-2.5 rounded-xl text-blue-400 font-bold text-[10px] text-center font-sans">
-                    ⚡ Instant Guest Checkout — No registration or login required to book!
+                  <div className="bg-blue-955/30 border border-blue-900/60 p-2.5 rounded-xl text-blue-400 font-bold text-[10px] text-center font-sans">
+                    {tenant.config.enableB2bEnquiry 
+                      ? '💼 Industrial Enquiry — Submit project requirements for offline engineering estimate' 
+                      : '⚡ Instant Guest Checkout — No registration or login required to book!'}
                   </div>
                 </div>
 
@@ -1126,18 +1128,25 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     <textarea className="form-input resize-none" rows={1} placeholder="Specific instructions..." value={formData.notes} onChange={e => setFormData(d => ({ ...d, notes: e.target.value }))} />
                   </div>
 
-                  <div className="bg-slate-950 border border-slate-850 p-3 rounded-xl space-y-1.5 text-left">
-                    <div className="flex justify-between text-slate-400"><span>Base Price</span><span>₹{bookingService.basePrice}</span></div>
-                    <div className="flex justify-between text-slate-400"><span>Visit & Travel Surcharge</span><span>₹150</span></div>
-                    {appliedCoupon && (
-                      <div className="flex justify-between text-emerald-400"><span>Discount</span><span>-₹{calculatePrice(bookingService.basePrice).discount}</span></div>
-                    )}
-                    <div className="flex justify-between text-slate-400"><span>GST (18%)</span><span>₹{calculatePrice(bookingService.basePrice).tax}</span></div>
-                    <div className="flex justify-between font-bold text-white border-t border-slate-800 pt-1.5 text-sm">
-                      <span>Grand Total:</span>
-                      <span style={{ color: pc }}>₹{(calculatePrice(bookingService.basePrice).total + 150).toLocaleString()}</span>
+                  {tenant.config.enableB2bEnquiry ? (
+                    <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl text-center space-y-1">
+                      <p className="text-xs font-bold text-white">📋 Estimate Request Registered</p>
+                      <p className="text-[10px] text-slate-500">Pricing will be determined offline by our estimating engineers following switchgear specifications review.</p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-slate-950 border border-slate-850 p-3 rounded-xl space-y-1.5 text-left">
+                      <div className="flex justify-between text-slate-400"><span>Base Price</span><span>₹{bookingService.basePrice}</span></div>
+                      <div className="flex justify-between text-slate-400"><span>Visit & Travel Surcharge</span><span>₹150</span></div>
+                      {appliedCoupon && (
+                        <div className="flex justify-between text-emerald-405"><span>Discount</span><span>-₹{calculatePrice(bookingService.basePrice).discount}</span></div>
+                      )}
+                      <div className="flex justify-between text-slate-400"><span>GST (18%)</span><span>₹{calculatePrice(bookingService.basePrice).tax}</span></div>
+                      <div className="flex justify-between font-bold text-white border-t border-slate-800 pt-1.5 text-sm">
+                        <span>Grand Total:</span>
+                        <span style={{ color: pc }}>₹{(calculatePrice(bookingService.basePrice).total + 150).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Terms Checkbox */}
                   <div className="flex items-start gap-2 mt-2 font-sans text-[10px] text-slate-400 text-left">
@@ -1160,7 +1169,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     style={{ background: pc, color: getTextColorForBg(pc) }}
                     disabled={!agreeTerms}
                   >
-                    Place Booking Request →
+                    {tenant.config.enableB2bEnquiry ? 'Submit Commercial Enquiry ➔' : 'Place Booking Request ➔'}
                   </button>
                   <button type="button" onClick={closeModal} className="w-full text-center text-slate-500 hover:text-slate-400 font-bold">Cancel</button>
                 </form>
