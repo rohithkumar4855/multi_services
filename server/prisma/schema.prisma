@@ -30,32 +30,15 @@ model User {
   name         String
   role         Role      @default(CUSTOMER)
   tenantId     String?
-  tenant       Tenant?   @relation(fields: [tenantId], references: [id])
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   bookings     Booking[] @relation("CustomerBookings")
   worker       Worker?
 }
 
-model Tenant {
-  id           String    @id @default(uuid())
-  name         String
-  subdomain    String    @unique
-  customDomain String?   @unique
-  plan         String    @default("starter")
-  config       Json      // Dynamic JSON config mapping to TenantConfig
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  users        User[]
-  services     Service[]
-  bookings     Booking[]
-  workers      Worker[]
-}
-
 model Service {
   id          String    @id @default(uuid())
   tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id])
   name        String
   category    String
   description String
@@ -72,7 +55,6 @@ model Worker {
   userId       String    @unique
   user         User      @relation(fields: [userId], references: [id])
   tenantId     String
-  tenant       Tenant    @relation(fields: [tenantId], references: [id])
   skills       String[]
   availability String    @default("available")
   rating       Float     @default(5.0)
@@ -86,7 +68,6 @@ model Worker {
 model Booking {
   id            String        @id @default(uuid())
   tenantId      String
-  tenant        Tenant        @relation(fields: [tenantId], references: [id])
   customerId    String
   customer      User          @relation("CustomerBookings", fields: [customerId], references: [id])
   serviceId     String
@@ -104,3 +85,38 @@ model Booking {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
+
+model Lead {
+  id              String   @id @default(uuid())
+  tenantId        String
+  name            String
+  phone           String
+  email           String?  @default("")
+  serviceInterest String?  @default("")
+  notes           String?  @default("")
+  status          String   @default("new")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model TenantRegistration {
+  id             String   @id @default(uuid())
+  businessName   String
+  ownerName      String
+  ownerPhone     String
+  ownerEmail     String   @unique
+  passwordHash   String
+  industryType   String   @default("Home Services")
+  industries     String[]
+  primaryColor   String   @default("#2563eb")
+  secondaryColor String   @default("#4f46e5")
+  font           String?  @default("Inter, sans-serif")
+  plan           String   @default("starter")
+  status         String   @default("pending")
+  config         Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+
+

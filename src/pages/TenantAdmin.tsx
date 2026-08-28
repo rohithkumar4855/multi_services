@@ -4,6 +4,7 @@ import type { AuthSession, Tenant, Service, Worker, Lead, Booking, SupportTicket
 import type { SharedStore } from '../App';
 import { THEME_CONFIGS, INDUSTRY_PACKS } from '../initialData';
 import { generateThemeTokens, getContrastRatio } from '../utils/themeEngine';
+import { api } from '../utils/api';
 import AnalyticsTab      from './admin/AnalyticsTab';
 import MarketingTab      from './admin/MarketingTab';
 import AITab             from './admin/AITab';
@@ -56,8 +57,44 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   const [selectedTenantTicketId, setSelectedTenantTicketId] = useState<string | null>(null);
   const [tenantTicketReply, setTenantTicketReply] = useState('');
 
-  const tenant = tenants.find(t => t.id === session.tenantId) || tenants[0];
-  if (!tenant) return <div className="p-8 text-center text-slate-400">No active tenant found.</div>;
+  const matchedTenant = tenants.find(t => t.id === session.tenantId || (session.email && t.ownerEmail === session.email) || (session.tenantName && t.name === session.tenantName));
+  const tenant = matchedTenant || (session.role === 'tenant' ? null : tenants[0]);
+
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-slate-300">Loading {session.tenantName || 'Tenant'} workspace...</p>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    if (!tenant?.id) return;
+    api.getLeads(tenant.id).then(res => {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setLeads(prev => {
+          const map = new Map(prev.map(item => [item.id, item]));
+          for (const dbLead of res.data) {
+            map.set(dbLead.id, {
+              id: dbLead.id,
+              tenantId: dbLead.tenantId,
+              name: dbLead.name,
+              phone: dbLead.phone,
+              email: dbLead.email || '',
+              serviceInterest: dbLead.serviceInterest || '',
+              notes: dbLead.notes || '',
+              status: dbLead.status || 'new',
+              createdAt: dbLead.createdAt || new Date().toISOString()
+            });
+          }
+          return Array.from(map.values());
+        });
+      }
+    }).catch(err => {
+      // Backend not running or offline
+    });
+  }, [tenant?.id]);
 
   const showToast = (msg: string, type = 'success') => {
     setToast({ msg, type });
@@ -190,6 +227,32 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   // ─── Domain configuration ──────────────────────────────────
   const [customDomain, setCustomDomain] = useState(tenant.customDomain || '');
   const [dnsStatus, setDnsStatus] = useState<'idle' | 'checking' | 'verified' | 'failed'>('idle');
+
+  // Sync state whenever tenant data updates / loads from DB
+  useEffect(() => {
+    if (!tenant || !tenant.config) return;
+    setHeroTitle(tenant.config.heroTitle || '');
+    setHeroSubtitle(tenant.config.heroSubtitle || '');
+    setPrimaryColor(tenant.config.primaryColor || '#2563eb');
+    setSecondaryColor(tenant.config.secondaryColor || '#2563eb');
+    setSelectedTheme(tenant.theme || 'modern');
+    _setThemeMode(tenant.config.themeMode || 'light');
+    _setThemeFont(tenant.config.themeFont || 'Inter, sans-serif');
+    _setThemeRadius(tenant.config.themeRadius || 'modern');
+    _setThemeButtonStyle(tenant.config.themeButtonStyle || 'filled');
+    setWhatsApp(tenant.config.whatsAppNumber || '');
+    setDarkMode(tenant.config.websiteDarkMode || false);
+    setSeoTitle(tenant.config.seoTitle || '');
+    setSeoDesc(tenant.config.seoDescription || '');
+    if (tenant.config.sections) setSections(tenant.config.sections);
+    setSeoKeywords(tenant.config.seoKeywords || 'local repairs, services');
+    setAnnounceActive(tenant.config.announcementActive ?? true);
+    setAnnounceText(tenant.config.announcementText || '🎉 Special offer: Book online today!');
+    setNavLinks(tenant.config.navLinks || []);
+    setTrustBadges(tenant.config.trustBadgesActive ?? true);
+    setFaqs(tenant.config.faqs || []);
+    setCustomDomain(tenant.customDomain || '');
+  }, [tenant?.id, tenant?.config]);
 
   // ─── Services Form ────────────────────────────────────────
   const [newSvcName,     setNewSvcName]     = useState('');
@@ -477,13 +540,37 @@ Manager Signature: ________________________
     return score;
   };
 
-  const handleAddLead = (e: React.FormEvent) => {
+  const handleAddLead = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLeadName) return;
+    let leadId = `lead-${Date.now()}`;
+    const payload = {
+      tenantId: tenant.id,
+      name: newLeadName,
+      phone: newLeadPhone,
+      email: newLeadEmail,
+      serviceInterest: newLeadInterest,
+      notes: newLeadNotes,
+      status: 'new'
+    };
+    try {
+      const res = await api.createLead(payload);
+      if (res && res.data && res.data.id) {
+        leadId = res.data.id;
+      }
+    } catch (err) {
+      console.error('Error saving lead to DB:', err);
+    }
     const nl: Lead = {
-      id: `lead-${Date.now()}`, tenantId: tenant.id, name: newLeadName, phone: newLeadPhone,
-      email: newLeadEmail, serviceInterest: newLeadInterest, notes: newLeadNotes,
-      status: 'new', createdAt: new Date().toISOString(),
+      id: leadId,
+      tenantId: tenant.id,
+      name: newLeadName,
+      phone: newLeadPhone,
+      email: newLeadEmail,
+      serviceInterest: newLeadInterest,
+      notes: newLeadNotes,
+      status: 'new',
+      createdAt: new Date().toISOString(),
     };
     setLeads(prev => [...prev, nl]);
     setNewLeadName(''); setNewLeadPhone(''); setNewLeadEmail(''); setNewLeadInterest(''); setNewLeadNotes('');
@@ -784,7 +871,7 @@ Manager Signature: ________________________
                     <div><label className="form-label">Support Email Address *</label><input className="form-input" type="email" value={bizEmail} onChange={e => setBizEmail(e.target.value)} required /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className="form-label">Support Call Hotline *</label><input className="form-input" value={bizPhone} onChange={e => setBizPhone(e.target.value)} required /></div>
+                    <div><label className="form-label">Support Call Hotline *</label><input className="form-input" maxLength={10} value={bizPhone} onChange={e => setBizPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} required /></div>
                     <div><label className="form-label">WhatsApp Contact Number *</label><input className="form-input" value={whatsApp} onChange={e => setWhatsApp(e.target.value)} placeholder="91XXXXXXXXXX" required /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -1155,7 +1242,7 @@ Manager Signature: ________________________
                     <p className="section-title">Add New Technician</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="form-label">Full Name *</label><input className="form-input" value={newWrkName} onChange={e => setNewWrkName(e.target.value)} required placeholder="e.g. Ramesh Naidu" /></div>
-                      <div><label className="form-label">Phone Number *</label><input className="form-input" value={newWrkPhone} onChange={e => setNewWrkPhone(e.target.value)} required placeholder="9876543210" /></div>
+                      <div><label className="form-label">Phone Number *</label><input className="form-input" maxLength={10} value={newWrkPhone} onChange={e => setNewWrkPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} required placeholder="9876543210" /></div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -1269,8 +1356,13 @@ Manager Signature: ________________________
                               <select
                                 className="bg-slate-900 border border-slate-800 text-slate-300 rounded px-2.5 py-1 text-[10px] font-mono capitalize"
                                 value={l.status}
-                                onChange={e => {
+                                onChange={async e => {
                                   const next = e.target.value as any;
+                                  try {
+                                    await api.updateLead(l.id, { status: next });
+                                  } catch (err) {
+                                    console.error('Error updating lead status in DB:', err);
+                                  }
                                   setLeads(prev => prev.map(ld => ld.id === l.id ? { ...ld, status: next } : ld));
                                   showToast(`Lead advanced to stage: ${next}`);
                                 }}
@@ -1292,7 +1384,7 @@ Manager Signature: ________________________
                     <p className="section-title">Capture New CRM Lead</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="form-label">Lead Full Name *</label><input className="form-input" value={newLeadName} onChange={e => setNewLeadName(e.target.value)} required placeholder="Kishore Reddy" /></div>
-                      <div><label className="form-label">Phone Number *</label><input className="form-input" value={newLeadPhone} onChange={e => setNewLeadPhone(e.target.value)} required placeholder="9876543210" /></div>
+                      <div><label className="form-label">Phone Number *</label><input className="form-input" maxLength={10} value={newLeadPhone} onChange={e => setNewLeadPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} required placeholder="9876543210" /></div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="form-label">Email Address *</label><input className="form-input" type="email" value={newLeadEmail} onChange={e => setNewLeadEmail(e.target.value)} required placeholder="you@email.com" /></div>

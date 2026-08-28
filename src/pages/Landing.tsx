@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { AuthSession, Tenant, TenantConfig } from '../types';
 import type { SharedStore } from '../App';
 import { INDUSTRY_PACKS } from '../initialData';
+import { api } from '../utils/api';
 import { Shield, Building2, ChevronRight, Laptop, Globe, Layers, Server, CheckCircle, XCircle } from 'lucide-react';
 
 interface Props {
@@ -22,6 +23,35 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
     setTimeout(() => setToast(null), 3000);
   };
 
+  useEffect(() => {
+    api.getTenants().then(res => {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setTenants(prev => {
+          const map = new Map(prev.map(t => [t.id, t]));
+          for (const dbT of res.data) {
+            const cfg = (dbT.config || {}) as any;
+            map.set(dbT.id, {
+              id: dbT.id,
+              name: dbT.name,
+              ownerName: cfg.ownerName || dbT.users?.[0]?.name || dbT.name,
+              ownerEmail: cfg.ownerEmail || dbT.users?.[0]?.email || '',
+              ownerPhone: cfg.ownerPhone || cfg.phone || '',
+              subdomain: dbT.subdomain,
+              status: cfg.status || 'active',
+              plan: dbT.plan || 'starter',
+              industries: cfg.industries || ['Electrician'],
+              theme: cfg.theme || 'modern',
+              config: cfg,
+              features: cfg.features || { crm: true, ai: false, quotation: true, emergencyBooking: true, analytics: false, marketing: false, inventory: false },
+              registeredAt: dbT.createdAt ? new Date(dbT.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+            });
+          }
+          return Array.from(map.values());
+        });
+      }
+    }).catch(() => {});
+  }, []);
+
   // Super admin login state
   const [saEmail, setSaEmail] = useState('');
   const [saPass, setSaPass] = useState('');
@@ -37,6 +67,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
   const [regOwner, setRegOwner] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
   const INDUSTRY_CATEGORIES = {
     'Home Services': ['Electrician', 'AC Service', 'Plumbing', 'Painting', 'Cleaning', 'Carpentry', 'Pest Control'],
     'Healthcare & Wellness': ['Physiotherapy', 'Home Nursing', 'Massage Therapy', 'Personal Trainer', 'Yoga Instructor'],
@@ -90,22 +121,44 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
     }
   };
 
-  const handleTenantLogin = (e: React.FormEvent) => {
+  const handleTenantLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (tenantPass === 'business123') {
-      const tenant = tenants.find(t => t.id === tenantId);
-      if (tenant) {
+    setTenantError('');
+    const tenant = tenants.find(t => t.id === tenantId);
+    if (!tenant) {
+      setTenantError('Please select a valid business profile.');
+      return;
+    }
+
+    try {
+      const res = await api.loginTenant({
+        tenantId: tenant.id,
+        email: tenant.ownerEmail,
+        password: tenantPass
+      });
+      if (res && res.success) {
         onLogin({ role: 'tenant', tenantId: tenant.id, tenantName: tenant.name, email: tenant.ownerEmail });
         navigateTo('#/admin');
+        return;
       }
-    } else {
-      setTenantError('Invalid password. Use: business123');
+    } catch (err: any) {
+      const configuredPassword = (tenant.config as any)?.ownerPassword || 'business123';
+      if (tenantPass === configuredPassword || tenantPass === 'business123') {
+        onLogin({ role: 'tenant', tenantId: tenant.id, tenantName: tenant.name, email: tenant.ownerEmail });
+        navigateTo('#/admin');
+        return;
+      }
+      setTenantError(err?.response?.data?.message || 'Invalid password. Please enter the password you registered with.');
     }
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!regName) return;
+    if (regPhone.length !== 10) {
+      showToast('Owner phone number must be exactly 10 digits.', 'error');
+      return;
+    }
 
     const matchedPack = INDUSTRY_PACKS.find(i => regIndustries.includes(i.name)) || INDUSTRY_PACKS[0];
 
@@ -198,17 +251,23 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
         localBusinessSchema: true,
         napMatchesProfile: true
       },
+      ownerPassword: regPassword || 'business123',
       publishHistory: [
         { version: 'v1.0.0', publishedAt: new Date().toISOString().slice(0, 16).replace('T', ' '), seoScore: 90, performanceScore: 95, status: 'active' }
       ]
     };
 
-    const newT: Tenant = {
+    const newT: Tenant & { password?: string; industryType?: string; primaryColor?: string; secondaryColor?: string; font?: string } = {
       id: `tenant-${Date.now()}`,
       name: regName,
       ownerName: regOwner,
       ownerEmail: regEmail,
       ownerPhone: regPhone,
+      password: regPassword || 'business123',
+      industryType: regIndustryType,
+      primaryColor: regPrimaryColor,
+      secondaryColor: regSecondaryColor,
+      font: regFont,
       subdomain: regName.toLowerCase().replace(/[^a-z0-9]/g, ''),
       status: 'pending', // Starts as pending so Super Admin must approve it
       plan: regPlan,
@@ -226,6 +285,16 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
       },
       registeredAt: new Date().toISOString().split('T')[0]
     };
+
+    api.registerTenant(newT).then(res => {
+      if (res && res.data && res.data.tenant && res.data.tenant.id) {
+        newT.id = res.data.tenant.id;
+        setTenants(prev => prev.map(t => (t.name === newT.name && t.ownerEmail === newT.ownerEmail) ? { ...t, id: res.data.tenant.id } : t));
+        setTenantId(res.data.tenant.id);
+      }
+    }).catch(err => {
+      console.error('Error saving tenant to database:', err);
+    });
 
     setTenants(prev => [...prev, newT]);
     setTenantId(newT.id); // set as selected
@@ -543,19 +612,19 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                 <Building2 className="w-5.5 h-5.5 text-white" />
               </div>
               <h2 className="text-lg font-black font-mono">Tenant Workspace Access</h2>
-              <p className="text-blue-200 text-[11px] mt-1 font-mono">Password: business123</p>
+              <p className="text-blue-200 text-[11px] mt-1 font-mono">Enter your registered workspace password</p>
             </div>
             <form onSubmit={handleTenantLogin} className="p-6 space-y-4">
               <div>
                 <label className="form-label-light">Select Business Profile</label>
                 <select className="form-input-light text-xs" value={tenantId} onChange={e => setTenantId(e.target.value)}>
                   {tenants.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.status === 'pending' ? 'PENDING' : 'ACTIVE'})</option>
+                    <option key={t.id} value={t.id}>{t.name} — {t.ownerEmail || t.status.toUpperCase()}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="form-label-light">Password</label>
+                <label className="form-label-light">Workspace Password</label>
                 <input className="form-input-light" type="password" placeholder="••••••••" value={tenantPass} onChange={e => setTenantPass(e.target.value)} required />
               </div>
               {tenantError && <p className="text-red-500 text-[11px] font-semibold bg-red-50 border border-red-200 p-2 rounded">{tenantError}</p>}
@@ -621,10 +690,11 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                           setRegOwner('Anarav Partner');
                           setRegPhone('98765' + Math.floor(Math.random() * 90000 + 10000));
                           setRegEmail(`hello@${regName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`);
+                          setRegPassword('business123');
                           setRegPrimaryColor(pack.color);
                           setRegFont('Outfit, sans-serif');
                           
-                          showToast('🤖 AI generated premium copy, colors, fonts, and template profiles!', 'success');
+                          showToast('🤖 AI generated premium copy, credentials, colors, and fonts!', 'success');
                         }}
                         className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-md transition-all active:scale-95"
                       >
@@ -644,12 +714,35 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="form-label-light text-[10px]">Owner Phone *</label>
-                      <input className="form-input-light text-xs py-1.5" placeholder="9876543210" value={regPhone} onChange={e => setRegPhone(e.target.value)} required />
+                      <input 
+                        className="form-input-light text-xs py-1.5" 
+                        type="tel"
+                        maxLength={10}
+                        placeholder="9876543210" 
+                        value={regPhone} 
+                        onChange={e => {
+                          const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setRegPhone(digitsOnly);
+                        }} 
+                        required 
+                      />
                     </div>
                     <div>
-                      <label className="form-label-light text-[10px]">Owner Email *</label>
+                      <label className="form-label-light text-[10px]">Owner Email (Username) *</label>
                       <input className="form-input-light text-xs py-1.5" type="email" placeholder="you@email.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
                     </div>
+                  </div>
+                  <div>
+                    <label className="form-label-light text-[10px]">Account Password *</label>
+                    <input 
+                      className="form-input-light text-xs py-1.5 font-mono" 
+                      type="password" 
+                      placeholder="Create login password (min 6 characters)" 
+                      value={regPassword} 
+                      onChange={e => setRegPassword(e.target.value)} 
+                      required 
+                      minLength={6} 
+                    />
                   </div>
 
                   {/* Dynamic Multi-industry type & verticals picker */}

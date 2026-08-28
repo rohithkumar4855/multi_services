@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import authRoutes from './routes/auth.routes';
 import bookingRoutes from './routes/booking.routes';
 import adminRoutes from './routes/admin.routes';
+import leadRoutes from './routes/lead.routes';
+import tenantRoutes from './routes/tenant.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { logger } from './utils/logger';
 
@@ -24,6 +26,8 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/tenants', tenantRoutes);
 
 // Base Health Check
 app.get('/health', (req, res) => {

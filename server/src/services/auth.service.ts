@@ -10,25 +10,8 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    // Dynamic configuration setup for new tenants
-    let tenantId = data.tenantId || null;
-    if (data.role === 'TENANT_ADMIN' && !tenantId) {
-      const newTenant = await prisma.tenant.create({
-        data: {
-          name: data.companyName || 'My Business',
-          subdomain: (data.companyName || 'biz').toLowerCase().replace(/[^a-z0-9]/g, ''),
-          plan: 'starter',
-          config: {
-            primaryColor: '#2563eb',
-            heroTitle: 'Welcome to our platform',
-            heroSubtitle: 'Certified professional services at your doorstep.',
-            announcementActive: true,
-            announcementText: '🎉 Welcome to our brand new site!'
-          }
-        }
-      });
-      tenantId = newTenant.id;
-    }
+    // Dynamic tenant identifier setup for new tenants
+    let tenantId = data.tenantId || (data.companyName ? (data.companyName).toLowerCase().replace(/[^a-z0-9]/g, '') : null);
 
     const user = await prisma.user.create({
       data: {

@@ -6,6 +6,7 @@ import type { SharedStore } from '../App';
 import { Phone, MessageCircle, ArrowLeft, Moon, Sun, Search, ShoppingBag, MapPin, ChevronDown } from 'lucide-react';
 import CmsRenderer from './CmsRenderer';
 import { generateThemeTokens } from '../utils/themeEngine';
+import { api } from '../utils/api';
 
 interface Props {
   session: AuthSession;
@@ -29,8 +30,22 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   const initialTenantId = session.tenantId || tenants[0]?.id || '';
   const [activeTenantId, setActiveTenantId] = useState(initialTenantId);
 
-  const tenant = tenants.find(t => t.id === activeTenantId) || tenants[0];
-  if (!tenant) return <div className="p-8 text-center text-slate-400">No tenants configured.</div>;
+  useEffect(() => {
+    if (session.tenantId && activeTenantId !== session.tenantId) {
+      setActiveTenantId(session.tenantId);
+    }
+  }, [session.tenantId]);
+
+  const matchedTenant = tenants.find(t => t.id === activeTenantId || (session.tenantId && t.id === session.tenantId) || (session.email && t.ownerEmail === session.email) || (session.tenantName && t.name === session.tenantName));
+  const tenant = matchedTenant || (session.tenantId ? null : tenants[0]);
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-slate-300">Loading {session.tenantName || 'Site'}...</p>
+      </div>
+    );
+  }
 
   const c = tenant.config;
   const pc = c.primaryColor;
@@ -308,6 +323,13 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
           status: 'new' as const,
           createdAt: new Date().toISOString()
         };
+        api.createLead(newL).then(res => {
+          if (res && res.data && res.data.id) {
+            newL.id = res.data.id;
+          }
+        }).catch(err => {
+          console.error('Error saving lead to DB:', err);
+        });
         setLeads(prev => [...prev, newL]);
       }
       setLastBookingId(tempBooking.id);

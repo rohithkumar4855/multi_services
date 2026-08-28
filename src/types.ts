@@ -43,6 +43,7 @@ export interface TenantConfig {
   cancellationPolicy: string;
   refundPolicy: string;
   warrantyPolicy: string;
+  ownerPassword?: string;
   gstNumber?: string;
   paymentGatewayKey?: string;
   googleMapsLink?: string;

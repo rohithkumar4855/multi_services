@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AuthSession, TicketReply } from '../types';
 import type { SharedStore } from '../App';
 import { INITIAL_AUDIT_LOGS } from '../initialData';
+import { api } from '../utils/api';
 import {
   Shield, LogOut, Building2, CheckCircle, XCircle, AlertTriangle, Clock, Activity,
   Server, Database, Network, LifeBuoy, FileCheck2
@@ -36,6 +37,7 @@ export default function SuperAdminDashboard({ session, store, onLogout, navigate
   const activeBookings = bookings.filter(b => !['completed', 'cancelled', 'closed'].includes(b.status)).length;
 
   const handleApprove = (id: string) => {
+    api.updateTenant(id, { status: 'active' }).catch(err => console.error('Error approving tenant in DB:', err));
     setTenants(prev => prev.map(t => t.id === id ? { ...t, status: 'active' } : t));
     showToast('Tenant approved & provisioned successfully!');
   };
@@ -46,11 +48,13 @@ export default function SuperAdminDashboard({ session, store, onLogout, navigate
   };
 
   const handleSuspend = (id: string) => {
+    api.updateTenant(id, { status: 'suspended' }).catch(err => console.error('Error suspending tenant in DB:', err));
     setTenants(prev => prev.map(t => t.id === id ? { ...t, status: 'suspended' } : t));
     showToast('Tenant suspended.', 'info');
   };
 
   const handleActivate = (id: string) => {
+    api.updateTenant(id, { status: 'active' }).catch(err => console.error('Error activating tenant in DB:', err));
     setTenants(prev => prev.map(t => t.id === id ? { ...t, status: 'active' } : t));
     showToast('Tenant re-activated successfully.');
   };

@@ -8,11 +8,11 @@ async function main() {
   const saHash = await bcrypt.hash('admin123', 10);
 
   // 1. Clean existing records
+  await prisma.lead.deleteMany({});
   await prisma.booking.deleteMany({});
   await prisma.worker.deleteMany({});
   await prisma.service.deleteMany({});
   await prisma.user.deleteMany({});
-  await prisma.tenant.deleteMany({});
 
   // 2. Create Super Admin User
   await prisma.user.create({
@@ -24,40 +24,16 @@ async function main() {
     }
   });
 
-  // 3. Create Tenant VoltFix (Electrician)
-  const tenantVolt = await prisma.tenant.create({
-    data: {
-      name: 'VoltFix Nellore',
-      subdomain: 'voltfix',
-      plan: 'starter',
-      config: {
-        primaryColor: '#2563eb',
-        secondaryColor: '#2563eb',
-        logoText: '⚡ VoltFix Pro',
-        heroTitle: 'Certified Electrical Services in Nellore',
-        heroSubtitle: 'Licensed electricians for home wiring, repairs, and inverter upgrades.',
-        whatsAppNumber: '919876543210',
-        email: 'contact@voltfix.in',
-        phone: '+91 98765 43210',
-        businessHours: '08:00 AM – 08:00 PM',
-        city: 'Nellore, AP',
-        address: '14, Balaji Nagar, Nellore',
-        announcementActive: false,
-        announcementText: '🎉 Welcome to our brand new site!',
-        testimonials: [],
-        faqs: []
-      }
-    }
-  });
+  const tenantVoltId = 'tenant-voltfix';
 
-  // 4. Tenant Volt Users (Admin, Worker, Customer)
+  // 3. Tenant Volt Users (Admin, Worker, Customer)
   const voltAdmin = await prisma.user.create({
     data: {
       email: 'owner@voltfix.in',
       name: 'Ravi Kumar',
       passwordHash,
       role: 'TENANT_ADMIN',
-      tenantId: tenantVolt.id
+      tenantId: tenantVoltId
     }
   });
 
@@ -67,7 +43,7 @@ async function main() {
       name: 'Chandra Sekhar',
       passwordHash,
       role: 'WORKER',
-      tenantId: tenantVolt.id
+      tenantId: tenantVoltId
     }
   });
 
@@ -77,15 +53,15 @@ async function main() {
       name: 'Kalyan Ram',
       passwordHash,
       role: 'CUSTOMER',
-      tenantId: tenantVolt.id
+      tenantId: tenantVoltId
     }
   });
 
-  // 5. Worker Specs
+  // 4. Worker Specs
   const worker = await prisma.worker.create({
     data: {
       userId: voltTech.id,
-      tenantId: tenantVolt.id,
+      tenantId: tenantVoltId,
       skills: ['Wiring', 'Troubleshooting', 'Inverter'],
       availability: 'available',
       aadhaarValid: true,
@@ -93,10 +69,10 @@ async function main() {
     }
   });
 
-  // 6. Services list
+  // 5. Services list
   const service = await prisma.service.create({
     data: {
-      tenantId: tenantVolt.id,
+      tenantId: tenantVoltId,
       name: 'Short Circuit Repair',
       category: 'Troubleshooting',
       description: 'Diagnose and fix short circuits, sparking switches.',
@@ -106,10 +82,10 @@ async function main() {
     }
   });
 
-  // 7. Booking mock
+  // 6. Booking mock
   await prisma.booking.create({
     data: {
-      tenantId: tenantVolt.id,
+      tenantId: tenantVoltId,
       customerId: voltCustomer.id,
       serviceId: service.id,
       workerId: worker.id,
@@ -124,8 +100,22 @@ async function main() {
     }
   });
 
+  // 7. Lead mock
+  await prisma.lead.create({
+    data: {
+      tenantId: tenantVoltId,
+      name: 'Prasad Babu',
+      phone: '9000112233',
+      email: 'prasadb@gmail.com',
+      serviceInterest: 'Full House Wiring',
+      notes: 'Requires site visit for new warehouse electrical plan.',
+      status: 'contacted'
+    }
+  });
+
   console.log('✅ PostgreSQL database seeded successfully with mock accounts!');
 }
+
 
 main()
   .catch((e) => {
@@ -135,3 +125,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

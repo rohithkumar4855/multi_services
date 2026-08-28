@@ -58,5 +58,45 @@ export const api = {
   getWorkers: async () => {
     const res = await client.get('/admin/workers');
     return res.data;
+  },
+
+  // Leads
+  getLeads: async (tenantId?: string) => {
+    const url = tenantId ? `/leads?tenantId=${encodeURIComponent(tenantId)}` : '/leads';
+    const res = await client.get(url);
+    return res.data;
+  },
+  createLead: async (leadData) => {
+    const res = await client.post('/leads', leadData);
+    return res.data;
+  },
+  updateLead: async (id, leadData) => {
+    const res = await client.put(`/leads/${id}`, leadData);
+    return res.data;
+  },
+  deleteLead: async (id) => {
+    const res = await client.delete(`/leads/${id}`);
+    return res.data;
+  },
+
+  // Tenants
+  registerTenant: async (tenantData) => {
+    const res = await client.post('/tenants/register', tenantData);
+    return res.data;
+  },
+  loginTenant: async (credentials) => {
+    const res = await client.post('/tenants/login', credentials);
+    if (res.data?.data?.token) {
+      sessionStorage.setItem('servos_jwt', res.data.data.token);
+    }
+    return res.data;
+  },
+  getTenants: async () => {
+    const res = await client.get('/tenants');
+    return res.data;
+  },
+  updateTenant: async (id, tenantData) => {
+    const res = await client.put(`/tenants/${id}`, tenantData);
+    return res.data;
   }
 };

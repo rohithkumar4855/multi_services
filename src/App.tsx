@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import TenantAdmin from './pages/TenantAdmin';
 import CustomerSite from './pages/CustomerSite';
+import { api } from './utils/api';
 
 // ── Route constants ─────────────────────────────────────────
 const ROUTE_LANDING    = '#/';
@@ -53,7 +54,20 @@ export default function App() {
   // ── GLOBAL SHARED STATE ──────────────────────────────────
   // This is the single source of truth for ALL pages.
   // TenantAdmin writes here → CustomerSite reads here = theme propagates.
-  const [tenants,    setTenants]    = useState<Tenant[]>(INITIAL_TENANTS);
+  const [tenants,    setTenants]    = useState<Tenant[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('anarav_cached_tenants');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map(INITIAL_TENANTS.map(t => [t.id, t]));
+          for (const t of parsed) map.set(t.id, t);
+          return Array.from(map.values());
+        }
+      }
+    } catch {}
+    return INITIAL_TENANTS;
+  });
   const [services,   setServices]   = useState<Service[]>(INITIAL_SERVICES);
   const [workers,    setWorkers]    = useState<Worker[]>(INITIAL_WORKERS);
   const [bookings,   setBookings]   = useState<Booking[]>(INITIAL_BOOKINGS);
@@ -74,6 +88,64 @@ export default function App() {
     campaigns, setCampaigns,
     tickets, setTickets,
   };
+
+  // ── Sync database data on startup / refresh ──
+  useEffect(() => {
+    // 1. Sync tenants from database
+    api.getTenants().then(res => {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setTenants(prev => {
+          const map = new Map(prev.map(t => [t.id, t]));
+          for (const dbT of res.data) {
+            const cfg = (dbT.config || {}) as any;
+            map.set(dbT.id, {
+              id: dbT.id,
+              name: dbT.name,
+              ownerName: cfg.ownerName || dbT.users?.[0]?.name || dbT.name,
+              ownerEmail: cfg.ownerEmail || dbT.users?.[0]?.email || '',
+              ownerPhone: cfg.ownerPhone || cfg.phone || '',
+              subdomain: dbT.subdomain,
+              status: cfg.status || 'active',
+              plan: dbT.plan || 'starter',
+              industries: cfg.industries || ['Electrician'],
+              theme: cfg.theme || 'modern',
+              config: cfg,
+              features: cfg.features || { crm: true, ai: false, quotation: true, emergencyBooking: true, analytics: false, marketing: false, inventory: false },
+              registeredAt: dbT.createdAt ? new Date(dbT.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+            });
+          }
+          const merged = Array.from(map.values());
+          try {
+            sessionStorage.setItem('anarav_cached_tenants', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+    }).catch(() => {});
+
+    // 2. Sync leads from database
+    api.getLeads().then(res => {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setLeads(prev => {
+          const map = new Map(prev.map(l => [l.id, l]));
+          for (const dbL of res.data) {
+            map.set(dbL.id, {
+              id: dbL.id,
+              tenantId: dbL.tenantId,
+              name: dbL.name,
+              phone: dbL.phone,
+              email: dbL.email || '',
+              serviceInterest: dbL.serviceInterest || '',
+              notes: dbL.notes || '',
+              status: dbL.status || 'new',
+              createdAt: dbL.createdAt || new Date().toISOString()
+            });
+          }
+          return Array.from(map.values());
+        });
+      }
+    }).catch(() => {});
+  }, []);
 
   // ── Hash routing ──
   useEffect(() => {

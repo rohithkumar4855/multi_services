@@ -30,20 +30,6 @@ export const tenantContextMiddleware = async (
       if (!tenantId) {
         return next(new AppError('Tenant identifier missing in context', 400));
       }
-
-      // Check database to verify tenant status
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId }
-      });
-
-      if (!tenant) {
-        return next(new AppError('Tenant not found', 404));
-      }
-      
-      // If billing configs or active features are suspended:
-      if ((tenant.config as any)?.status === 'suspended') {
-        return next(new AppError('Tenant account is suspended', 403));
-      }
     }
 
     // 3. Bind Scoped Prisma Provider to Request
