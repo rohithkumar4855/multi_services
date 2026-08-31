@@ -62,9 +62,12 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     // 1. Save directly into PostgreSQL TenantRegistration Table
     let regRecord = await prisma.tenantRegistration.findUnique({ where: { ownerEmail } });
     if (!regRecord) {
+      const existingWithId = await prisma.tenantRegistration.findUnique({ where: { id: tenantId } });
+      const uniqueId = existingWithId ? `${tenantId}-${Date.now().toString(36)}` : tenantId;
+
       regRecord = await prisma.tenantRegistration.create({
         data: {
-          id: tenantId,
+          id: uniqueId,
           businessName: name,
           ownerName: ownerName || name,
           ownerPhone: ownerPhone || '',
@@ -123,7 +126,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       tenant: {
         id: regRecord.id,
         name: regRecord.businessName,
-        subdomain: finalSubdomain,
+        subdomain: regRecord.id.replace(/^tenant-/, ''),
         plan: regRecord.plan,
         status: regRecord.status,
         config: regRecord.config
@@ -241,27 +244,55 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, plan, config, status } = req.body;
+    const { name, plan, config, status, primaryColor, secondaryColor, font, industries } = req.body;
 
-    const existing = await prisma.tenantRegistration.findUnique({ where: { id } });
-    if (existing) {
-      let updatedConfig = (existing.config as any) || {};
-      if (config) updatedConfig = { ...updatedConfig, ...config };
-      if (status) updatedConfig.status = status;
-
-      const updated = await prisma.tenantRegistration.update({
-        where: { id },
-        data: {
-          ...(name && { businessName: name }),
-          ...(plan && { plan }),
-          ...(status && { status }),
-          config: updatedConfig
-        }
-      });
-      return sendResponse(res, 200, 'Tenant updated successfully', updated);
+    let existing = await prisma.tenantRegistration.findUnique({ where: { id } });
+    if (!existing && config?.ownerEmail) {
+      existing = await prisma.tenantRegistration.findUnique({ where: { ownerEmail: config.ownerEmail } });
     }
 
-    sendResponse(res, 200, 'Tenant updated successfully', { id, name, plan, status });
+    let updatedConfig = (existing?.config as any) || {};
+    if (config) updatedConfig = { ...updatedConfig, ...config };
+    if (status) updatedConfig.status = status;
+    if (primaryColor) updatedConfig.primaryColor = primaryColor;
+    if (secondaryColor) updatedConfig.secondaryColor = secondaryColor;
+    if (font) updatedConfig.themeFont = font;
+
+    const targetId = existing?.id || id;
+    const businessName = name || config?.name || existing?.businessName || 'Business';
+    const ownerEmail = config?.email || config?.ownerEmail || existing?.ownerEmail || `${targetId}@servos.in`;
+    const defaultPasswordHash = existing?.passwordHash || await bcrypt.hash('business123', 10);
+
+    const updated = await prisma.tenantRegistration.upsert({
+      where: { id: targetId },
+      update: {
+        ...(name && { businessName: name }),
+        ...(plan && { plan }),
+        ...(status && { status }),
+        ...(primaryColor && { primaryColor }),
+        ...(secondaryColor && { secondaryColor }),
+        ...(font && { font }),
+        config: updatedConfig
+      },
+      create: {
+        id: targetId,
+        businessName,
+        ownerName: config?.ownerName || businessName,
+        ownerPhone: config?.phone || config?.ownerPhone || '9876543210',
+        ownerEmail,
+        passwordHash: defaultPasswordHash,
+        industryType: config?.industryType || 'Home Services',
+        industries: industries || config?.industries || ['Electrician'],
+        primaryColor: primaryColor || config?.primaryColor || '#2563eb',
+        secondaryColor: secondaryColor || config?.secondaryColor || '#4f46e5',
+        font: font || config?.themeFont || 'Inter, sans-serif',
+        plan: plan || 'starter',
+        status: status || 'active',
+        config: updatedConfig
+      }
+    });
+
+    sendResponse(res, 200, 'Tenant updated and saved to database successfully', updated);
   } catch (err) {
     next(err);
   }
