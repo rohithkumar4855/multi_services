@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { AuthSession, TicketReply } from '../types';
 import type { SharedStore } from '../App';
 import { INITIAL_AUDIT_LOGS } from '../initialData';
@@ -17,7 +17,21 @@ interface Props {
 
 export default function SuperAdminDashboard({ session, store, onLogout, navigateTo }: Props) {
   const { tenants, setTenants, bookings, leads, tickets, setTickets } = store;
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'pending' | 'health' | 'tickets' | 'logs'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tenants' | 'pending' | 'health' | 'tickets' | 'logs'>(() => {
+    try {
+      const saved = sessionStorage.getItem('anarav_superadmin_tab') || localStorage.getItem('anarav_superadmin_tab');
+      if (saved) return saved as any;
+    } catch {}
+    return 'dashboard';
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('anarav_superadmin_tab', activeTab);
+      localStorage.setItem('anarav_superadmin_tab', activeTab);
+    } catch {}
+  }, [activeTab]);
+
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
 
   const showToast = (msg: string, type = 'success') => {

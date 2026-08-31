@@ -34,6 +34,7 @@ export interface TenantConfig {
   primaryColor: string;
   secondaryColor: string;
   logoText: string;
+  logoImage?: string;
   heroTitle: string;
   heroSubtitle: string;
   whatsAppNumber: string;
@@ -55,6 +56,20 @@ export interface TenantConfig {
   themeFont: string;
   themeRadius: 'modern' | 'rounded' | 'square';
   themeButtonStyle: 'filled' | 'outline' | 'soft';
+  accentColor?: string;
+  bgType?: 'solid' | 'gradient' | 'image' | 'pattern';
+  bgImage?: string;
+  bgGradient?: string;
+  bgPattern?: 'dots' | 'grid' | 'mesh' | 'waves' | 'none';
+  bgOverlayOpacity?: number;
+  bgOverlayColor?: string;
+  bgBlur?: number;
+  heroBgType?: 'default' | 'image' | 'gradient' | 'mesh';
+  heroBgImage?: string;
+  heroBgOverlayOpacity?: number;
+  heroGlowActive?: boolean;
+  cardStyle?: 'glassmorphic' | 'solid' | 'bordered' | 'minimal';
+  cardBgColor?: string;
   maintenanceMode: boolean;
   seoTitle: string;
   seoDescription: string;
@@ -240,6 +255,8 @@ export interface Service {
   isActive: boolean;
   industry?: string;
   variants?: ServiceVariant[];
+  imageUrl?: string;
+  isPopular?: boolean;
 }
 
 // ─── Worker ────────────────────────────────────────────────────────

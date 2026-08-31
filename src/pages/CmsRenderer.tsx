@@ -144,49 +144,194 @@ export default function CmsRenderer({
 
   const scrollToServices = () => {
     setActivePageSlug('services');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
       const el = document.getElementById('services');
       if (el) el.scrollIntoView({ behavior: 'smooth' });
     }, 50);
   };
 
-  /* Resolve page */
-  const activePage = (c.cmsPages || []).find(p => p.slug === activePageSlug) || (c.cmsPages?.[0]) || {
-    id: 'home', title: 'Home', slug: 'home',
-    components: [
-      { id: 'comp-hero', type: 'hero', enabled: true, settings: {} },
-      { id: 'comp-stats', type: 'stats', enabled: true, settings: {} },
-      { id: 'comp-services-grid', type: 'services', enabled: true, settings: {} },
-      { id: 'comp-how', type: 'how_it_works', enabled: true, settings: {} },
-      { id: 'comp-offers-row', type: 'offers_row', enabled: true, settings: {} },
-      { id: 'comp-team', type: 'team', enabled: true, settings: {} },
-      { id: 'comp-gallery', type: 'gallery', enabled: true, settings: {} },
-      { id: 'comp-testimonials', type: 'testimonials', enabled: true, settings: {} },
-      { id: 'comp-trust-bar', type: 'trust_bar', enabled: true, settings: {} },
-      { id: 'comp-faq', type: 'faq', enabled: true, settings: {} },
-      { id: 'comp-map', type: 'map', enabled: true, settings: {} },
-    ]
+  /* Resolve page or isolated section based on activePageSlug */
+  const isIsolatedSection = activePageSlug !== 'home' && activePageSlug !== 'hero' && Boolean(activePageSlug);
+
+  const getSectionMetadata = (slug: string) => {
+    switch (slug) {
+      case 'services':
+        return { title: 'Our Services Catalogue', icon: '🛠️', desc: 'Browse, filter, and book all verified home services in your area' };
+      case 'offers':
+        return { title: 'Special Offers & Promotions', icon: '🔥', desc: 'Limited-time deals, discount coupon codes, and exclusive packages' };
+      case 'team':
+        return { title: 'Our Verified Team & Specialists', icon: '👥', desc: 'Meet our trained, Aadhaar-verified, and background-checked technicians' };
+      case 'gallery':
+        return { title: 'Project Transformation Gallery', icon: '📸', desc: 'Explore our latest verified project executions and before & after highlights' };
+      case 'reviews':
+      case 'testimonials':
+        return { title: 'Customer Ratings & Reviews', icon: '⭐', desc: 'Verified reviews and feedback from happy customers across your city' };
+      case 'faqs':
+      case 'faq':
+        return { title: 'Frequently Asked Questions', icon: '❓', desc: 'Instant answers to pricing, booking, warranties, and service details' };
+      case 'coverage':
+      case 'contact':
+      case 'map':
+        return { title: 'Service Coverage & Contact Us', icon: '📍', desc: 'Direct contact details, operational hours, and serviceable locations' };
+      default:
+        return { title: 'Section', icon: '📄', desc: '' };
+    }
   };
+
+  const getActiveComponents = () => {
+    // Check if custom page is configured
+    const customPage = (c.cmsPages || []).find(p => p.slug === activePageSlug);
+    if (customPage && activePageSlug !== 'home') return customPage.components;
+
+    switch (activePageSlug) {
+      case 'services':
+        return [
+          { id: 'comp-services-full', type: 'services', enabled: true, settings: { showAll: true } },
+        ];
+      case 'offers':
+        return [
+          { id: 'comp-offers-row', type: 'offers_row', enabled: true, settings: {} },
+        ];
+      case 'team':
+        return [
+          { id: 'comp-team', type: 'team', enabled: true, settings: {} },
+        ];
+      case 'gallery':
+        return [
+          { id: 'comp-gallery', type: 'gallery', enabled: true, settings: {} },
+        ];
+      case 'reviews':
+      case 'testimonials':
+        return [
+          { id: 'comp-testimonials', type: 'testimonials', enabled: true, settings: {} },
+        ];
+      case 'faqs':
+      case 'faq':
+        return [
+          { id: 'comp-faq', type: 'faq', enabled: true, settings: {} },
+        ];
+      case 'coverage':
+      case 'contact':
+      case 'map':
+        return [
+          { id: 'comp-map', type: 'map', enabled: true, settings: {} },
+        ];
+      case 'home':
+      case 'hero':
+      default: {
+        const homePage = (c.cmsPages || []).find(p => p.slug === 'home');
+        if (homePage) return homePage.components;
+        return [
+          { id: 'comp-hero', type: 'hero', enabled: true, settings: {} },
+          { id: 'comp-stats', type: 'stats', enabled: true, settings: {} },
+          { id: 'comp-services-grid', type: 'services', enabled: true, settings: {} },
+          { id: 'comp-how', type: 'how_it_works', enabled: true, settings: {} },
+          { id: 'comp-offers-row', type: 'offers_row', enabled: true, settings: {} },
+          { id: 'comp-team', type: 'team', enabled: true, settings: {} },
+          { id: 'comp-gallery', type: 'gallery', enabled: true, settings: {} },
+          { id: 'comp-testimonials', type: 'testimonials', enabled: true, settings: {} },
+          { id: 'comp-trust-bar', type: 'trust_bar', enabled: true, settings: {} },
+          { id: 'comp-faq', type: 'faq', enabled: true, settings: {} },
+          { id: 'comp-map', type: 'map', enabled: true, settings: {} },
+        ];
+      }
+    }
+  };
+
+  const activeComponents = getActiveComponents();
+  const sectionMeta = getSectionMetadata(activePageSlug);
 
   return (
     <>
-      {activePage.components.filter(comp => comp.enabled).map(comp => {
+      {/* Isolated Section Header Breadcrumb Banner */}
+      {isIsolatedSection && (
+        <div 
+          className="border-b py-8 px-4 sm:px-6 relative transition-all animate-fadeIn"
+          style={{ 
+            backgroundColor: localDark ? '#0b1120' : '#f1f5f9',
+            borderColor: 'var(--color-border)' 
+          }}
+        >
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1 text-left">
+              <div className="flex items-center gap-2 text-xs font-bold" style={{ color: textMuted }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActivePageSlug('home');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="hover:underline flex items-center gap-1"
+                  style={{ color: pc }}
+                >
+                  🏠 Home
+                </button>
+                <span>/</span>
+                <span className="capitalize" style={{ color: textPrimary }}>{activePageSlug}</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black flex items-center gap-2" style={{ color: textPrimary }}>
+                <span>{sectionMeta.icon}</span> <span>{sectionMeta.title}</span>
+              </h1>
+              {sectionMeta.desc && (
+                <p className="text-xs sm:text-sm max-w-2xl" style={{ color: textMuted }}>
+                  {sectionMeta.desc}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePageSlug('home');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:scale-105 shadow-sm shrink-0"
+              style={{
+                borderColor: pc,
+                color: pc,
+                background: `${pc}15`
+              }}
+            >
+              ← Back to Full Homepage
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeComponents.filter(comp => comp.enabled).map(comp => {
         switch (comp.type) {
 
           /* ══════════════════════════════════════════════════
              HERO — Full-bleed photography + glassmorphism
           ══════════════════════════════════════════════════ */
-          case 'hero':
+          case 'hero': {
+            const heroBgImg = (c as any).heroBgImage;
+            const heroOverlayDarkness = (c as any).heroBgOverlayOpacity ?? 50;
+            const heroGlowOn = (c as any).heroGlowActive ?? true;
+
             return (
               <section
                 key={comp.id}
                 id="hero"
-                className="relative overflow-hidden flex items-center justify-center py-24 px-6 sm:py-36"
+                className="relative overflow-hidden flex items-center justify-center py-24 px-6 sm:py-36 bg-cover bg-center"
                 style={{
                   backgroundColor: localDark ? '#0b0f19' : '#0f172a',
+                  backgroundImage: heroBgImg ? `url(${heroBgImg})` : undefined,
                   minHeight: '520px',
                 }}
               >
+                {/* Hero Photo Dark Overlay if image active */}
+                {heroBgImg && (
+                  <div 
+                    className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+                    style={{
+                      backgroundColor: '#000000',
+                      opacity: heroOverlayDarkness / 100,
+                    }}
+                  />
+                )}
+
                 {/* 🎨 Premium Animated Gradient Mesh Background */}
                 <div
                   className="absolute inset-0 pointer-events-none opacity-45 mix-blend-screen"
@@ -199,15 +344,17 @@ export default function CmsRenderer({
                 />
 
                 {/* ✨ Aura Glow Center Ring Effect */}
-                <div 
-                  className="absolute pointer-events-none w-[320px] h-[320px] rounded-full opacity-35 blur-[80px] animate-pulse"
-                  style={{
-                    background: pc,
-                    top: '20%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                  }}
-                />
+                {heroGlowOn && (
+                  <div 
+                    className="absolute pointer-events-none w-[320px] h-[320px] rounded-full opacity-35 blur-[80px] animate-pulse"
+                    style={{
+                      background: pc,
+                      top: '20%',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                    }}
+                  />
+                )}
 
                 <div className="relative z-10 max-w-4xl mx-auto text-center space-y-8 animate-fadeIn">
                   {/* Arrival guarantee badge with float and pulse effects */}
@@ -296,6 +443,7 @@ export default function CmsRenderer({
                 </div>
               </section>
             );
+          }
 
           /* ══════════════════════════════════════════════════
              STATS — Dark animated numbers strip
@@ -338,25 +486,53 @@ export default function CmsRenderer({
              SERVICES — Premium image cards with hover effects
           ══════════════════════════════════════════════════ */
           case 'services':
+            const isServicesPage = activePageSlug === 'services';
+            const homeCards = (tenant?.config?.featuredServiceIds && tenant.config.featuredServiceIds.length > 0
+              ? myServices.filter(s => tenant.config.featuredServiceIds.includes(s.id))
+              : myServices).slice(0, 8);
+            const displayedServices = universalSearch
+              ? myServices.filter(svc => {
+                  const q = universalSearch.toLowerCase();
+                  return svc.name.toLowerCase().includes(q) || svc.category.toLowerCase().includes(q);
+                })
+              : (isServicesPage ? myServices : homeCards);
+
             return (
               <section key={comp.id} id="services" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg0 }}>
                 <div className="max-w-7xl mx-auto">
 
                   {/* Header */}
-                  <div className="text-center mb-12">
-                    <SectionLabel text="What We Offer" color={pc} />
-                    <SectionTitle color={textPrimary}>Our Top Services</SectionTitle>
+                  <div className="text-center mb-10">
+                    <SectionLabel text={isServicesPage ? "Complete Catalogue" : "What We Offer"} color={pc} />
+                    <SectionTitle color={textPrimary}>
+                      {isServicesPage ? `All Professional Services (${myServices.length})` : "Our Top Services"}
+                    </SectionTitle>
                     <p className="text-sm sm:text-base mt-3 max-w-xl mx-auto" style={{ color: textMuted }}>
-                      Solutions for every corner of your home, delivered by verified professionals
+                      {isServicesPage
+                        ? "Browse our full range of certified services, verified technicians & upfront pricing"
+                        : "Solutions for every corner of your home, delivered by verified professionals"}
                     </p>
+                    {isServicesPage && (
+                      <div className="mt-4">
+                        <button
+                          onClick={() => {
+                            setActivePageSlug('home');
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-white bg-slate-850 border border-slate-750 transition-colors"
+                        >
+                          ← Back to Homepage
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Search */}
+                  {/* Search & Filter */}
                   <div className="relative max-w-md mx-auto mb-10">
                     <input
                       type="text"
                       className="w-full pl-11 pr-4 py-3.5 rounded-2xl border text-sm outline-none transition-all focus:ring-2 font-medium"
-                      placeholder="Search services..."
+                      placeholder="Search services (e.g. cleaning, AC, plumbing)..."
                       value={universalSearch}
                       onChange={e => setUniversalSearch(e.target.value)}
                       style={{
@@ -371,16 +547,10 @@ export default function CmsRenderer({
                   </div>
 
                   {/* Cards Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
-                    {myServices
-                      .filter(svc => {
-                        if (!universalSearch) return true;
-                        const q = universalSearch.toLowerCase();
-                        return svc.name.toLowerCase().includes(q) || svc.category.toLowerCase().includes(q);
-                      })
-                      .map((svc: any) => {
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                    {displayedServices.map((svc: any) => {
                         const inBasket = basket.find(item => item.serviceId === svc.id);
-                        const imgUrl = getServiceImage(svc.name, svc.category);
+                        const imgUrl = svc.imageUrl || getServiceImage(svc.name, svc.category);
                         const isHovered = hoveredService === svc.id;
                         return (
                           <div
@@ -479,21 +649,23 @@ export default function CmsRenderer({
                       })}
                   </div>
 
-                  {/* View All */}
-                  <div className="text-center mt-10">
-                    <button
-                      onClick={scrollToServices}
-                      className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-bold text-sm border-2 transition-all hover:scale-[1.02]"
-                      style={{
-                        borderColor: pc,
-                        color: pc,
-                        borderRadius: 'var(--border-radius)',
-                        background: `${pc}0d`,
-                      }}
-                    >
-                      View All Services <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {/* View More / All Services Button on Homepage */}
+                  {!isServicesPage && (
+                    <div className="text-center mt-10">
+                      <button
+                        onClick={scrollToServices}
+                        className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-black text-sm border-2 transition-all hover:scale-[1.03] shadow-lg"
+                        style={{
+                          borderColor: pc,
+                          color: pc,
+                          borderRadius: 'var(--border-radius)',
+                          background: `${pc}12`,
+                        }}
+                      >
+                        <span>View More Services ({myServices.length > 0 ? myServices.length : '8+'})</span> <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>
             );
@@ -594,7 +766,7 @@ export default function CmsRenderer({
           ══════════════════════════════════════════════════ */
           case 'offers_row':
             return (
-              <section key={comp.id} className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg1 }}>
+              <section key={comp.id} id="offers" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg1 }}>
                 <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                   {/* ── Limited Time Offers ── */}
@@ -610,8 +782,8 @@ export default function CmsRenderer({
                       <h3 className="text-lg font-black" style={{ color: textPrimary }}>Limited Time Offers</h3>
                     </div>
 
-                    {(c.campaigns || []).filter((camp: any) => camp.enabled).slice(0, 3).length > 0
-                      ? (c.campaigns || []).filter((camp: any) => camp.enabled).slice(0, 3).map((camp: any) => (
+                    {(c.campaigns || []).filter((camp: any) => camp.enabled).length > 0 ? (
+                      (c.campaigns || []).filter((camp: any) => camp.enabled).slice(0, 3).map((camp: any) => (
                         <div key={camp.id} className="flex items-center gap-3 p-3 rounded-2xl border"
                           style={{ backgroundColor: localDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', borderColor: `${pc}20` }}>
                           <div className="px-3 py-2 rounded-xl text-center font-black text-sm text-white flex-shrink-0"
@@ -620,35 +792,23 @@ export default function CmsRenderer({
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-black truncate" style={{ color: textPrimary }}>{camp.title}</p>
-                            <p className="text-[10px]" style={{ color: textMuted }}>Valid till {camp.endDate || '31/08/2026'}</p>
+                            <p className="text-[10px]" style={{ color: textMuted }}>Valid till {camp.endDate || 'No Expiry'}</p>
                           </div>
                           <button onClick={scrollToServices} className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black border"
                             style={{ borderColor: pc, color: pc, background: `${pc}10` }}>Apply</button>
                         </div>
                       ))
-                      : [
-                        { code: 'FIRST50', label: 'Flat ₹50 Off', sub: 'Min order ₹300 · Valid 31/08/2026' },
-                        { code: 'CLEAN10', label: '10% Discount', sub: 'Min order ₹500 · Valid 30/09/2026' },
-                        { code: 'REFER20', label: '₹20 on Referral', sub: 'Invite a friend and earn' },
-                      ].map(offer => (
-                        <div key={offer.code} className="flex items-center gap-3 p-3 rounded-2xl border"
-                          style={{ backgroundColor: localDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', borderColor: `${pc}20` }}>
-                          <div className="px-3 py-2 rounded-xl text-center font-black text-xs text-white flex-shrink-0"
-                            style={{ background: `linear-gradient(135deg, ${pc}, ${pc}bb)`, minWidth: '64px' }}>
-                            {offer.code}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-black" style={{ color: textPrimary }}>{offer.label}</p>
-                            <p className="text-[10px]" style={{ color: textMuted }}>{offer.sub}</p>
-                          </div>
-                          <button onClick={scrollToServices} className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black"
-                            style={{ background: `${pc}15`, color: pc }}>Apply</button>
-                        </div>
-                      ))
-                    }
-                    <button onClick={scrollToServices} className="text-xs font-bold" style={{ color: pc }}>
-                      View All Offers →
-                    </button>
+                    ) : (
+                      <div className="py-6 px-4 text-center border border-dashed rounded-2xl space-y-1" style={{ borderColor: localDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
+                        <p className="text-xs font-bold" style={{ color: textPrimary }}>No active offers currently</p>
+                        <p className="text-[10px]" style={{ color: textMuted }}>Special promo codes will appear here once configured.</p>
+                      </div>
+                    )}
+                    {(c.campaigns || []).filter((camp: any) => camp.enabled).length > 0 && (
+                      <button onClick={scrollToServices} className="text-xs font-bold" style={{ color: pc }}>
+                        View All Offers →
+                      </button>
+                    )}
                   </div>
 
                   {/* ── Why Choose Us ── */}
@@ -765,7 +925,7 @@ export default function CmsRenderer({
             const totalTechPages = Math.ceil(visibleWorkers.length / TECHS_PER_PAGE);
             const shownWorkers = visibleWorkers.slice(techPage * TECHS_PER_PAGE, techPage * TECHS_PER_PAGE + TECHS_PER_PAGE);
             return (
-              <section key={comp.id} className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg0 }}>
+              <section key={comp.id} id="team" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg0 }}>
                 <div className="max-w-7xl mx-auto">
                   <div className="text-center mb-12">
                     <SectionLabel text="Our Professionals" color={pc} />
@@ -867,7 +1027,7 @@ export default function CmsRenderer({
             const totalTestPages = Math.ceil(c.testimonials.length / TEST_PER_PAGE);
             const shownTestimonials = c.testimonials.slice(testimonialPage * TEST_PER_PAGE, testimonialPage * TEST_PER_PAGE + TEST_PER_PAGE);
             return (
-              <section key={comp.id} className="py-20 px-4 sm:px-6 relative overflow-hidden" style={{ backgroundColor: bg1 }}>
+              <section key={comp.id} id="reviews" className="py-20 px-4 sm:px-6 relative overflow-hidden" style={{ backgroundColor: bg1 }}>
                 <div className="max-w-7xl mx-auto">
                   <div className="text-center mb-12">
                     <SectionLabel text="Customer Reviews" color={pc} />
@@ -973,9 +1133,9 @@ export default function CmsRenderer({
              FAQ — Search + clean accordion
           ══════════════════════════════════════════════════ */
           case 'faq':
-            if (!c.sections?.faq || !c.faqs?.length) return null;
+            if (!c.faqs?.length) return null;
             return (
-              <section key={comp.id} id="faq" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg2 }}>
+              <section key={comp.id} id="faqs" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg2 }}>
                 <div className="max-w-3xl mx-auto">
                   <div className="text-center mb-12">
                     <SectionLabel text="FAQ" color={pc} />
@@ -1040,7 +1200,7 @@ export default function CmsRenderer({
           ══════════════════════════════════════════════════ */
           case 'gallery':
             return (
-              <section key={comp.id} id="portfolio" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg0 }}>
+              <section key={comp.id} id="gallery" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg0 }}>
                 <div className="max-w-7xl mx-auto">
                   <div className="text-center mb-12">
                     <SectionLabel text="Our Work" color={pc} />
@@ -1219,86 +1379,85 @@ export default function CmsRenderer({
             );
 
           /* ══════════════════════════════════════════════════
-             MAP / CONTACT — Areas + form
+             MAP / CONTACT — Service Areas & Coverage
           ══════════════════════════════════════════════════ */
-          case 'map':
+          case 'map': {
+            const nearbyList = (c.localSeoConfig?.nearbyCities && c.localSeoConfig.nearbyCities.length > 0)
+              ? c.localSeoConfig.nearbyCities
+              : [c.city].filter(Boolean);
+
             return (
-              <section key={comp.id} id="contact" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg2 }}>
+              <section key={comp.id} id="coverage" className="py-16 px-4 sm:px-6" style={{ backgroundColor: bg1 }}>
                 <div className="max-w-7xl mx-auto">
-                  <div className="text-center mb-12">
-                    <SectionLabel text="Coverage" color={pc} />
-                    <SectionTitle color={textPrimary}>Service Areas & Contact</SectionTitle>
-                  </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="space-y-5">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {[c.city, ...(c.localSeoConfig?.nearbyCities || [])].filter(Boolean).map((city: string) => (
-                          <div key={city} className="flex items-center gap-2 px-4 py-3 rounded-2xl border font-bold text-sm"
-                            style={{ backgroundColor: localDark ? '#1e293b' : '#fff', borderColor: localDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)', color: textPrimary, borderRadius: '12px' }}>
-                            <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: pc }} /> {city}
-                          </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+                    {/* Left Column: Information & Contact */}
+                    <div className="space-y-4 text-left">
+                      <div className="text-xs font-black uppercase tracking-widest" style={{ color: pc }}>
+                        — Service Areas —
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-black leading-tight" style={{ color: textPrimary }}>
+                        Serving {c.city || 'Nellore, AP'} & Surrounding Areas
+                      </h2>
+                      <p className="text-xs sm:text-sm leading-relaxed" style={{ color: textMuted }}>
+                        Our local certified service units are distributed throughout {c.city ? c.city.split(',')[0] : 'Nellore'} ensuring rapid on-time arrival within 30 minutes.
+                      </p>
+
+                      {/* City badge pills */}
+                      <div className="flex flex-wrap gap-2 pt-1 pb-2">
+                        {nearbyList.map((cityItem: string) => (
+                          <span
+                            key={cityItem}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors"
+                            style={{
+                              backgroundColor: `${pc}12`,
+                              borderColor: `${pc}30`,
+                              color: pc,
+                            }}
+                          >
+                            📍 {cityItem}
+                          </span>
                         ))}
                       </div>
-                      <div className="space-y-3">
-                        {[
-                          { icon: <Phone className="w-4 h-4" />, label: 'Phone', value: c.phone, href: `tel:${c.phone}` },
-                          { icon: <MessageCircle className="w-4 h-4" />, label: 'WhatsApp', value: c.whatsAppNumber, href: `https://wa.me/${c.whatsAppNumber}` },
-                          { icon: <Clock className="w-4 h-4" />, label: 'Hours', value: c.businessHours || 'Mon–Sun, 8 AM – 8 PM', href: undefined },
-                        ].filter(i => i.value).map((item, i) => (
-                          <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border"
-                            style={{ backgroundColor: localDark ? '#1e293b' : '#fff', borderColor: localDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)', borderRadius: '14px' }}>
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                              style={{ background: `${pc}15`, color: pc }}>{item.icon}</div>
-                            <div>
-                              <p className="text-[10px] font-black uppercase tracking-wider mb-0.5" style={{ color: textMuted }}>{item.label}</p>
-                              {item.href
-                                ? <a href={item.href} className="text-sm font-bold hover:underline" style={{ color: textPrimary }}>{item.value}</a>
-                                : <p className="text-sm font-medium" style={{ color: textPrimary }}>{item.value}</p>}
-                            </div>
+
+                      {/* Contact details */}
+                      <div className="space-y-2 text-xs pt-1">
+                        {c.phone && (
+                          <div className="flex items-center gap-2 font-medium" style={{ color: textPrimary }}>
+                            <span>📞</span> <strong>Phone:</strong> <a href={`tel:${c.phone}`} className="hover:underline">{c.phone}</a>
                           </div>
-                        ))}
+                        )}
+                        {c.whatsAppNumber && (
+                          <div className="flex items-center gap-2 font-medium" style={{ color: textPrimary }}>
+                            <span>💬</span> <strong>WhatsApp:</strong> <a href={`https://wa.me/${c.whatsAppNumber}`} target="_blank" rel="noreferrer" className="hover:underline">+{c.whatsAppNumber}</a>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 font-medium" style={{ color: textPrimary }}>
+                          <span>⏰</span> <strong>Hours:</strong> {c.businessHours || '08:00 AM – 08:00 PM'}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="p-8 rounded-3xl border"
-                      style={{ backgroundColor: localDark ? '#1e293b' : '#fff', borderColor: localDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
-                      {coverageSubmitted ? (
-                        <div className="text-center py-10">
-                          <div className="text-6xl mb-4">🎉</div>
-                          <p className="font-black text-xl" style={{ color: textPrimary }}>Request Submitted!</p>
-                          <p className="text-sm mt-2" style={{ color: textMuted }}>We'll notify you when we expand to your area.</p>
-                        </div>
-                      ) : (
-                        <form onSubmit={e => { e.preventDefault(); setCoverageSubmitted(true); }} className="space-y-5">
-                          <div>
-                            <h3 className="text-xl font-black" style={{ color: textPrimary }}>Join Expansion Waitlist</h3>
-                            <p className="text-xs mt-1" style={{ color: textMuted }}>Not in our service area? Get notified when we expand.</p>
-                          </div>
-                          {[
-                            { ph: 'Your email address', type: 'email', val: coverageEmail, fn: setCoverageEmail },
-                          ].map((field, i) => (
-                            <input key={i} type={field.type} placeholder={field.ph} value={field.val}
-                              onChange={e => field.fn(e.target.value)} required
-                              className="w-full px-4 py-3.5 rounded-2xl border text-sm outline-none font-medium"
-                              style={{ backgroundColor: localDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', borderColor: localDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', color: textPrimary, borderRadius: '14px' }}
-                            />
-                          ))}
-                          <input type="text" placeholder="Your area / pincode" required
-                            className="w-full px-4 py-3.5 rounded-2xl border text-sm outline-none font-medium"
-                            style={{ backgroundColor: localDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', borderColor: localDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', color: textPrimary, borderRadius: '14px' }}
-                          />
-                          <button type="submit"
-                            className="w-full py-4 rounded-2xl font-black text-sm transition-all hover:scale-[1.01] hover:shadow-lg"
-                            style={{ background: `linear-gradient(135deg, ${pc}, ${pc}cc)`, color: getTextColorForBg(pc), borderRadius: '14px', boxShadow: `0 8px 24px ${pc}35` }}>
-                            Submit Waitlist Request
-                          </button>
-                        </form>
-                      )}
+                    {/* Right Column: Interactive Coverage Map Card */}
+                    <div 
+                      className="h-64 sm:h-72 rounded-3xl border flex flex-col items-center justify-center gap-2 text-center p-6 shadow-sm transition-all"
+                      style={{
+                        backgroundColor: localDark ? '#1e293b' : '#f1f5fd',
+                        borderColor: localDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                      }}
+                    >
+                      <span className="text-4xl">🗺️</span>
+                      <span className="font-extrabold text-sm sm:text-base" style={{ color: textPrimary }}>
+                        Interactive Coverage Map
+                      </span>
+                      <span className="text-xs max-w-xs" style={{ color: textMuted }}>
+                        {c.address || 'Main Bazar Road, City Center'}
+                      </span>
                     </div>
                   </div>
                 </div>
               </section>
             );
+          }
 
           /* ══════════════════════════════════════════════════
              VIDEO — YouTube embed
@@ -1318,6 +1477,43 @@ export default function CmsRenderer({
                       src={`https://www.youtube.com/embed/${c.videoYouTubeUrl.replace(/.*(?:youtu.be\/|v\/|embed\/|watch\?v=)/, '').split(/[?&]/)[0]}`}
                       allowFullScreen
                     />
+                  </div>
+                </div>
+              </section>
+            );
+
+          /* ══════════════════════════════════════════════════
+             CUSTOM HIGHLIGHT / GUARANTEE SECTION
+          ══════════════════════════════════════════════════ */
+          case 'custom':
+            return (
+              <section key={comp.id} id={comp.id || 'custom'} className="py-16 px-4 sm:px-6 relative overflow-hidden" style={{ backgroundColor: bg1 }}>
+                <div className="max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl border text-center space-y-4 shadow-xl"
+                  style={{
+                    backgroundColor: localDark ? '#111927' : '#ffffff',
+                    borderColor: localDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    borderRadius: '24px'
+                  }}
+                >
+                  <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-3xl shadow-md"
+                    style={{ background: `${pc}18`, color: pc }}
+                  >
+                    {comp.icon || (comp.settings as any)?.icon || '✨'}
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black" style={{ color: textPrimary }}>
+                    {comp.title || (comp.settings as any)?.title || 'Special Guarantee'}
+                  </h2>
+                  <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed" style={{ color: textMuted }}>
+                    {comp.desc || (comp.settings as any)?.desc || 'Learn more about our verified guarantees, pricing, and on-time service commitments.'}
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      onClick={scrollToServices}
+                      className="px-6 py-3 rounded-xl font-bold text-xs shadow-md transition-all hover:scale-105"
+                      style={{ background: pc, color: getTextColorForBg(pc) }}
+                    >
+                      Book Service Now →
+                    </button>
                   </div>
                 </div>
               </section>
