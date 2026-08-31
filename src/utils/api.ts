@@ -11,7 +11,7 @@ const client = axios.create({
 });
 
 client.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('servos_jwt');
+  const token = sessionStorage.getItem('servos_jwt') || localStorage.getItem('servos_jwt');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -19,56 +19,222 @@ client.interceptors.request.use((config) => {
 }, (err) => Promise.reject(err));
 
 export const api = {
-  // Auth
+  // ── Auth ──────────────────────────────────────────
   login: async (credentials) => {
     const res = await client.post('/auth/login', credentials);
-    if (res.data.success) {
+    if (res.data?.data?.token) {
       sessionStorage.setItem('servos_jwt', res.data.data.token);
+      localStorage.setItem('servos_jwt', res.data.data.token);
     }
     return res.data;
   },
   register: async (data) => {
     const res = await client.post('/auth/register', data);
+    if (res.data?.data?.token) {
+      sessionStorage.setItem('servos_jwt', res.data.data.token);
+      localStorage.setItem('servos_jwt', res.data.data.token);
+    }
     return res.data;
   },
 
-  // Bookings
-  getBookings: async () => {
-    const res = await client.get('/bookings');
+  // ── Customer Auth Scoped to Tenant ────────────────
+  customerRegister: async (data) => {
+    const res = await client.post('/auth/customer/register', data);
+    if (res.data?.data?.token) {
+      sessionStorage.setItem(`servos_customer_jwt_${data.tenantId || 'global'}`, res.data.data.token);
+    }
+    return res.data;
+  },
+  customerLogin: async (credentials) => {
+    const res = await client.post('/auth/customer/login', credentials);
+    if (res.data?.data?.token) {
+      sessionStorage.setItem(`servos_customer_jwt_${credentials.tenantId || 'global'}`, res.data.data.token);
+    }
+    return res.data;
+  },
+
+  // ── Tenant & Auto-Generated Website ───────────────
+  registerTenant: async (tenantData) => {
+    const res = await client.post('/tenants/register', tenantData);
+    if (res.data?.data?.token) {
+      sessionStorage.setItem('servos_jwt', res.data.data.token);
+      localStorage.setItem('servos_jwt', res.data.data.token);
+    }
+    return res.data;
+  },
+  loginTenant: async (credentials) => {
+    const res = await client.post('/tenants/login', credentials);
+    if (res.data?.data?.token) {
+      sessionStorage.setItem('servos_jwt', res.data.data.token);
+      localStorage.setItem('servos_jwt', res.data.data.token);
+    }
+    return res.data;
+  },
+  resolveTenant: async (slug: string) => {
+    const res = await client.get(`/tenants/resolve/${encodeURIComponent(slug)}`);
+    return res.data;
+  },
+  getTenants: async () => {
+    const res = await client.get('/tenants');
+    return res.data;
+  },
+  getCurrentTenant: async () => {
+    const res = await client.get('/tenants/current');
+    return res.data;
+  },
+  updateTenant: async (id: string, tenantData) => {
+    const res = await client.put(`/tenants/${id}`, tenantData);
+    return res.data;
+  },
+
+  // ── CMS Website Pages ─────────────────────────────
+  getWebsitePages: async (slug: string) => {
+    const res = await client.get(`/websites/pages/${encodeURIComponent(slug)}`);
+    return res.data;
+  },
+  getAdminPages: async () => {
+    const res = await client.get('/websites/admin/pages');
+    return res.data;
+  },
+  saveAdminPage: async (pageData) => {
+    const res = await client.post('/websites/admin/pages', pageData);
+    return res.data;
+  },
+  deleteAdminPage: async (id: string) => {
+    const res = await client.delete(`/websites/admin/pages/${id}`);
+    return res.data;
+  },
+
+  // ── Products ──────────────────────────────────────
+  getProducts: async (tenantId?: string) => {
+    const url = tenantId ? `/products?tenantId=${encodeURIComponent(tenantId)}` : '/products';
+    const res = await client.get(url);
+    return res.data;
+  },
+  getAdminProducts: async () => {
+    const res = await client.get('/products/admin');
+    return res.data;
+  },
+  createProduct: async (product) => {
+    const res = await client.post('/products', product);
+    return res.data;
+  },
+  updateProduct: async (id: string, product) => {
+    const res = await client.put(`/products/${id}`, product);
+    return res.data;
+  },
+  deleteProduct: async (id: string) => {
+    const res = await client.delete(`/products/${id}`);
+    return res.data;
+  },
+
+  // ── Services ──────────────────────────────────────
+  getServices: async (tenantId?: string) => {
+    const url = tenantId ? `/services?tenantId=${encodeURIComponent(tenantId)}` : '/services';
+    const res = await client.get(url);
+    return res.data;
+  },
+  createService: async (service) => {
+    const res = await client.post('/services', service);
+    return res.data;
+  },
+  updateService: async (id: string, service) => {
+    const res = await client.put(`/services/${id}`, service);
+    return res.data;
+  },
+  deleteService: async (id: string) => {
+    const res = await client.delete(`/services/${id}`);
+    return res.data;
+  },
+
+  // ── Orders & Checkout ─────────────────────────────
+  createOrder: async (orderData) => {
+    const res = await client.post('/orders', orderData);
+    return res.data;
+  },
+  getOrders: async (params?: { status?: string; limit?: number; offset?: number }) => {
+    const query = new URLSearchParams(params as any).toString();
+    const res = await client.get(`/orders${query ? `?${query}` : ''}`);
+    return res.data;
+  },
+  getOrderById: async (id: string) => {
+    const res = await client.get(`/orders/${id}`);
+    return res.data;
+  },
+  updateOrderStatus: async (id: string, status: string) => {
+    const res = await client.put(`/orders/${id}/status`, { status });
+    return res.data;
+  },
+
+  // ── Payments ──────────────────────────────────────
+  processPayment: async (paymentData) => {
+    const res = await client.post('/payments/process', paymentData);
+    return res.data;
+  },
+  getPayments: async () => {
+    const res = await client.get('/payments');
+    return res.data;
+  },
+
+  // ── Files ─────────────────────────────────────────
+  getFiles: async () => {
+    const res = await client.get('/files');
+    return res.data;
+  },
+  uploadFile: async (fileData) => {
+    const res = await client.post('/files', fileData);
+    return res.data;
+  },
+  deleteFile: async (id: string) => {
+    const res = await client.delete(`/files/${id}`);
+    return res.data;
+  },
+
+  // ── Notifications ─────────────────────────────────
+  getNotifications: async () => {
+    const res = await client.get('/notifications');
+    return res.data;
+  },
+  markNotificationRead: async (id: string) => {
+    const res = await client.put(`/notifications/${id}/read`);
+    return res.data;
+  },
+  markAllNotificationsRead: async () => {
+    const res = await client.put('/notifications/read-all');
+    return res.data;
+  },
+
+  // ── Audit Logs ────────────────────────────────────
+  getTenantAuditLogs: async () => {
+    const res = await client.get('/audit/tenant');
+    return res.data;
+  },
+  getGlobalAuditLogs: async () => {
+    const res = await client.get('/audit/global');
+    return res.data;
+  },
+
+  // ── Bookings & Leads ──────────────────────────────
+  getBookings: async (tenantId?: string, customerId?: string) => {
+    const params = new URLSearchParams();
+    if (tenantId) params.append('tenantId', tenantId);
+    if (customerId) params.append('customerId', customerId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const res = await client.get(`/bookings${queryString}`);
     return res.data;
   },
   createBooking: async (data) => {
     const res = await client.post('/bookings', data);
     return res.data;
   },
-  assignWorker: async (bookingId, workerId) => {
+  updateBookingStatus: async (id: string, status: string) => {
+    const res = await client.put(`/bookings/${id}/status`, { status });
+    return res.data;
+  },
+  assignWorker: async (bookingId: string, workerId: string) => {
     const res = await client.post(`/bookings/${bookingId}/assign`, { workerId });
     return res.data;
   },
-
-  // Admin
-  saveConfig: async (config) => {
-    const res = await client.put('/admin/tenant/config', config);
-    return res.data;
-  },
-  createService: async (service) => {
-    const res = await client.post('/admin/services', service);
-    return res.data;
-  },
-  updateService: async (id, service) => {
-    const res = await client.put(`/admin/services/${id}`, service);
-    return res.data;
-  },
-  getServices: async () => {
-    const res = await client.get('/admin/services');
-    return res.data;
-  },
-  getWorkers: async () => {
-    const res = await client.get('/admin/workers');
-    return res.data;
-  },
-
-  // Leads
   getLeads: async (tenantId?: string) => {
     const url = tenantId ? `/leads?tenantId=${encodeURIComponent(tenantId)}` : '/leads';
     const res = await client.get(url);
@@ -78,33 +244,13 @@ export const api = {
     const res = await client.post('/leads', leadData);
     return res.data;
   },
-  updateLead: async (id, leadData) => {
+  updateLead: async (id: string, leadData) => {
     const res = await client.put(`/leads/${id}`, leadData);
     return res.data;
   },
-  deleteLead: async (id) => {
+  deleteLead: async (id: string) => {
     const res = await client.delete(`/leads/${id}`);
-    return res.data;
-  },
-
-  // Tenants
-  registerTenant: async (tenantData) => {
-    const res = await client.post('/tenants/register', tenantData);
-    return res.data;
-  },
-  loginTenant: async (credentials) => {
-    const res = await client.post('/tenants/login', credentials);
-    if (res.data?.data?.token) {
-      sessionStorage.setItem('servos_jwt', res.data.data.token);
-    }
-    return res.data;
-  },
-  getTenants: async () => {
-    const res = await client.get('/tenants');
-    return res.data;
-  },
-  updateTenant: async (id, tenantData) => {
-    const res = await client.put(`/tenants/${id}`, tenantData);
     return res.data;
   }
 };
+

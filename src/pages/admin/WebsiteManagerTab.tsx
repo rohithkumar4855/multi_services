@@ -5,9 +5,7 @@ import { api } from '../../utils/api';
 import { 
   Upload, Trash2, Sparkles, Check, 
   Copy, ChevronDown, ChevronUp, ShoppingBag,
-  Maximize2, Minimize2, ExternalLink, Plus,
-  Image as ImageIcon, Palette, Layers, Type,
-  Sliders, Sun, Moon, Wand2
+  Maximize2, Minimize2, ExternalLink, Plus
 } from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -140,35 +138,7 @@ const PRESET_SERVICE_IMAGES = [
   { label: 'Appliance Repair', url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&q=80&auto=format&fit=crop', icon: '📺' },
 ];
 
-const DEFAULT_FALLBACK_SERVICES: Service[] = [
-  { id: 'def-1', tenantId: '', name: 'Deep Home Cleaning', category: 'Cleaning', basePrice: 499, description: 'Complete deep cleaning of all rooms and corners', durationMin: 120, emergencyAllowed: true, requiredSkills: ['Cleaning'], formFields: [], isActive: true, icon: '✨' },
-  { id: 'def-2', tenantId: '', name: 'AC Master Service & Gas', category: 'Electrician', basePrice: 399, description: 'Filter clean, coil wash, and gas check', durationMin: 60, emergencyAllowed: true, requiredSkills: ['AC Repair'], formFields: [], isActive: true, icon: '❄️' },
-  { id: 'def-3', tenantId: '', name: 'Switch & Wiring Repair', category: 'Electrician', basePrice: 199, description: 'Certified electrician for safe home repair', durationMin: 45, emergencyAllowed: true, requiredSkills: ['Electrical'], formFields: [], isActive: true, icon: '⚡' },
-  { id: 'def-4', tenantId: '', name: 'Plumbing & Pipe Fix', category: 'Plumber', basePrice: 249, description: 'Leakage fixing, tap install, bathroom setup', durationMin: 60, emergencyAllowed: true, requiredSkills: ['Plumbing'], formFields: [], isActive: true, icon: '🚰' },
-  { id: 'def-5', tenantId: '', name: 'Waterproofing & Paint', category: 'Painter', basePrice: 999, description: 'Waterproof coating and premium wall emulsion', durationMin: 180, emergencyAllowed: false, requiredSkills: ['Painting'], formFields: [], isActive: true, icon: '🎨' },
-  { id: 'def-6', tenantId: '', name: 'Pest Control Shield', category: 'Pest Control', basePrice: 599, description: 'Eco-friendly odorless pest protection', durationMin: 90, emergencyAllowed: true, requiredSkills: ['Pest Control'], formFields: [], isActive: true, icon: '🛡️' },
-  { id: 'def-7', tenantId: '', name: 'Sofa & Upholstery Clean', category: 'Cleaning', basePrice: 699, description: 'Deep fabric steam cleaning & stain removal', durationMin: 75, emergencyAllowed: true, requiredSkills: ['Cleaning'], formFields: [], isActive: true, icon: '🛋️' },
-  { id: 'def-8', tenantId: '', name: 'Appliance Diagnostics', category: 'Appliance', basePrice: 299, description: 'Expert diagnosis for TV, fridge & washing machines', durationMin: 45, emergencyAllowed: true, requiredSkills: ['Repair'], formFields: [], isActive: true, icon: '🔧' },
-];
 
-const DEFAULT_FALLBACK_WORKERS = [
-  { id: 'w-1', name: 'Ramesh Kumar', designation: 'Master Electrician', skills: ['Electrical', 'Wiring'] },
-  { id: 'w-2', name: 'Suresh Varma', designation: 'Senior HVAC & AC Tech', skills: ['AC Repair', 'Cooling'] },
-  { id: 'w-3', name: 'Priya Sundaram', designation: 'Deep Cleaning Lead', skills: ['Sanitization', 'Deep Clean'] },
-  { id: 'w-4', name: 'Manoj Patel', designation: 'Chief Plumbing Expert', skills: ['Plumbing', 'Pipes'] },
-];
-
-const DEFAULT_FALLBACK_TESTIMONIALS = [
-  { id: 't-1', author: 'Anita Sharma', role: 'Homeowner, Nellore', text: 'Arrived in 25 minutes! Fixed our AC cooling problem immediately. Very professional and polite technician.', rating: 5 },
-  { id: 't-2', author: 'Rajesh K.', role: 'Apartment Secretary', text: 'Top quality deep cleaning service. The team came with full equipment and cleaned every tile spotless.', rating: 5 },
-  { id: 't-3', author: 'Divya Reddy', role: 'Tech Professional', text: 'Transparent pricing with zero hidden charges. Highly recommend for any home electrical work.', rating: 5 },
-];
-
-const DEFAULT_FALLBACK_FAQS = [
-  { id: 'f-1', question: 'How fast can a technician arrive at my home?', answer: 'Our certified technicians arrive within 30 minutes in all covered areas or scheduled at your exact preferred time.' },
-  { id: 'f-2', question: 'Is there a warranty on services completed?', answer: 'Yes! All services come with a complimentary 30-day service warranty and satisfaction guarantee.' },
-  { id: 'f-3', question: 'Are your technicians verified and trained?', answer: 'Every professional undergoes rigorous background verification, police check, and Aadhaar validation.' },
-];
 
 function getServiceImg(name: string, cat: string) {
   const k = `${name} ${cat}`.toLowerCase();
@@ -279,11 +249,11 @@ interface MiniSitePreviewProps {
 }
 
 function MiniSitePreview({
-  subdomain, previewDevice, primaryColor, secondaryColor = '#4f46e5', accentColor = '#38bdf8',
+  subdomain, previewDevice, primaryColor, secondaryColor = '#4f46e5',
   themeMode, themeFont, themeRadius, themeButtonStyle, cardStyle = 'glassmorphic',
   bgType = 'solid', bgImage = '', bgGradient = 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%)',
   bgPattern = 'none', bgOverlayOpacity = 40, bgOverlayColor = '#000000', bgBlur = 0,
-  heroBgType = 'default', heroBgImage = '', heroBgOverlayOpacity = 50, heroGlowActive = true,
+  heroBgImage = '', heroBgOverlayOpacity = 50, heroGlowActive = true,
   logoImage, logoText, heroTitle, heroSubtitle, heroBadge, primaryCta, secondaryCta,
   announceActive, announceText, announceExpiry, pageComponents, services,
   featuredServiceIds, homepageServiceCount, portfolio, workers, campaigns,
@@ -357,7 +327,6 @@ function MiniSitePreview({
   };
 
   const cardBg = getEffectiveCardBg();
-  const cardBackdropFilter = cardStyle === 'glassmorphic' ? 'blur(12px)' : 'none';
 
   // Dynamic state for interactivity in preview
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
@@ -1432,7 +1401,14 @@ function MiniSitePreview({
                     type="text"
                     placeholder="e.g. 9876543210 or user@example.com"
                     value={authEmailOrPhone}
-                    onChange={e => setAuthEmailOrPhone(e.target.value)}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (/^\d+$/.test(val)) {
+                        setAuthEmailOrPhone(val.slice(0, 10));
+                      } else {
+                        setAuthEmailOrPhone(val);
+                      }
+                    }}
                     style={{
                       width: '100%',
                       boxSizing: 'border-box',
@@ -1588,10 +1564,11 @@ function MiniSitePreview({
                       Mobile Phone
                     </label>
                     <input 
-                      type="text"
+                      type="tel"
                       placeholder="9876543210"
+                      maxLength={10}
                       value={authPhone}
-                      onChange={e => setAuthPhone(e.target.value)}
+                      onChange={e => setAuthPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                       style={{
                         width: '100%',
                         boxSizing: 'border-box',
@@ -2248,25 +2225,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     reader.readAsDataURL(file);
   };
 
-  const handleEditServiceImageUpload = (svcId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Image size exceeds 5MB limit', 'error');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (reader.result) {
-        const dataUrl = reader.result as string;
-        if (setServices) {
-          setServices(prev => prev.map(s => s.id === svcId ? { ...s, imageUrl: dataUrl } : s));
-        }
-        showToast('Updated service card photo!', 'success');
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+
 
   const handleAddServiceCard = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -2305,12 +2264,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     showToast(`✨ Service card "${newSvc.name}" (₹${newSvc.basePrice}) added and featured!`, 'success');
   };
 
-  const handleUpdateServicePrice = (svcId: string, newPrice: number) => {
-    if (setServices) {
-      setServices(prev => prev.map(s => s.id === svcId ? { ...s, basePrice: newPrice } : s));
-      showToast(`Updated price to ₹${newPrice}`, 'success');
-    }
-  };
+
 
   const handleDeleteService = (svcId: string) => {
     if (setServices) {
@@ -4346,9 +4300,9 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
 
               <SectionCard title="Contact Information">
                 <FieldLabel>Support Phone</FieldLabel>
-                <FieldInput value={bizPhone} onChange={e => setBizPhone(e.target.value)} placeholder="+91 98765 43210" />
+                <FieldInput maxLength={10} value={bizPhone} onChange={e => setBizPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="9876543210" />
                 <FieldLabel>WhatsApp Number</FieldLabel>
-                <FieldInput value={bizWhatsApp} onChange={e => setBizWhatsApp(e.target.value)} placeholder="919876543210" />
+                <FieldInput maxLength={10} value={bizWhatsApp} onChange={e => setBizWhatsApp(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="9876543210" />
                 <FieldLabel>Office Address</FieldLabel>
                 <FieldTextarea rows={2} value={bizAddress} onChange={e => setBizAddress(e.target.value)} placeholder="12-3-456, Main Road, Nellore" />
                 <FieldLabel>Business Hours</FieldLabel>
