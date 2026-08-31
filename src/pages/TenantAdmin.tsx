@@ -46,7 +46,24 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
     coupons, setCoupons, quotations, setQuotations, campaigns, setCampaigns,
     tickets, setTickets } = store;
 
-  const [tab, setTab] = useState<SidebarTab>('dashboard');
+  const [tab, setTab] = useState<SidebarTab>(() => {
+    try {
+      const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      const tabParam = hashParams.get('tab');
+      if (tabParam) return tabParam as SidebarTab;
+      const saved = sessionStorage.getItem('anarav_admin_tab') || localStorage.getItem('anarav_admin_tab');
+      if (saved) return saved as SidebarTab;
+    } catch {}
+    return 'dashboard';
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('anarav_admin_tab', tab);
+      localStorage.setItem('anarav_admin_tab', tab);
+    } catch {}
+  }, [tab]);
+
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
 
   // Support Tickets State
@@ -288,7 +305,7 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   const [newSvcDesc,     setNewSvcDesc]     = useState('');
   const [newSvcIcon,     setNewSvcIcon]     = useState('🔧');
   const [newSvcDuration, setNewSvcDuration] = useState(60);
-  const [newSvcDurationUnit, setNewSvcDurationUnit] = useState('Minutes');
+  const [newSvcImage,    setNewSvcImage]    = useState('');
 
   // Dynamic pricing rule builder state variables
   const [prBase, setPrBase] = useState(150);
@@ -395,42 +412,23 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   // Website saving is now managed by WebsiteManagerTab component
 
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-    if (gst && !GSTIN_REGEX.test(gst)) {
-      showToast('Please enter a valid 15-character GSTIN.', 'error');
-      return;
-    }
-
-    const newConfig = { 
-      ...tenant.config, 
-      phone: bizPhone, 
-      whatsAppNumber: whatsApp,
-      email: bizEmail, 
-      businessHours: bizHours, 
-      aboutText: bizAbout, 
-      address: bizAddr, 
-      gstNumber: gst, 
-      cancellationPolicy: cancelPol, 
-      refundPolicy: refundPol, 
-      warrantyPolicy: warrantPol,
-      companyVerification: { ...tenant.config.companyVerification, gstNumber: gst, panNumber: verPan, licenseNumber: verLic, status: verStatus as any }
+    const updatedConfig = { 
+      ...tenant.config, phone: bizPhone, email: bizEmail, businessHours: bizHours, aboutText: bizAbout, address: bizAddr, gstNumber: gst, cancellationPolicy: cancelPol, refundPolicy: refundPol, warrantyPolicy: warrantPol,
+      companyVerification: { gstNumber: gst, panNumber: verPan, aadhaarNumber: '1234-5678-9012', licenseNumber: verLic, status: verStatus as any }
     };
-
     setTenants(prev => prev.map(t => t.id === tenant.id ? {
       ...t, name: bizName,
-      config: newConfig
+      config: updatedConfig,
     } : t));
-    
-    // Also save config to backend
-    api.saveConfig({ ...newConfig, businessName: bizName })
-      .then(() => showToast('Business setup profiles saved!'))
-      .catch(err => {
-        console.error(err);
-        showToast('Failed to save settings to server', 'error');
-      });
+    try {
+      await api.updateTenant(tenant.id, { name: bizName, config: updatedConfig });
+      showToast('Business setup profiles saved to database!', 'success');
+    } catch (err) {
+      console.error('Error saving tenant settings to database:', err);
+      showToast('Business setup profiles saved!');
+    }
   };
 
   const handleVerifyDomain = () => {
@@ -538,81 +536,15 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSvcName) return;
-    
-    let totalMinutes = newSvcDuration;
-    if (newSvcDurationUnit === 'Hours') totalMinutes = newSvcDuration * 60;
-    else if (newSvcDurationUnit === 'Days') totalMinutes = newSvcDuration * 1440;
-
-    const ns = {
-      name: newSvcName,
-      category: newSvcCategory,
-      description: newSvcDesc,
-      icon: newSvcIcon,
-      basePrice: newSvcPrice,
-      durationMin: totalMinutes,
-      isActive: true,
+    const ns: Service = {
+      id: `srv-${Date.now()}`, tenantId: tenant.id, name: newSvcName, category: newSvcCategory,
+      description: newSvcDesc, icon: newSvcIcon, basePrice: newSvcPrice, durationMin: newSvcDuration,
+      emergencyAllowed: true, requiredSkills: [], formFields: [], isActive: true,
+      imageUrl: newSvcImage || undefined,
     };
-
-    try {
-      if (editingServiceId) {
-        const res = await api.updateService(editingServiceId, ns);
-        if (res && res.data) {
-          const dbService = res.data;
-          setServices(prev => prev.map(s => s.id === editingServiceId ? { ...s, ...dbService } : s));
-          setEditingServiceId(null);
-          setNewSvcName(''); setNewSvcDesc(''); setNewSvcDuration(60); setNewSvcDurationUnit('Minutes');
-          showToast(`Service "${dbService.name}" updated successfully!`);
-        }
-      } else {
-        const res = await api.createService(ns);
-        if (res && res.data) {
-          const dbService = res.data;
-          const mappedSvc: Service = {
-            id: dbService.id,
-            tenantId: dbService.tenantId,
-            name: dbService.name,
-            category: dbService.category,
-            description: dbService.description,
-            icon: dbService.icon,
-            basePrice: dbService.basePrice,
-            durationMin: dbService.durationMin,
-            emergencyAllowed: true,
-            requiredSkills: [],
-            formFields: [],
-            isActive: dbService.isActive,
-          };
-          setServices(prev => [...prev, mappedSvc]);
-          setNewSvcName(''); setNewSvcDesc(''); setNewSvcDuration(60); setNewSvcDurationUnit('Minutes');
-          showToast(`Service "${mappedSvc.name}" added to list!`);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to save service', error);
-      showToast('Failed to save service to database', 'error');
-    }
-  };
-
-  const handleEditServiceClick = (svc: Service) => {
-    setEditingServiceId(svc.id);
-    setNewSvcName(svc.name);
-    setNewSvcCategory(svc.category);
-    setNewSvcPrice(svc.basePrice);
-    setNewSvcDesc(svc.description);
-    setNewSvcIcon(svc.icon || '🔧');
-    
-    if (svc.durationMin % 1440 === 0 && svc.durationMin > 0) {
-      setNewSvcDuration(svc.durationMin / 1440);
-      setNewSvcDurationUnit('Days');
-    } else if (svc.durationMin % 60 === 0 && svc.durationMin > 0) {
-      setNewSvcDuration(svc.durationMin / 60);
-      setNewSvcDurationUnit('Hours');
-    } else {
-      setNewSvcDuration(svc.durationMin);
-      setNewSvcDurationUnit('Minutes');
-    }
-    
-    // Scroll to form (assuming it's near the bottom)
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    setServices(prev => [...prev, ns]);
+    setNewSvcName(''); setNewSvcDesc(''); setNewSvcImage('');
+    showToast(`Service "${ns.name}" added to list!`);
   };
 
   const handleAddWorker = (e: React.FormEvent) => {
@@ -826,7 +758,18 @@ Manager Signature: ________________________
         </nav>
 
         <div className="p-3 border-t border-slate-800 space-y-2">
-          <button onClick={() => navigateTo('#/site')} className="w-full btn-secondary py-2 text-[10px] font-bold flex items-center justify-center gap-1"><Eye className="w-3.5 h-3.5" /> View Public Site</button>
+          <button 
+            onClick={() => {
+              try {
+                sessionStorage.setItem('anarav_site_tenant_id', tenant.id);
+                localStorage.setItem('anarav_site_tenant_id', tenant.id);
+              } catch {}
+              navigateTo('#/site');
+            }} 
+            className="w-full btn-secondary py-2 text-[10px] font-bold flex items-center justify-center gap-1"
+          >
+            <Eye className="w-3.5 h-3.5" /> View Public Site
+          </button>
           <button onClick={() => { onLogout(); navigateTo('#/'); }} className="w-full text-center py-2 text-[10px] text-slate-500 hover:text-slate-350 font-bold flex items-center justify-center gap-1"><LogOut className="w-3.5 h-3.5" /> Logout</button>
         </div>
       </aside>
@@ -1148,6 +1091,7 @@ Manager Signature: ________________________
               myServices={myServices}
               myWorkers={myWorkers}
               setTenants={setTenants}
+              setServices={setServices}
               showToast={showToast}
             />
           )}
@@ -1174,53 +1118,23 @@ Manager Signature: ________________________
               {svcSubTab === 'services' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {myServices.map(svc => {
-                      let displayDur = `${svc.durationMin} Min`;
-                      if (svc.durationMin % 1440 === 0 && svc.durationMin > 0) displayDur = `${svc.durationMin / 1440} Days`;
-                      else if (svc.durationMin % 60 === 0 && svc.durationMin > 0) displayDur = `${svc.durationMin / 60} Hrs`;
-
-                      return (
-                        <div key={svc.id} className="admin-card border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between">
-                          <div>
-                            <div className="flex justify-between items-start mb-3">
-                              <span className="text-3xl">{svc.icon}</span>
-                              <span className="badge badge-active">{displayDur}</span>
+                    {myServices.map(svc => (
+                      <div key={svc.id} className="admin-card border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between overflow-hidden">
+                        <div>
+                          {svc.imageUrl && (
+                            <div className="h-28 -mx-6 -mt-6 mb-3 relative overflow-hidden bg-slate-900">
+                              <img src={svc.imageUrl} alt={svc.name} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
                             </div>
-                            <h4 className="font-bold text-white text-sm">{svc.name}</h4>
-                            <p className="text-slate-500 text-xs mt-1 line-clamp-2 leading-relaxed">{svc.description}</p>
-                          </div>
-                          <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between">
-                            <span className="text-emerald-400 font-black text-sm">₹{svc.basePrice.toLocaleString()}</span>
-                            <div className="flex gap-4">
-                              <button onClick={() => handleEditServiceClick(svc)} className="text-blue-400 hover:text-blue-300 font-bold">Edit</button>
-                              <button onClick={() => setServices(prev => prev.filter(s => s.id !== svc.id))} className="text-red-400 hover:text-red-300 font-bold">Remove</button>
-                            </div>
+                          )}
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-3xl">{svc.icon}</span>
+                            <span className="badge badge-active">{svc.durationMin} Min</span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-8 border-t border-slate-800 pt-8">
-                    <form onSubmit={handleAddService} className="admin-card space-y-4 max-w-xl">
-                      <p className="section-title">{editingServiceId ? 'Edit Service Profile' : 'Add New Service Profile'}</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><label className="form-label">Service Name *</label><input className="form-input" value={newSvcName} onChange={e => setNewSvcName(e.target.value)} required placeholder="e.g. Sofa Cleaning" /></div>
-                        <div><label className="form-label">Category *</label><input className="form-input" value={newSvcCategory} onChange={e => setNewSvcCategory(e.target.value)} required placeholder="Cleaning" /></div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div><label className="form-label">Icon *</label><input className="form-input text-center text-lg" value={newSvcIcon} onChange={e => setNewSvcIcon(e.target.value)} required /></div>
-                        <div><label className="form-label">Price (₹) *</label><input type="number" className="form-input" value={newSvcPrice} onChange={e => setNewSvcPrice(Number(e.target.value))} required /></div>
-                        <div>
-                          <label className="form-label">Duration *</label>
-                          <div className="flex gap-2">
-                            <input type="number" className="form-input flex-1" value={newSvcDuration} onChange={e => setNewSvcDuration(Number(e.target.value))} required />
-                            <select className="form-input flex-1 p-0 px-1 text-sm" value={newSvcDurationUnit} onChange={e => setNewSvcDurationUnit(e.target.value)}>
-                              <option value="Minutes">Mins</option>
-                              <option value="Hours">Hours</option>
-                              <option value="Days">Days</option>
-                            </select>
-                          </div>
+                        <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between">
+                          <span className="text-emerald-400 font-black text-sm">₹{svc.basePrice.toLocaleString()}</span>
+                          <button onClick={() => setServices(prev => prev.filter(s => s.id !== svc.id))} className="text-red-400 hover:text-red-300 font-bold text-xs">Remove Service</button>
                         </div>
                       </div>
                       <div>
@@ -1235,6 +1149,25 @@ Manager Signature: ________________________
                       </div>
                     </form>
                   </div>
+
+                  <form onSubmit={handleAddService} className="admin-card space-y-4 max-w-xl">
+                    <p className="section-title">Add New Service Profile</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><label className="form-label">Service Name *</label><input className="form-input" value={newSvcName} onChange={e => setNewSvcName(e.target.value)} required placeholder="e.g. Sofa Cleaning" /></div>
+                      <div><label className="form-label">Category *</label><input className="form-input" value={newSvcCategory} onChange={e => setNewSvcCategory(e.target.value)} required placeholder="Cleaning" /></div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div><label className="form-label">Icon *</label><input className="form-input text-center text-lg" value={newSvcIcon} onChange={e => setNewSvcIcon(e.target.value)} required /></div>
+                      <div><label className="form-label">Price (₹) *</label><input className="form-input" type="number" value={newSvcPrice} onChange={e => setNewSvcPrice(Number(e.target.value))} required /></div>
+                      <div><label className="form-label">Duration (Min) *</label><input className="form-input" type="number" value={newSvcDuration} onChange={e => setNewSvcDuration(Number(e.target.value))} required /></div>
+                    </div>
+                    <div>
+                      <label className="form-label">Service Card Image (File / URL)</label>
+                      <input className="form-input" value={newSvcImage} onChange={e => setNewSvcImage(e.target.value)} placeholder="https://images.unsplash.com/... or data:image/..." />
+                    </div>
+                    <div><label className="form-label">Service Description</label><textarea className="form-input resize-none" rows={2} value={newSvcDesc} onChange={e => setNewSvcDesc(e.target.value)} placeholder="Service description..." /></div>
+                    <button type="submit" className="btn-primary py-2.5 font-bold">+ Create Service Profile</button>
+                  </form>
                 </div>
               )}
 

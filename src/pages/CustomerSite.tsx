@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import type { AuthSession, Booking, BasketItem } from '../types';
 import type { SharedStore } from '../App';
 
-import { Phone, MessageCircle, ArrowLeft, Moon, Sun, Search, ShoppingBag, MapPin, ChevronDown } from 'lucide-react';
+import { Phone, MessageCircle, ArrowLeft, Moon, Sun, Search, ShoppingBag, MapPin, ChevronDown, LogOut, Eye, EyeOff, Lock, User, Mail, ShieldCheck } from 'lucide-react';
 import CmsRenderer from './CmsRenderer';
 import { generateThemeTokens } from '../utils/themeEngine';
 import { api } from '../utils/api';
@@ -27,7 +27,13 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   const { tenants, services, workers, bookings, setBookings, coupons, leads, setLeads, quotations, setQuotations } = store;
 
   // Use active session tenant or first tenant for demo
-  const initialTenantId = session.tenantId || tenants[0]?.id || '';
+  const initialTenantId = session.tenantId || (() => {
+    try {
+      const saved = sessionStorage.getItem('anarav_site_tenant_id') || localStorage.getItem('anarav_site_tenant_id');
+      if (saved) return saved;
+    } catch {}
+    return tenants[0]?.id || '';
+  })();
   const [activeTenantId, setActiveTenantId] = useState(initialTenantId);
 
   useEffect(() => {
@@ -35,6 +41,13 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       setActiveTenantId(session.tenantId);
     }
   }, [session.tenantId]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('anarav_site_tenant_id', activeTenantId);
+      localStorage.setItem('anarav_site_tenant_id', activeTenantId);
+    } catch {}
+  }, [activeTenantId]);
 
   const matchedTenant = tenants.find(t => t.id === activeTenantId || (session.tenantId && t.id === session.tenantId) || (session.email && t.ownerEmail === session.email) || (session.tenantName && t.name === session.tenantName));
   const tenant = matchedTenant || (session.tenantId ? null : tenants[0]);
@@ -91,9 +104,25 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [invoiceModalBooking, setInvoiceModalBooking] = useState<Booking | null>(null);
 
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerSession, setCustomerSession] = useState<{ phone: string; name: string } | null>(null);
+  const [customerSession, setCustomerSession] = useState<{ phone: string; name: string; email?: string; address?: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem(`anarav_customer_session_${tenant.id}`) || sessionStorage.getItem(`anarav_customer_session_${tenant.id}`);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
   const [showCustomerLoginModal, setShowCustomerLoginModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authIdentifier, setAuthIdentifier] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authShowPassword, setAuthShowPassword] = useState(false);
+  const [authFullName, setAuthFullName] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authAddress, setAuthAddress] = useState('');
+  const [authRememberMe, setAuthRememberMe] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
+
   const [customerActiveTab, setCustomerActiveTab] = useState<'bookings' | 'book_service' | 'warranties' | 'rewards' | 'support' | 'quotations'>('bookings');
   const [viewMode, setViewMode] = useState<'website' | 'dashboard'>('website');
 
@@ -104,7 +133,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       setFormData({
         name: customerSession.name,
         phone: customerSession.phone,
-        address: lastB ? lastB.customerAddress : '',
+        address: customerSession.address || (lastB ? lastB.customerAddress : ''),
         date: '',
         time: '',
         notes: ''
@@ -341,19 +370,57 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     }, 1500);
   };
 
-  const handleCustomerLogin = (e: React.FormEvent) => {
+  const handleCustomerSignIn = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerPhone.trim()) return;
-    const phone = customerPhone.trim();
-    const found = bookings.find(b => b.customerPhone === phone && b.tenantId === tenant.id);
-    const clientName = found ? found.customerName : 'Ravi Kumar';
-    setCustomerSession({ phone, name: clientName });
+    if (!authIdentifier.trim()) {
+      showToast('Please enter your mobile phone number or email address', 'error');
+      return;
+    }
+    if (!authPassword.trim()) {
+      showToast('Please enter your account password', 'error');
+      return;
+    }
+
+    setAuthLoading(true);
+    const identifier = authIdentifier.trim();
+    const isEmail = identifier.includes('@');
+
+    // Find customer in existing bookings or leads
+    const foundBooking = bookings.find(b => 
+      b.tenantId === tenant.id && 
+      (b.customerPhone === identifier || (b.formData && (b.formData as any).email === identifier))
+    );
+    const foundLead = leads.find(l => 
+      l.tenantId === tenant.id && 
+      (l.phone === identifier || l.email === identifier)
+    );
+
+    const clientName = foundBooking ? foundBooking.customerName : (foundLead ? foundLead.name : (isEmail ? identifier.split('@')[0] : 'Customer'));
+    const clientPhone = foundBooking ? foundBooking.customerPhone : (foundLead ? foundLead.phone : (isEmail ? '9876543210' : identifier));
+    const clientEmail = isEmail ? identifier : (foundLead ? foundLead.email : '');
+    const clientAddress = foundBooking ? foundBooking.customerAddress : '';
+
+    const sessionData = {
+      phone: clientPhone,
+      name: clientName,
+      email: clientEmail,
+      address: clientAddress
+    };
+
+    setCustomerSession(sessionData);
+    if (authRememberMe) {
+      try {
+        localStorage.setItem(`anarav_customer_session_${tenant.id}`, JSON.stringify(sessionData));
+      } catch {}
+    }
+
     setShowCustomerLoginModal(false);
     setViewMode('dashboard');
     setCustomerActiveTab('bookings');
+    setAuthLoading(false);
 
     // Inject mock bookings if no real ones exist for this customer
-    const existingBookings = bookings.filter(b => b.customerPhone === phone && b.tenantId === tenant.id);
+    const existingBookings = bookings.filter(b => b.customerPhone === clientPhone && b.tenantId === tenant.id);
     if (existingBookings.length === 0 && myServices.length > 0) {
       const svc0 = myServices[0];
       const svc1 = myServices[Math.min(1, myServices.length - 1)];
@@ -362,10 +429,10 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         {
           id: `BK-DEMO-001`,
           tenantId: tenant.id,
-          customerId: `cust-${phone}`,
+          customerId: `cust-${clientPhone}`,
           customerName: clientName,
-          customerPhone: phone,
-          customerAddress: '12-3-456, MG Road, Nellore, AP 524001',
+          customerPhone: clientPhone,
+          customerAddress: clientAddress || '12-3-456, MG Road, Nellore, AP 524001',
           serviceId: svc0.id,
           serviceName: svc0.name,
           status: 'completed',
@@ -382,10 +449,10 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         {
           id: `BK-DEMO-002`,
           tenantId: tenant.id,
-          customerId: `cust-${phone}`,
+          customerId: `cust-${clientPhone}`,
           customerName: clientName,
-          customerPhone: phone,
-          customerAddress: '12-3-456, MG Road, Nellore, AP 524001',
+          customerPhone: clientPhone,
+          customerAddress: clientAddress || '12-3-456, MG Road, Nellore, AP 524001',
           serviceId: svc1.id,
           serviceName: svc1.name,
           status: 'assigned',
@@ -400,10 +467,10 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         {
           id: `BK-DEMO-003`,
           tenantId: tenant.id,
-          customerId: `cust-${phone}`,
+          customerId: `cust-${clientPhone}`,
           customerName: clientName,
-          customerPhone: phone,
-          customerAddress: '12-3-456, MG Road, Nellore, AP 524001',
+          customerPhone: clientPhone,
+          customerAddress: clientAddress || '12-3-456, MG Road, Nellore, AP 524001',
           serviceId: svc2.id,
           serviceName: svc2.name,
           status: 'requested',
@@ -419,6 +486,66 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     }
   };
 
+  const handleCustomerSignUp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authFullName.trim()) {
+      showToast('Please enter your full name', 'error');
+      return;
+    }
+    if (!authPhone.trim()) {
+      showToast('Please enter your mobile phone number', 'error');
+      return;
+    }
+    if (!authPassword.trim() || authPassword.length < 4) {
+      showToast('Please create a password of at least 4 characters', 'error');
+      return;
+    }
+
+    setAuthLoading(true);
+    const sessionData = {
+      phone: authPhone.trim(),
+      name: authFullName.trim(),
+      email: authEmail.trim(),
+      address: authAddress.trim()
+    };
+
+    // Save lead to DB
+    const newL = {
+      id: `lead-${Date.now()}`,
+      tenantId: tenant.id,
+      name: sessionData.name,
+      phone: sessionData.phone,
+      email: sessionData.email,
+      serviceInterest: 'Account Registered',
+      notes: `Registered from website portal. Address: ${sessionData.address}`,
+      status: 'new' as const,
+      createdAt: new Date().toISOString()
+    };
+    api.createLead(newL).catch(err => console.error('Error saving customer lead to DB:', err));
+    setLeads(prev => [...prev, newL]);
+
+    setCustomerSession(sessionData);
+    if (authRememberMe) {
+      try {
+        localStorage.setItem(`anarav_customer_session_${tenant.id}`, JSON.stringify(sessionData));
+      } catch {}
+    }
+
+    setShowCustomerLoginModal(false);
+    setViewMode('dashboard');
+    setCustomerActiveTab('bookings');
+    setAuthLoading(false);
+  };
+
+  const handleCustomerSignOut = () => {
+    setCustomerSession(null);
+    try {
+      localStorage.removeItem(`anarav_customer_session_${tenant.id}`);
+      sessionStorage.removeItem(`anarav_customer_session_${tenant.id}`);
+    } catch {}
+    setViewMode('website');
+  };
+
   const closeModal = () => {
     setBookingService(null);
     setBookingSubmitted(false);
@@ -428,17 +555,86 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     setAgreeTerms(false);
   };
 
+  const tc = tenant.config as any;
+  const siteBgType = tc.bgType || 'solid';
+  const siteBgImage = tc.bgImage || '';
+  const siteBgGradient = tc.bgGradient || '';
+  const siteBgPattern = tc.bgPattern || 'none';
+  const siteBgOverlayOpacity = tc.bgOverlayOpacity ?? 40;
+  const siteBgOverlayColor = tc.bgOverlayColor || '#000000';
+  const siteBgBlur = tc.bgBlur ?? 0;
 
+  const getSitePatternBg = (p: string) => {
+    switch (p) {
+      case 'dots':
+        return 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1px, transparent 0)';
+      case 'grid':
+        return 'linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)';
+      case 'mesh':
+        return 'radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.12) 0px, transparent 50%)';
+      case 'waves':
+        return 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.04) 2px, transparent 40px)';
+      default:
+        return undefined;
+    }
+  };
+
+  const getSiteRootStyles = (): React.CSSProperties => {
+    const base: React.CSSProperties = {
+      fontFamily: 'var(--font-family)',
+      color: 'var(--color-text-primary)',
+      minHeight: '100vh',
+      position: 'relative',
+    };
+
+    if (siteBgType === 'image' && siteBgImage) {
+      return {
+        ...base,
+        backgroundImage: `url(${siteBgImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        backgroundRepeat: 'no-repeat',
+      };
+    }
+    if (siteBgType === 'gradient' && siteBgGradient) {
+      return {
+        ...base,
+        background: siteBgGradient,
+        backgroundAttachment: 'fixed',
+      };
+    }
+    if (siteBgType === 'pattern' && siteBgPattern !== 'none') {
+      return {
+        ...base,
+        backgroundImage: getSitePatternBg(siteBgPattern),
+        backgroundSize: siteBgPattern === 'dots' ? '20px 20px' : siteBgPattern === 'grid' ? '32px 32px' : 'auto',
+        backgroundColor: 'var(--color-background)',
+      };
+    }
+    return {
+      ...base,
+      backgroundColor: 'var(--color-background)',
+    };
+  };
 
   return (
     <div 
-      className="min-h-screen transition-all pb-16 md:pb-0" 
-      style={{ 
-        fontFamily: 'var(--font-family)',
-        backgroundColor: 'var(--color-background)',
-        color: 'var(--color-text-primary)'
-      }}
+      className="min-h-screen transition-all pb-16 md:pb-0 relative" 
+      style={getSiteRootStyles()}
     >
+      {/* Background Image / Frosted Overlay */}
+      {siteBgType === 'image' && siteBgImage && (
+        <div 
+          className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-300"
+          style={{
+            backgroundColor: siteBgOverlayColor,
+            opacity: siteBgOverlayOpacity / 100,
+            backdropFilter: siteBgBlur > 0 ? `blur(${siteBgBlur}px)` : undefined,
+            WebkitBackdropFilter: siteBgBlur > 0 ? `blur(${siteBgBlur}px)` : undefined,
+          }}
+        />
+      )}
 
       {/* ===== DEMO SWITCHER ===== */}
       <div className="bg-slate-955 border-b border-slate-850 text-slate-350 text-xs py-2 px-4 flex items-center justify-between">
@@ -517,43 +713,59 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           {/* Logo */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black text-white" style={{ background: pc }}>
-              {(c.logoText || tenant.name).charAt(0)}
-            </div>
+          <div 
+            onClick={() => {
+              setActivePageSlug('home');
+              setViewMode('website');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex items-center gap-3 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+            title="Go to Homepage"
+          >
+            {c.logoImage ? (
+              <img
+                src={c.logoImage}
+                alt={c.logoText || tenant.name}
+                className="h-10 w-auto max-w-[150px] object-contain rounded-lg shadow-sm"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black text-white shadow-sm" style={{ background: pc }}>
+                {(c.logoText || tenant.name).charAt(0)}
+              </div>
+            )}
             <div>
               <p className="text-base font-black leading-tight" style={{ color: 'var(--color-primary)' }}>{c.logoText || tenant.name}</p>
-              <p className="text-[10px] leading-tight" style={{ color: 'var(--color-text-secondary)' }}>One Call. We Do It All.</p>
+              <p className="text-[10px] leading-tight" style={{ color: 'var(--color-text-secondary)' }}>{(c as any).navbarTagline || 'One Call. We Do It All.'}</p>
             </div>
           </div>
 
-          {/* Nav Links */}
+          {/* Dynamic Navigation Menu Links */}
           <nav className="hidden lg:flex items-center gap-1">
-            {(c.cmsPages || [
-              { id: 'home', title: 'Home', slug: 'home' },
-              { id: 'services', title: 'Services', slug: 'services' },
-              { id: 'offers', title: 'Offers', slug: 'offers' },
-              { id: 'about', title: 'About Us', slug: 'about' },
-              { id: 'reviews', title: 'Reviews', slug: 'reviews' },
-              { id: 'contact', title: 'Contact Us', slug: 'contact' },
-            ]).map((page: any) => {
-              const isActive = activePageSlug === page.slug;
+            {(((c as any).navLinksList) || [
+              { id: 'nav-1', name: 'Home', tab: 'hero' },
+              { id: 'nav-2', name: 'Services', tab: 'services' },
+              { id: 'nav-3', name: 'Offers', tab: 'offers' },
+              { id: 'nav-4', name: 'Team', tab: 'team' },
+              { id: 'nav-5', name: 'Gallery', tab: 'gallery' },
+              { id: 'nav-6', name: 'Reviews', tab: 'reviews' },
+              { id: 'nav-7', name: 'FAQs', tab: 'faqs' },
+              { id: 'nav-8', name: 'Contact', tab: 'coverage' },
+            ]).map((link: any) => {
+              const targetTab = link.tab || 'hero';
+              const targetSlug = (targetTab === 'hero' || targetTab === 'home') ? 'home' : targetTab;
+              const isActive = activePageSlug === targetSlug || ((activePageSlug === 'hero' || !activePageSlug) && targetSlug === 'home');
               return (
                 <button
-                  key={page.id}
+                  key={link.id}
                   onClick={() => {
-                    setActivePageSlug(page.slug);
+                    setActivePageSlug(targetSlug);
                     setViewMode('website');
-                    setTimeout(() => {
-                      const el = document.getElementById(page.slug === 'home' ? 'hero' : page.slug);
-                      if (el) el.scrollIntoView({ behavior: 'smooth' });
-                      else if (page.slug === 'home') window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }, 50);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="px-3 py-2 text-xs font-bold transition-all relative"
+                  className="px-3 py-2 text-xs font-bold transition-all relative hover:opacity-80"
                   style={{ color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}
                 >
-                  {page.title}
+                  {link.name}
                   {isActive && <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full" style={{ background: pc }} />}
                 </button>
               );
@@ -563,18 +775,20 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
           {/* Right Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Track Booking */}
-            <button
-              onClick={() => setShowTrackModal(true)}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg border transition-all"
-              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-            >
-              <Search className="w-3.5 h-3.5" /> Track Booking
-            </button>
+            {(c as any).showTrackButton !== false && (
+              <button
+                onClick={() => setShowTrackModal(true)}
+                className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg border transition-all hover:border-slate-600"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+              >
+                <Search className="w-3.5 h-3.5" /> {(c as any).trackButtonText || 'Track Booking'}
+              </button>
+            )}
 
             {/* Basket */}
             <button
               onClick={() => setIsBasketOpen(true)}
-              className="relative p-2 rounded-lg border transition-all"
+              className="relative p-2 rounded-lg border transition-all hover:border-slate-600"
               style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
             >
               <ShoppingBag className="w-4 h-4" />
@@ -585,39 +799,57 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
               )}
             </button>
 
-            {/* Sign In */}
-            {customerSession ? (
-              <button
-                onClick={() => setViewMode(viewMode === 'dashboard' ? 'website' : 'dashboard')}
-                className="flex items-center gap-1.5 font-bold text-xs px-3 py-2 rounded-lg border transition-all"
-                style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
-              >
-                👤 {viewMode === 'dashboard' ? 'Exit' : customerSession.name.split(' ')[0]}
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowCustomerLoginModal(true)}
-                className="hidden sm:flex items-center gap-1.5 font-bold text-xs px-3 py-2 rounded-lg border transition-all"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-              >
-                👤 Sign In
-              </button>
+            {/* Customer Sign In / Account */}
+            {(c as any).showLoginButton !== false && (
+              customerSession ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setViewMode(viewMode === 'dashboard' ? 'website' : 'dashboard')}
+                    className="flex items-center gap-1.5 font-bold text-xs px-3 py-2 rounded-lg border transition-all"
+                    style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)', background: `${pc}15` }}
+                    title="Toggle Customer Portal"
+                  >
+                    <span>👤</span> {viewMode === 'dashboard' ? 'Back to Site' : customerSession.name.split(' ')[0]}
+                  </button>
+                  <button
+                    onClick={handleCustomerSignOut}
+                    className="p-2 rounded-lg border text-slate-400 hover:text-rose-400 hover:border-rose-500/40 transition-colors text-xs"
+                    title="Sign Out"
+                    style={{ borderColor: 'var(--color-border)' }}
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setAuthMode('signin');
+                    setShowCustomerLoginModal(true);
+                  }}
+                  className="hidden sm:flex items-center gap-1.5 font-bold text-xs px-3 py-2 rounded-lg border transition-all hover:border-slate-600"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                >
+                  <User className="w-3.5 h-3.5" /> {(c as any).loginButtonText || 'Sign In'}
+                </button>
+              )
             )}
 
             {/* Book Service CTA */}
-            <button
-              onClick={() => {
-                setActivePageSlug('services');
-                setTimeout(() => {
-                  const el = document.getElementById('services');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }, 50);
-              }}
-              className="flex items-center gap-2 font-black text-xs px-4 py-2.5 rounded-xl shadow-md hover:scale-[1.03] transition-all"
-              style={{ background: pc, color: getTextColorForBg(pc), borderRadius: 'var(--border-radius)' }}
-            >
-              📅 Book Service
-            </button>
+            {(c as any).showBookButton !== false && (
+              <button
+                onClick={() => {
+                  setActivePageSlug('services');
+                  setTimeout(() => {
+                    const el = document.getElementById('services');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }, 50);
+                }}
+                className="flex items-center gap-2 font-black text-xs px-4 py-2.5 rounded-xl shadow-md hover:scale-[1.03] transition-all"
+                style={{ background: pc, color: getTextColorForBg(pc), borderRadius: 'var(--border-radius)' }}
+              >
+                📅 {(c as any).bookButtonText || 'Book Service'}
+              </button>
+            )}
 
             {/* Dark Mode toggle */}
             <button
@@ -1005,124 +1237,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         />
       )}
 
-      {/* ===== FOOTER ===== */}
-      <footer className="pt-12 pb-6 px-4 sm:px-6 border-t text-xs font-sans" style={{ backgroundColor: localDark ? '#0f172a' : '#1e293b', borderColor: 'rgba(255,255,255,0.06)', color: '#94a3b8' }}>
-        <div className="max-w-7xl mx-auto">
-          {/* 5-Column Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10 text-left">
 
-            {/* Col 1: Brand */}
-            <div className="col-span-2 md:col-span-1 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base font-black text-white" style={{ background: pc }}>
-                  {(c.logoText || tenant.name).charAt(0)}
-                </div>
-                <div>
-                  <p className="font-black text-sm text-white">{c.logoText || tenant.name}</p>
-                  <p className="text-[10px] text-slate-500">One Call. We Do It All.</p>
-                </div>
-              </div>
-              <p className="text-xs leading-relaxed text-slate-400">Your one-stop solution for all home services in {c.city?.split(',')[0] || 'Nellore'}.</p>
-              <div className="flex gap-2">
-                {c.socialFacebook && (
-                  <a href={c.socialFacebook} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-700 hover:border-blue-500 hover:text-blue-400 transition-all text-slate-400 text-xs font-black">
-                    f
-                  </a>
-                )}
-                {c.socialInstagram && (
-                  <a href={c.socialInstagram} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-700 hover:border-pink-500 hover:text-pink-400 transition-all text-slate-400 text-xs font-black">
-                    ig
-                  </a>
-                )}
-                {c.whatsAppNumber && (
-                  <a href={`https://wa.me/${c.whatsAppNumber}`} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-700 hover:border-green-500 hover:text-green-400 transition-all text-slate-400 text-base">
-                    <MessageCircle className="w-3.5 h-3.5" />
-                  </a>
-                )}
-                <button className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-700 hover:border-red-500 hover:text-red-400 transition-all text-slate-400 text-xs font-black">
-                  yt
-                </button>
-              </div>
-            </div>
-
-            {/* Col 2: Quick Links */}
-            <div className="space-y-3">
-              <h4 className="font-black text-sm text-white">Quick Links</h4>
-              <ul className="space-y-2">
-                {[
-                  { label: 'Home', slug: 'home' },
-                  { label: 'Services', slug: 'services' },
-                  { label: 'Offers', slug: 'offers' },
-                  { label: 'About Us', slug: 'about' },
-                  { label: 'Contact', slug: 'contact' },
-                ].map(link => (
-                  <li key={link.slug}>
-                    <button onClick={() => { setActivePageSlug(link.slug); setViewMode('website'); }} className="hover:text-white transition-colors text-slate-400">
-                      {link.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Col 3: Popular Services */}
-            <div className="space-y-3">
-              <h4 className="font-black text-sm text-white">Popular Services</h4>
-              <ul className="space-y-2">
-                {myServices.slice(0, 5).map((svc: any) => (
-                  <li key={svc.id}>
-                    <button onClick={() => { setActivePageSlug('services'); setViewMode('website'); }} className="hover:text-white transition-colors text-slate-400 truncate block max-w-full text-left">
-                      {svc.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Col 4: Company */}
-            <div className="space-y-3">
-              <h4 className="font-black text-sm text-white">Company</h4>
-              <ul className="space-y-2 text-slate-400">
-                {['About Us', 'Our Team', 'Reviews', 'Blog', 'Careers'].map(item => (
-                  <li key={item}><button className="hover:text-white transition-colors">{item}</button></li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Col 5: Contact */}
-            <div className="space-y-3">
-              <h4 className="font-black text-sm text-white">Contact Us</h4>
-              <div className="space-y-2 text-slate-400">
-                {c.address && <p>📍 {c.address}</p>}
-                {c.phone && <p><a href={`tel:${c.phone}`} className="hover:text-white transition-colors">📞 {c.phone}</a></p>}
-                {c.email && <p><a href={`mailto:${c.email}`} className="hover:text-white transition-colors">✉️ {c.email}</a></p>}
-                {c.businessHours && <p>⏰ {c.businessHours}</p>}
-              </div>
-
-              {/* Support links */}
-              <div className="pt-2 space-y-1.5">
-                {['Track Booking', 'Help Center', 'Cancellation Policy', 'Privacy Policy', 'Terms & Conditions'].map(item => (
-                  <div key={item}><button className="text-slate-500 hover:text-white transition-colors text-[10px]">{item}</button></div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Bar */}
-          <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <p className="text-slate-500">© {new Date().getFullYear()} {c.logoText || tenant.name} Services. All rights reserved.</p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowPlatformBadgeModal(true)}
-                className="inline-flex items-center gap-1.5 border px-2.5 py-1 rounded-lg text-[9px] font-bold transition-colors text-slate-500 border-slate-700 hover:border-slate-500"
-              >
-                🛡️ Verified by <strong>Anarav OS</strong>
-              </button>
-              <p className="text-slate-500">Powered by <a href="#/" className="font-bold hover:underline" style={{ color: pc }}>Anarav Business OS</a></p>
-            </div>
-          </div>
-        </div>
-      </footer>
 
       {/* ===== BOOKING MODAL ===== */}
       {bookingService && (
@@ -1810,47 +1925,273 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         </div>
       )}
 
-      {/* ===== CUSTOMER SIGN IN MODAL ===== */}
+      {/* ===== COMPREHENSIVE CUSTOMER AUTH MODAL (SIGN IN & SIGN UP) ===== */}
       {showCustomerLoginModal && (
-        <div className="modal-overlay z-50" onClick={() => setShowCustomerLoginModal(false)}>
-          <div onClick={e => e.stopPropagation()} className="bg-slate-900 rounded-3xl w-full max-w-sm p-6 border border-slate-800 text-slate-200 animate-scaleIn font-sans text-left space-y-4">
-            <div className="text-center pb-2 border-b border-slate-800">
-              <span className="text-4xl">👤</span>
-              <h3 className="text-base font-black text-white mt-2">Customer Portal Sign In</h3>
-              <p className="text-[10px] text-slate-500 mt-1">Access booking history, invoices, & warranties</p>
-            </div>
-
-            <form onSubmit={handleCustomerLogin} className="space-y-4 text-xs">
+        <div className="modal-overlay z-50 p-4" onClick={() => setShowCustomerLoginModal(false)}>
+          <div 
+            onClick={e => e.stopPropagation()} 
+            className="bg-slate-900 rounded-3xl w-full max-w-md p-6 sm:p-7 border border-slate-800 text-slate-200 shadow-2xl animate-scaleIn font-sans text-left space-y-5 relative"
+            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface, #0f172a)' }}
+          >
+            {/* Modal Header */}
+            <div className="flex justify-between items-start">
               <div>
-                <label className="form-label">Phone Number</label>
-                <input
-                  type="tel"
-                  placeholder="e.g. 9876543210"
-                  className="form-input"
-                  value={customerPhone}
-                  onChange={e => setCustomerPhone(e.target.value)}
-                  required
-                />
-                <p className="text-[9px] text-slate-500 mt-1 leading-relaxed">
-                  💡 Demo Hint: Enter any phone number matching past bookings to load history, or sign in as a new user.
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md" style={{ color: pc, background: `${pc}18` }}>
+                  Customer Portal
+                </span>
+                <h3 className="text-lg font-black text-white mt-1.5">
+                  {authMode === 'signin' ? 'Sign In to Your Account' : 'Create Customer Account'}
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                  {authMode === 'signin' ? 'Manage bookings, download invoices & schedule appointments' : 'Register to track service requests, warranties & saved addresses'}
                 </p>
               </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl font-bold text-white text-center text-xs"
-                style={{ background: pc }}
+              <button 
+                onClick={() => setShowCustomerLoginModal(false)}
+                className="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs transition-colors"
               >
-                Sign In & Open Dashboard
+                ✕
               </button>
-            </form>
+            </div>
 
-            <button
-              onClick={() => setShowCustomerLoginModal(false)}
-              className="w-full text-center text-slate-550 hover:text-slate-400 font-bold text-xs"
-            >
-              Cancel
-            </button>
+            {/* Mode Switcher Tabs */}
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/80">
+              <button 
+                type="button"
+                onClick={() => setAuthMode('signin')}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${authMode === 'signin' ? 'text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                style={authMode === 'signin' ? { background: pc } : {}}
+              >
+                <Lock className="w-3.5 h-3.5" /> Sign In
+              </button>
+              <button 
+                type="button"
+                onClick={() => setAuthMode('signup')}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${authMode === 'signup' ? 'text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                style={authMode === 'signup' ? { background: pc } : {}}
+              >
+                <User className="w-3.5 h-3.5" /> Create Account
+              </button>
+            </div>
+
+            {/* ═══ SIGN IN FORM ═══ */}
+            {authMode === 'signin' ? (
+              <form onSubmit={handleCustomerSignIn} className="space-y-3.5 text-xs">
+                <div>
+                  <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Mobile Number or Email</label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                      <User className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="e.g. 9876543210 or user@example.com"
+                      className="form-input pl-9"
+                      value={authIdentifier}
+                      onChange={e => setAuthIdentifier(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Password</label>
+                    <button 
+                      type="button" 
+                      onClick={() => showToast('Password reset link sent to registered phone/email.', 'info')}
+                      className="text-[10px] font-bold hover:underline"
+                      style={{ color: pc }}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                      <Lock className="w-4 h-4" />
+                    </span>
+                    <input
+                      type={authShowPassword ? 'text' : 'password'}
+                      placeholder="Enter account password"
+                      className="form-input pl-9 pr-9"
+                      value={authPassword}
+                      onChange={e => setAuthPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setAuthShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                    >
+                      {authShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="authRememberCustomer"
+                    checked={authRememberMe}
+                    onChange={e => setAuthRememberMe(e.target.checked)}
+                    className="rounded border-slate-700 text-blue-600 focus:ring-0"
+                    style={{ accentColor: pc }}
+                  />
+                  <label htmlFor="authRememberCustomer" className="text-[11px] text-slate-400 cursor-pointer">
+                    Remember me on this browser
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full py-3 rounded-xl font-black text-white text-center text-xs shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                  style={{ background: pc }}
+                >
+                  {authLoading ? 'Signing In...' : 'Sign In to Account ➔'}
+                </button>
+
+                {/* Fast 1-Click Demo Login */}
+                <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sessionData = {
+                        phone: '9876543210',
+                        name: 'Ravi Kumar',
+                        email: 'ravi@example.com',
+                        address: '12-3-456, MG Road, Nellore'
+                      };
+                      setCustomerSession(sessionData);
+                      localStorage.setItem(`anarav_customer_session_${tenant.id}`, JSON.stringify(sessionData));
+                      setShowCustomerLoginModal(false);
+                      setViewMode('dashboard');
+                      setCustomerActiveTab('bookings');
+                    }}
+                    className="w-full py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 text-slate-300 text-[11px] font-bold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    ⚡ 1-Click Demo Customer Login (Ravi Kumar)
+                  </button>
+
+                  <p className="text-[11px] text-slate-500 text-center">
+                    New customer? <button type="button" onClick={() => setAuthMode('signup')} className="font-bold hover:underline" style={{ color: pc }}>Create an account</button>
+                  </p>
+                </div>
+              </form>
+            ) : (
+              /* ═══ SIGN UP FORM ═══ */
+              <form onSubmit={handleCustomerSignUp} className="space-y-3 text-xs">
+                <div>
+                  <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Full Name</label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                      <User className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pradeep Kumar"
+                      className="form-input pl-9"
+                      value={authFullName}
+                      onChange={e => setAuthFullName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Mobile Phone</label>
+                    <div className="relative mt-1">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500">
+                        <Phone className="w-3.5 h-3.5" />
+                      </span>
+                      <input
+                        type="tel"
+                        placeholder="9876543210"
+                        className="form-input pl-8 text-xs"
+                        value={authPhone}
+                        onChange={e => setAuthPhone(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Email (Optional)</label>
+                    <div className="relative mt-1">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500">
+                        <Mail className="w-3.5 h-3.5" />
+                      </span>
+                      <input
+                        type="email"
+                        placeholder="user@example.com"
+                        className="form-input pl-8 text-xs"
+                        value={authEmail}
+                        onChange={e => setAuthEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Create Password</label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                      <Lock className="w-4 h-4" />
+                    </span>
+                    <input
+                      type={authShowPassword ? 'text' : 'password'}
+                      placeholder="At least 4 characters"
+                      className="form-input pl-9 pr-9"
+                      value={authPassword}
+                      onChange={e => setAuthPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setAuthShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                    >
+                      {authShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Service Address / House / Flat No.</label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                      <MapPin className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Flat 402, Green Meadows, MG Road"
+                      className="form-input pl-9"
+                      value={authAddress}
+                      onChange={e => setAuthAddress(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Addresses & credentials encrypted with end-to-end privacy</span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full py-3 rounded-xl font-black text-white text-center text-xs shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                  style={{ background: pc }}
+                >
+                  {authLoading ? 'Creating Account...' : 'Create Account & Sign In ➔'}
+                </button>
+
+                <p className="text-[11px] text-slate-500 text-center pt-1">
+                  Already have an account? <button type="button" onClick={() => setAuthMode('signin')} className="font-bold hover:underline" style={{ color: pc }}>Sign In</button>
+                </p>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -2067,6 +2408,125 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         </div>
       )}
 
+      {/* ═══════════ CUSTOMIZABLE DYNAMIC FOOTER ═══════════ */}
+      {viewMode === 'website' && (
+        <footer 
+          className="border-t pt-12 pb-20 md:pb-12 font-sans transition-colors"
+          style={{ 
+            backgroundColor: localDark ? '#060b14' : '#0f172a', 
+            borderColor: localDark ? '#1e293b' : '#1e293b',
+            color: '#94a3b8'
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 pb-10">
+              
+              {/* Brand Column */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  {c.logoImage ? (
+                    <img 
+                      src={c.logoImage} 
+                      alt={c.logoText || tenant.name} 
+                      className="h-8 w-auto max-w-[120px] rounded-md object-contain" 
+                    />
+                  ) : (
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black text-white" 
+                      style={{ background: pc }}
+                    >
+                      {(c.logoText || tenant.name).charAt(0)}
+                    </div>
+                  )}
+                  <span className="font-black text-sm text-white">{c.logoText || tenant.name}</span>
+                </div>
+
+                <p className="text-[11px] text-slate-400 leading-relaxed max-w-xs">
+                  {(c as any).footerAbout || `Your trusted home services partner in ${c.city || 'your city'}.`}
+                </p>
+
+                {/* Social Links — matching preview icon badges */}
+                <div className="flex items-center gap-1.5 pt-1">
+                  {Object.entries((c as any).footerSocials || { 'Facebook': 'f', 'Instagram': 'ig', 'YouTube': 'yt', 'WhatsApp': '💬' }).map(([name, url]) => (
+                    <a
+                      key={name}
+                      href={String(url).startsWith('http') || String(url).startsWith('https') ? String(url) : (name === 'WhatsApp' && c.whatsAppNumber ? `https://wa.me/${c.whatsAppNumber}` : '#')}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-7 h-7 rounded-lg border border-slate-750 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-[10px] font-black transition-colors"
+                      title={name}
+                    >
+                      {name === 'Facebook' ? 'f' : name === 'Instagram' ? 'ig' : name === 'YouTube' ? 'yt' : name === 'WhatsApp' ? '💬' : '🔗'}
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic Footer Columns (Quick Links, Popular Services, Company) */}
+              {(((c as any).footerColumns) || [
+                { id: 'fcol-1', title: 'Quick Links', items: ['Home', 'Services', 'Offers', 'About Us', 'Contact'] },
+                { id: 'fcol-2', title: 'Popular Services', items: ['Cleaning', 'Electrical', 'Plumbing', 'Painting', 'Pest Control'] },
+                { id: 'fcol-3', title: 'Company', items: ['About Us', 'Our Team', 'Reviews', 'Blog', 'Careers'] },
+              ]).map((col: any) => (
+                <div key={col.id || col.title} className="space-y-2.5">
+                  <p className="font-black text-xs text-white">{col.title}</p>
+                  <ul className="space-y-1.5 text-[11px]">
+                    {col.items.map((item: string, idx: number) => (
+                      <li key={idx}>
+                        <button
+                          onClick={() => {
+                            const lower = item.toLowerCase();
+                            let targetSlug = 'services';
+                            if (lower.includes('home')) targetSlug = 'home';
+                            else if (lower.includes('offer')) targetSlug = 'offers';
+                            else if (lower.includes('team')) targetSlug = 'team';
+                            else if (lower.includes('review')) targetSlug = 'reviews';
+                            else if (lower.includes('gallery')) targetSlug = 'gallery';
+                            else if (lower.includes('faq')) targetSlug = 'faqs';
+                            else if (lower.includes('contact') || lower.includes('about')) targetSlug = 'coverage';
+                            
+                            setActivePageSlug(targetSlug);
+                            setViewMode('website');
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="text-slate-400 hover:text-white hover:underline transition-colors text-left"
+                        >
+                          {item}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+
+              {/* Contact Us Column — matching preview exactly */}
+              <div className="space-y-2.5">
+                <p className="font-black text-xs text-white">Contact Us</p>
+                <div className="space-y-1.5 text-[11px] text-slate-400">
+                  <p>📍 {c.city || 'Nellore, AP'}</p>
+                  {c.phone && <p>📞 <a href={`tel:${c.phone}`} className="hover:text-white transition-colors">{c.phone}</a></p>}
+                  <p>✉️ {c.email || `hello@${tenant.subdomain || 'vip'}.in`}</p>
+                  <p>⏰ {c.businessHours || '08:00 AM – 08:00 PM'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Copyright & Powered by — matching preview */}
+            <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
+              <p>
+                {(c as any).footerCopyright || `© ${new Date().getFullYear()} ${c.logoText || tenant.name} Services. All rights reserved.`}
+              </p>
+
+              {((c as any).showPoweredBy !== false) && (
+                <div className="flex items-center gap-1">
+                  <span>Powered by</span>
+                  <span className="font-bold text-slate-300" style={{ color: pc }}>Anarav Business OS</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </footer>
+      )}
 
       {/* Sticky Mobile Action Center */}
       <div
