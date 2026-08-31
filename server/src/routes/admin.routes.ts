@@ -4,6 +4,7 @@ import { authenticate, authorize, AuthenticatedRequest } from '../middlewares/au
 import { tenantContextMiddleware } from '../middlewares/tenant';
 import { sendResponse } from '../utils/response';
 import { AppError } from '../utils/errors';
+import { gstinSchema } from '../utils/validators';
 
 const router = Router();
 router.use(authenticate);
@@ -51,7 +52,40 @@ router.get('/workers', authorize('TENANT_ADMIN'), async (req: AuthenticatedReque
 // 3. TENANT CONFIG UPDATES
 router.put('/tenant/config', authorize('TENANT_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    sendResponse(res, 200, 'Tenant configuration saved', { tenantId: req.user!.tenantId, config: req.body });
+    const { gstNumber, businessName, ...configData } = req.body;
+
+    if (gstNumber) {
+      const gstinResult = gstinSchema.safeParse(gstNumber);
+      if (!gstinResult.success) {
+        return next(new AppError('Please enter a valid 15-character GSTIN.', 400));
+      }
+    }
+
+    const tenantId = req.user!.tenantId!;
+
+    try {
+      const existingReg = await prisma.tenantRegistration.findUnique({ where: { id: tenantId } });
+      const currentConfig = (existingReg?.config as object) || {};
+      const mergedConfig = { ...currentConfig, ...configData };
+
+      const updateData: any = {
+        config: mergedConfig,
+        gstNumber: gstNumber || null
+      };
+
+      if (businessName) {
+        updateData.businessName = businessName;
+      }
+
+      await prisma.tenantRegistration.update({
+        where: { id: tenantId },
+        data: updateData
+      });
+    } catch (err) {
+      console.error("Error updating tenant registration config:", err);
+    }
+
+    sendResponse(res, 200, 'Tenant configuration saved', { tenantId, config: req.body });
   } catch (err) { next(err); }
 });
 
@@ -105,6 +139,75 @@ router.delete('/leads/:id', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req
       where: { id: req.params.id }
     });
     sendResponse(res, 200, 'Lead deleted successfully', null);
+  } catch (err) { next(err); }
+});
+
+// 5. SERVICES CRUD
+router.get('/services', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId!;
+    const services = await prisma.service.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' }
+    });
+    sendResponse(res, 200, 'Services retrieved successfully', services);
+  } catch (err) { next(err); }
+});
+
+router.post('/services', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId!;
+    const { name, category, description, icon, basePrice, durationMin, isActive } = req.body;
+    
+    if (!name || !category || basePrice === undefined || durationMin === undefined) {
+      return next(new AppError('Missing required service fields', 400));
+    }
+
+    const service = await prisma.service.create({
+      data: {
+        tenantId,
+        name,
+        category,
+        description: description || '',
+        icon: icon || '🔧',
+        basePrice: Number(basePrice),
+        durationMin: Number(durationMin),
+        isActive: isActive !== undefined ? isActive : true
+      }
+    });
+    sendResponse(res, 201, 'Service created successfully', service);
+  } catch (err) { next(err); }
+});
+
+router.put('/services/:id', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId!;
+    const serviceId = req.params.id;
+    const { name, category, description, icon, basePrice, durationMin, isActive } = req.body;
+    
+    // Ensure the service belongs to the tenant
+    const existing = await prisma.service.findFirst({
+      where: { id: serviceId, tenantId }
+    });
+    
+    if (!existing) {
+      return next(new AppError('Service not found or unauthorized', 404));
+    }
+
+    const service = await prisma.service.update({
+      where: { id: serviceId },
+      data: {
+        name: name !== undefined ? name : existing.name,
+        category: category !== undefined ? category : existing.category,
+        description: description !== undefined ? description : existing.description,
+        icon: icon !== undefined ? icon : existing.icon,
+        basePrice: basePrice !== undefined ? Number(basePrice) : existing.basePrice,
+        durationMin: durationMin !== undefined ? Number(durationMin) : existing.durationMin,
+        isActive: isActive !== undefined ? isActive : existing.isActive
+      }
+    });
+    
+    sendResponse(res, 200, 'Service updated successfully', service);
   } catch (err) { next(err); }
 });
 

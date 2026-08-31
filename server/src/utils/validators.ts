@@ -24,3 +24,9 @@ export const createBookingSchema = z.object({
 export const assignWorkerSchema = z.object({
   workerId: z.string().uuid()
 });
+
+export const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
+export const gstinSchema = z.string()
+  .length(15, 'Please enter a valid 15-character GSTIN.')
+  .regex(GSTIN_REGEX, 'Please enter a valid 15-character GSTIN.');

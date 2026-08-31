@@ -111,6 +111,32 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
     }).catch(err => {
       // Backend not running or offline
     });
+
+    api.getServices().then(res => {
+      if (res && res.data && Array.isArray(res.data)) {
+        setServices(prev => {
+          // Merge with any existing mock data, preferring DB
+          const map = new Map(prev.map(item => [item.id, item]));
+          for (const dbSvc of res.data) {
+            map.set(dbSvc.id, {
+              id: dbSvc.id,
+              tenantId: dbSvc.tenantId,
+              name: dbSvc.name,
+              category: dbSvc.category,
+              description: dbSvc.description,
+              icon: dbSvc.icon,
+              basePrice: dbSvc.basePrice,
+              durationMin: dbSvc.durationMin,
+              emergencyAllowed: true,
+              requiredSkills: [],
+              formFields: [],
+              isActive: dbSvc.isActive
+            });
+          }
+          return Array.from(map.values());
+        });
+      }
+    }).catch(err => console.error('Failed to load services', err));
   }, [tenant?.id]);
 
   const showToast = (msg: string, type = 'success') => {
@@ -272,6 +298,7 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   }, [tenant?.id, tenant?.config]);
 
   // ─── Services Form ────────────────────────────────────────
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [newSvcName,     setNewSvcName]     = useState('');
   const [newSvcCategory, setNewSvcCategory] = useState('General');
   const [newSvcPrice,    setNewSvcPrice]    = useState(500);
@@ -325,6 +352,10 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   const [verPan, setVerPan] = useState(tenant.config.companyVerification?.panNumber || 'ABCDE1234F');
   const [verLic, setVerLic] = useState(tenant.config.companyVerification?.licenseNumber || 'LIC-2026-991A');
   const [verStatus, setVerStatus] = useState(tenant.config.companyVerification?.status || 'verified');
+  const [verAadhaar, setVerAadhaar] = useState(tenant.config.companyVerification?.aadhaarNumber || '1234-5678-9012');
+  const [aadhaarImg, setAadhaarImg] = useState(tenant.config.companyVerification?.aadhaarImage || '');
+  const [panImg, setPanImg] = useState(tenant.config.companyVerification?.panImage || '');
+  const [licImg, setLicImg] = useState(tenant.config.companyVerification?.licenseImage || '');
 
   // ─── AI Copywriter Generator state ────────────────────────
   const [aiIndustry, setAiIndustry] = useState('electrician');
@@ -409,6 +440,43 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
     }, 1500);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) setter(reader.result.toString());
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveVerification = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newConfig = { 
+      ...tenant.config, 
+      companyVerification: { 
+        ...tenant.config.companyVerification, 
+        panNumber: verPan, 
+        aadhaarNumber: verAadhaar,
+        licenseNumber: verLic, 
+        status: verStatus,
+        aadhaarImage: aadhaarImg,
+        panImage: panImg,
+        licenseImage: licImg
+      }
+    };
+
+    setTenants(prev => prev.map(t => t.id === tenant.id ? { ...t, config: newConfig } : t));
+    
+    api.saveConfig({ ...newConfig, businessName: tenant.name })
+      .then(() => showToast('Verification documents saved successfully!'))
+      .catch(err => {
+        console.error(err);
+        showToast('Failed to save documents', 'error');
+      });
+  };
+
   const handleApplyTemplate = (pack: typeof INDUSTRY_PACKS[0]) => {
     // Generate configurations from industry template
     const confirm = window.confirm(`Overwrite existing services and website profiles to load the "${pack.name}" pack?`);
@@ -465,7 +533,7 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
     showToast(`Uploaded file "${newDocName}" to RAG knowledge vector pool.`);
   };
 
-  const handleAddService = (e: React.FormEvent) => {
+  const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSvcName) return;
     const ns: Service = {
@@ -490,6 +558,13 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
       joinedDate: new Date().toISOString().split('T')[0], attendanceToday: 'present',
     };
     setWorkers(prev => [...prev, nw]);
+    
+    // Save to DB via tenant config
+    const newConfig = { ...tenant.config, workers: [...(tenant.config.workers || []), nw] };
+    setTenants(prev => prev.map(t => t.id === tenant.id ? { ...t, config: newConfig } : t));
+    api.saveConfig({ ...newConfig, businessName: tenant.name })
+      .catch(err => console.error('Failed to save worker to db:', err));
+
     if (newWrkAadhaarFile) {
       console.log(`Worker Aadhaar document logged: ${newWrkAadhaarFile.name}`);
     }
@@ -792,7 +867,7 @@ Manager Signature: ________________________
                       <p className="kpi-label">New Service Requests</p>
                       <p className="kpi-value">{pendingJobs}</p>
                     </div>
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-shieldAlert">
                       <ShieldAlert className="w-4.5 h-4.5" />
                     </div>
                   </div>
@@ -913,7 +988,7 @@ Manager Signature: ________________________
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className="form-label">Office Address *</label><input className="form-input" value={bizAddr} onChange={e => setBizAddr(e.target.value)} required /></div>
-                    <div><label className="form-label">GST Tax Number</label><input className="form-input" value={gst} onChange={e => setGst(e.target.value)} placeholder="GST Number" /></div>
+                    <div><label className="form-label">GST Tax Number</label><input className="form-input uppercase font-mono" value={gst} onChange={e => setGst(e.target.value.replace(/\s+/g, '').toUpperCase())} placeholder="GST Number" maxLength={15} /></div>
                   </div>
                   <div><label className="form-label">Company About Description *</label><textarea className="form-input resize-none" rows={3} value={bizAbout} onChange={e => setBizAbout(e.target.value)} required /></div>
                   <button type="submit" className="btn-primary py-2.5 font-bold">Save Company Profile</button>
@@ -921,27 +996,66 @@ Manager Signature: ________________________
               )}
 
               {setupSubTab === 'verification' && (
-                <div className="admin-card space-y-4">
+                <form onSubmit={handleSaveVerification} className="admin-card space-y-4">
                   <div className="flex justify-between items-center">
                     <div><p className="section-title">SaaS Verification Documents</p><p className="section-subtitle">Aadhaar, PAN, and License verification tags for customer trusts.</p></div>
                     <span className={`badge ${verStatus === 'verified' ? 'badge-completed' : 'badge-requested'}`}>{verStatus.toUpperCase()}</span>
                   </div>
-                  <div className="space-y-3 font-sans">
-                    <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-850 rounded-xl">
-                      <div><p className="font-bold text-white text-xs">Aadhaar Card copy verification</p><p className="text-slate-500 text-[10px]">Verified: 1234-5678-XXXX</p></div>
-                      <span className="text-emerald-400 font-bold">✓ Approved</span>
+                  <div className="space-y-4 font-sans">
+                    {/* Aadhaar */}
+                    <div className="p-4 bg-slate-900 border border-slate-850 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                           <p className="font-bold text-white text-xs">Aadhaar Card copy verification</p>
+                           <input className="bg-slate-850 text-white rounded px-2.5 py-1 text-xs border border-slate-750 font-mono mt-1" value={verAadhaar} onChange={e => setVerAadhaar(e.target.value)} placeholder="Aadhaar Number" />
+                        </div>
+                        <span className={`font-bold text-xs ${aadhaarImg ? 'text-emerald-400' : 'text-slate-500'}`}>✓ {aadhaarImg ? 'Approved' : 'Pending'}</span>
+                      </div>
+                      <div className="flex gap-2">
+                         <input type="text" placeholder="Or Image URL Link" className="bg-slate-850 text-white rounded px-2.5 py-1.5 text-xs border border-slate-750 flex-1" value={aadhaarImg} onChange={e => setAadhaarImg(e.target.value)} />
+                         <input type="file" accept="image/*" className="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-700 file:text-white hover:file:bg-slate-600" onChange={(e) => handleImageUpload(e, setAadhaarImg)} />
+                      </div>
+                      {aadhaarImg && <img src={aadhaarImg} alt="Aadhaar" className="h-20 object-contain rounded border border-slate-700 mt-2" />}
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-850 rounded-xl">
-                      <div><p className="font-bold text-white text-xs">PAN Verification</p><input className="bg-slate-850 text-white rounded px-2.5 py-1 text-xs border border-slate-750 font-mono mt-1" value={verPan} onChange={e => setVerPan(e.target.value)} /></div>
-                      <span className="text-emerald-400 font-bold">✓ Approved</span>
+
+                    {/* PAN */}
+                    <div className="p-4 bg-slate-900 border border-slate-850 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                           <p className="font-bold text-white text-xs">PAN Verification</p>
+                           <input className="bg-slate-850 text-white rounded px-2.5 py-1 text-xs border border-slate-750 font-mono mt-1 uppercase" value={verPan} onChange={e => setVerPan(e.target.value)} placeholder="PAN Number" />
+                        </div>
+                        <span className={`font-bold text-xs ${panImg ? 'text-emerald-400' : 'text-slate-500'}`}>✓ {panImg ? 'Approved' : 'Pending'}</span>
+                      </div>
+                      <div className="flex gap-2">
+                         <input type="text" placeholder="Or Image URL Link" className="bg-slate-850 text-white rounded px-2.5 py-1.5 text-xs border border-slate-750 flex-1" value={panImg} onChange={e => setPanImg(e.target.value)} />
+                         <input type="file" accept="image/*" className="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-700 file:text-white hover:file:bg-slate-600" onChange={(e) => handleImageUpload(e, setPanImg)} />
+                      </div>
+                      {panImg && <img src={panImg} alt="PAN" className="h-20 object-contain rounded border border-slate-700 mt-2" />}
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-850 rounded-xl">
-                      <div><p className="font-bold text-white text-xs">Business License Certificate</p><input className="bg-slate-850 text-white rounded px-2.5 py-1 text-xs border border-slate-750 font-mono mt-1" value={verLic} onChange={e => setVerLic(e.target.value)} /></div>
-                      <span className="text-emerald-400 font-bold">✓ Approved</span>
+
+                    {/* Business License */}
+                    <div className="p-4 bg-slate-900 border border-slate-850 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                           <p className="font-bold text-white text-xs">Business License Certificate</p>
+                           <input className="bg-slate-850 text-white rounded px-2.5 py-1 text-xs border border-slate-750 font-mono mt-1" value={verLic} onChange={e => setVerLic(e.target.value)} placeholder="License Number" />
+                        </div>
+                        <span className={`font-bold text-xs ${licImg ? 'text-emerald-400' : 'text-slate-500'}`}>✓ {licImg ? 'Approved' : 'Pending'}</span>
+                      </div>
+                      <div className="flex gap-2">
+                         <input type="text" placeholder="Or Image URL Link" className="bg-slate-850 text-white rounded px-2.5 py-1.5 text-xs border border-slate-750 flex-1" value={licImg} onChange={e => setLicImg(e.target.value)} />
+                         <input type="file" accept="image/*" className="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-700 file:text-white hover:file:bg-slate-600" onChange={(e) => handleImageUpload(e, setLicImg)} />
+                      </div>
+                      {licImg && <img src={licImg} alt="License" className="h-20 object-contain rounded border border-slate-700 mt-2" />}
                     </div>
                   </div>
-                  <button onClick={() => { setVerStatus('verified'); showToast('Company verification status updated!'); }} className="btn-secondary w-full py-2 font-bold">Recheck Status Logs</button>
-                </div>
+                  
+                  <div className="flex gap-2 mt-4">
+                    <button type="submit" className="btn-primary flex-1 py-2 font-bold">Save Documents</button>
+                    <button type="button" onClick={() => { setVerStatus('verified'); showToast('Company verification status updated!'); }} className="btn-secondary flex-1 py-2 font-bold">Recheck Status Logs</button>
+                  </div>
+                </form>
               )}
 
               {setupSubTab === 'branches' && (
@@ -1017,15 +1131,23 @@ Manager Signature: ________________________
                             <span className="text-3xl">{svc.icon}</span>
                             <span className="badge badge-active">{svc.durationMin} Min</span>
                           </div>
-                          <h4 className="font-bold text-white text-sm">{svc.name}</h4>
-                          <p className="text-slate-500 text-xs mt-1 line-clamp-2 leading-relaxed">{svc.description}</p>
                         </div>
                         <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between">
                           <span className="text-emerald-400 font-black text-sm">₹{svc.basePrice.toLocaleString()}</span>
                           <button onClick={() => setServices(prev => prev.filter(s => s.id !== svc.id))} className="text-red-400 hover:text-red-300 font-bold text-xs">Remove Service</button>
                         </div>
                       </div>
-                    ))}
+                      <div>
+                        <label className="form-label">Service Description</label>
+                        <textarea className="form-input h-20" value={newSvcDesc} onChange={e => setNewSvcDesc(e.target.value)} placeholder="Service description..." />
+                      </div>
+                      <div className="flex gap-3">
+                        <button type="submit" className="btn-primary flex-1 py-2">{editingServiceId ? 'Update Service Profile' : '+ Create Service Profile'}</button>
+                        {editingServiceId && (
+                           <button type="button" onClick={() => { setEditingServiceId(null); setNewSvcName(''); setNewSvcDesc(''); setNewSvcDuration(60); setNewSvcDurationUnit('Minutes'); }} className="btn-secondary py-2 px-4">Cancel</button>
+                        )}
+                      </div>
+                    </form>
                   </div>
 
                   <form onSubmit={handleAddService} className="admin-card space-y-4 max-w-xl">
@@ -1311,8 +1433,15 @@ Manager Signature: ________________________
                         <input 
                           className="form-input font-mono" 
                           value={newWrkAadhaar} 
-                          onChange={e => setNewWrkAadhaar(e.target.value)} 
-                          placeholder="e.g. 1234-5678-9012" 
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                            setNewWrkAadhaar(val);
+                          }} 
+                          placeholder="e.g. 123456789012"
+                          minLength={12}
+                          maxLength={12}
+                          pattern="\d{12}"
+                          title="Please enter exactly 12 digits"
                           required 
                         />
                       </div>

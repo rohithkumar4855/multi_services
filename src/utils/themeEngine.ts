@@ -28,15 +28,17 @@ export interface ThemeTokens {
 
 // 1. RGB Conversions
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  if (!hex || typeof hex !== 'string') return { r: 37, g: 99, b: 235 };
+
   const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
   const cleanHex = hex.replace(shorthandRegex, (_, r, g, b) => r + r + g + g + b + b);
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(cleanHex);
   return result
     ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16),
+    }
     : { r: 37, g: 99, b: 235 }; // default blue #2563eb
 }
 
@@ -172,7 +174,7 @@ export function generateThemeTokens(
     const lightTextRatio = getContrastRatio('#ffffff', primaryColor);
     const darkTextRatio = getContrastRatio('#0f172a', primaryColor);
     btnText = lightTextRatio >= darkTextRatio ? '#ffffff' : '#0f172a';
-    
+
     // In case both fail target 4.5:1 ratio, force adjust text
     if (Math.max(lightTextRatio, darkTextRatio) < 4.5) {
       btnText = adjustContrast(btnText, primaryColor, 4.5);

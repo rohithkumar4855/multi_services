@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { sendResponse } from '../utils/response';
 import { AppError } from '../utils/errors';
+import { gstinSchema } from '../utils/validators';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -28,11 +29,19 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       theme,
       config,
       features,
-      status
+      status,
+      gstNumber
     } = req.body;
 
     if (!name || !ownerEmail) {
       return next(new AppError('Business name and owner email are required', 400));
+    }
+
+    if (gstNumber) {
+      const gstinResult = gstinSchema.safeParse(gstNumber);
+      if (!gstinResult.success) {
+        return next(new AppError('Please enter a valid 15-character GSTIN.', 400));
+      }
     }
 
     const userPassword = password || 'business123';
@@ -80,7 +89,8 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
           font: font || 'Inter, sans-serif',
           plan: plan || 'starter',
           status: status || 'pending',
-          config: tenantConfig
+          config: tenantConfig,
+          gstNumber: gstNumber || null
         }
       });
     } else {
@@ -98,7 +108,8 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
           font: font || regRecord.font,
           plan: plan || regRecord.plan,
           status: status || regRecord.status,
-          config: tenantConfig
+          config: tenantConfig,
+          gstNumber: gstNumber || regRecord.gstNumber
         }
       });
     }

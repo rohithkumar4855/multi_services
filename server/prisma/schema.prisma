@@ -42,6 +42,7 @@ model Service {
   name        String
   category    String
   description String
+  icon        String?   @default("🔧")
   basePrice   Float
   durationMin Int
   isActive    Boolean   @default(true)
@@ -114,6 +115,7 @@ model TenantRegistration {
   plan           String   @default("starter")
   status         String   @default("pending")
   config         Json?
+  gstNumber      String?  @db.VarChar(15)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
