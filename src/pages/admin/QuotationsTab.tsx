@@ -118,7 +118,7 @@ export default function QuotationsTab({ tenantId, tenantName, tenantPhone, tenan
             </div>
             <div>
               <label className="form-label">Customer Phone</label>
-              <input className="form-input" value={custPhone} onChange={e => setCustPhone(e.target.value)} placeholder="9876543210" />
+              <input className="form-input" maxLength={10} value={custPhone} onChange={e => setCustPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="9876543210" />
             </div>
             <div>
               <label className="form-label">Link to Booking (optional)</label>

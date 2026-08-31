@@ -249,14 +249,77 @@ export interface Service {
   icon: string;
   basePrice: number;
   durationMin: number;
-  emergencyAllowed: boolean;
-  requiredSkills: string[];
-  formFields: FormField[];
+  emergencyAllowed?: boolean;
+  requiredSkills?: string[];
+  formFields?: FormField[];
   isActive: boolean;
   industry?: string;
   variants?: ServiceVariant[];
   imageUrl?: string;
   isPopular?: boolean;
+  rating?: number;
+  ratingCount?: number;
+  tags?: string[];
+}
+
+// ─── Product ───────────────────────────────────────────────────────
+export interface Product {
+  id: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  price: number;
+  compareAtPrice?: number;
+  images: string[];
+  stock: number;
+  category: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+// ─── Order ─────────────────────────────────────────────────────────
+export interface Order {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  orderNumber: string;
+  items: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    type?: 'service' | 'product';
+  }>;
+  subtotal: number;
+  tax: number;
+  discount: number;
+  total: number;
+  paymentStatus: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  orderStatus: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
+  customerDetails: {
+    name: string;
+    email: string;
+    phone: string;
+    address?: string;
+  };
+  notes?: string;
+  createdAt: string;
+}
+
+// ─── Payment ───────────────────────────────────────────────────────
+export interface Payment {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  orderId?: string;
+  paymentGateway: string;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+  utrNumber?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
 }
 
 // ─── Worker ────────────────────────────────────────────────────────
@@ -410,13 +473,25 @@ export interface Campaign {
 // ─── Audit Log ─────────────────────────────────────────────────────
 export interface AuditLog {
   id: string;
-  tenantId: string;
-  userId: string;
-  userName: string;
+  tenantId?: string;
+  userId?: string;
+  userName?: string;
   action: string;
-  details: string;
-  ip: string;
-  timestamp: string;
+  details?: string;
+  entityType?: string;
+  entityId?: string;
+  oldValue?: Record<string, unknown>;
+  newValue?: Record<string, unknown>;
+  ip?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  timestamp?: string;
+  createdAt?: string;
+  user?: {
+    name: string;
+    email: string;
+    role: string;
+  };
 }
 
 // ─── Industry Pack ─────────────────────────────────────────────────

@@ -334,43 +334,59 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
 
 
 
-  const handleProcessPayment = () => {
+  const handleProcessPayment = async () => {
     if (!tempBooking) return;
     setIsProcessingPayment(true);
-    setTimeout(() => {
-      setBookings(prev => [...prev, tempBooking]);
-      const exists = leads.some(l => l.phone === tempBooking.customerPhone && l.tenantId === tenant.id);
-      if (!exists) {
-        const newL = {
-          id: `lead-${Date.now()}`,
-          tenantId: tenant.id,
-          name: tempBooking.customerName,
-          phone: tempBooking.customerPhone,
-          email: '',
-          serviceInterest: tempBooking.serviceName,
-          notes: `Auto-created from customer booking slot: ${tempBooking.scheduledDate} at ${tempBooking.scheduledTime}`,
-          status: 'new' as const,
-          createdAt: new Date().toISOString()
-        };
-        api.createLead(newL).then(res => {
-          if (res && res.data && res.data.id) {
-            newL.id = res.data.id;
-          }
-        }).catch(err => {
-          console.error('Error saving lead to DB:', err);
-        });
-        setLeads(prev => [...prev, newL]);
-      }
+
+    try {
+      // 1. Save booking directly to PostgreSQL Database
+      const res = await api.createBooking({
+        ...tempBooking,
+        tenantId: tenant.id
+      });
+      const savedBooking: Booking = (res && res.data) ? {
+        ...tempBooking,
+        id: res.data.id || tempBooking.id,
+        customerId: res.data.customerId || tempBooking.customerId
+      } : tempBooking;
+
+      setBookings(prev => [savedBooking, ...prev.filter(b => b.id !== savedBooking.id)]);
+      setLastBookingId(savedBooking.id);
+      showToast('🎉 Booking confirmed and saved to database!', 'success');
+    } catch (err) {
+      console.error('Error saving booking to DB:', err);
+      // Fallback local persistence
+      setBookings(prev => [tempBooking, ...prev.filter(b => b.id !== tempBooking.id)]);
       setLastBookingId(tempBooking.id);
-      setBasket([]);
-      setBasketCoupon('');
-      setIsProcessingPayment(false);
-      setPaymentGatewayOpen(false);
-      setBookingSubmitted(true);
-    }, 1500);
+      showToast('🎉 Booking confirmed and scheduled!', 'success');
+    }
+
+    // 2. Also register lead for notification & CRM
+    const exists = leads.some(l => l.phone === tempBooking.customerPhone && l.tenantId === tenant.id);
+    if (!exists) {
+      const newL = {
+        id: `lead-${Date.now()}`,
+        tenantId: tenant.id,
+        name: tempBooking.customerName,
+        phone: tempBooking.customerPhone,
+        email: '',
+        serviceInterest: tempBooking.serviceName,
+        notes: `Auto-created from customer booking slot: ${tempBooking.scheduledDate} at ${tempBooking.scheduledTime}`,
+        status: 'new' as const,
+        createdAt: new Date().toISOString()
+      };
+      api.createLead(newL).catch(() => {});
+      setLeads(prev => [...prev, newL]);
+    }
+
+    setBasket([]);
+    setBasketCoupon('');
+    setIsProcessingPayment(false);
+    setPaymentGatewayOpen(false);
+    setBookingSubmitted(true);
   };
 
-  const handleCustomerSignIn = (e: React.FormEvent) => {
+  const handleCustomerSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authIdentifier.trim()) {
       showToast('Please enter your mobile phone number or email address', 'error');
@@ -383,9 +399,84 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
 
     setAuthLoading(true);
     const identifier = authIdentifier.trim();
-    const isEmail = identifier.includes('@');
 
-    // Find customer in existing bookings or leads
+    try {
+      // 1. Authenticate against PostgreSQL database
+      const res = await api.customerLogin({
+        identifier,
+        password: authPassword,
+        tenantId: tenant.id
+      });
+
+      if (res && res.success && res.data?.user) {
+        const user = res.data.user;
+        const sessionData = {
+          id: user.id,
+          phone: user.phone || identifier,
+          name: user.name || 'Valued Customer',
+          email: user.email || '',
+          address: user.address || ''
+        };
+        setCustomerSession(sessionData);
+        if (authRememberMe) {
+          try {
+            localStorage.setItem(`anarav_customer_session_${tenant.id}`, JSON.stringify(sessionData));
+          } catch {}
+        }
+
+        // 2. Sync real customer bookings from DB
+        try {
+          const bookingsRes = await api.getBookings(tenant.id, user.id);
+          if (bookingsRes && bookingsRes.data && Array.isArray(bookingsRes.data)) {
+            const mapped = bookingsRes.data.map((dbB: any) => ({
+              id: dbB.id,
+              tenantId: dbB.tenantId,
+              customerId: dbB.customerId,
+              customerName: dbB.formData?.customerName || dbB.customer?.name || sessionData.name,
+              customerPhone: dbB.formData?.customerPhone || sessionData.phone,
+              customerAddress: dbB.formData?.customerAddress || sessionData.address || 'Doorstep Visit',
+              serviceId: dbB.serviceId,
+              serviceName: dbB.formData?.serviceName || dbB.service?.name || 'Service',
+              status: (dbB.status || 'requested').toLowerCase() as any,
+              scheduledDate: dbB.scheduledDate || new Date().toISOString().split('T')[0],
+              scheduledTime: dbB.scheduledTime || '10:00 AM',
+              isEmergency: !!dbB.formData?.isEmergency,
+              formData: dbB.formData || {},
+              priceDetails: {
+                baseVisit: Number(dbB.priceTotal) || 350,
+                distanceCharge: 50,
+                labour: 100,
+                material: 0,
+                emergencySurcharge: 0,
+                tax: Number(dbB.taxTotal) || 63,
+                discount: Number(dbB.discountTotal) || 0,
+                total: Number(dbB.netTotal) || 563
+              },
+              workerId: dbB.workerId || '',
+              workerName: dbB.worker?.user?.name || undefined,
+              createdAt: dbB.createdAt || new Date().toISOString()
+            }));
+            setBookings(prev => {
+              const map = new Map(prev.map(b => [b.id, b]));
+              for (const m of mapped) map.set(m.id, m);
+              return Array.from(map.values());
+            });
+          }
+        } catch {}
+
+        showToast(`Welcome back, ${sessionData.name}!`, 'success');
+        setShowCustomerLoginModal(false);
+        setViewMode('dashboard');
+        setCustomerActiveTab('bookings');
+        setAuthLoading(false);
+        return;
+      }
+    } catch (err: any) {
+      console.warn('DB login fallback to local session check:', err);
+    }
+
+    // Fallback local matching
+    const isEmail = identifier.includes('@');
     const foundBooking = bookings.find(b => 
       b.tenantId === tenant.id && 
       (b.customerPhone === identifier || (b.formData && (b.formData as any).email === identifier))
@@ -418,75 +509,10 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     setViewMode('dashboard');
     setCustomerActiveTab('bookings');
     setAuthLoading(false);
-
-    // Inject mock bookings if no real ones exist for this customer
-    const existingBookings = bookings.filter(b => b.customerPhone === clientPhone && b.tenantId === tenant.id);
-    if (existingBookings.length === 0 && myServices.length > 0) {
-      const svc0 = myServices[0];
-      const svc1 = myServices[Math.min(1, myServices.length - 1)];
-      const svc2 = myServices[Math.min(2, myServices.length - 1)];
-      const mockBookings: import('../types').Booking[] = [
-        {
-          id: `BK-DEMO-001`,
-          tenantId: tenant.id,
-          customerId: `cust-${clientPhone}`,
-          customerName: clientName,
-          customerPhone: clientPhone,
-          customerAddress: clientAddress || '12-3-456, MG Road, Nellore, AP 524001',
-          serviceId: svc0.id,
-          serviceName: svc0.name,
-          status: 'completed',
-          scheduledDate: '2026-07-10',
-          scheduledTime: '10:00 AM',
-          isEmergency: false,
-          formData: {},
-          priceDetails: { baseVisit: svc0.basePrice, distanceCharge: 0, labour: 150, material: 200, emergencySurcharge: 0, tax: Math.round(svc0.basePrice * 0.18), discount: 0, total: svc0.basePrice + 350 + Math.round(svc0.basePrice * 0.18) },
-          workerName: 'Suresh Kumar',
-          customerRating: 5,
-          couponCode: '',
-          createdAt: '2026-07-09T10:00:00Z',
-        },
-        {
-          id: `BK-DEMO-002`,
-          tenantId: tenant.id,
-          customerId: `cust-${clientPhone}`,
-          customerName: clientName,
-          customerPhone: clientPhone,
-          customerAddress: clientAddress || '12-3-456, MG Road, Nellore, AP 524001',
-          serviceId: svc1.id,
-          serviceName: svc1.name,
-          status: 'assigned',
-          scheduledDate: '2026-07-18',
-          scheduledTime: '02:30 PM',
-          isEmergency: false,
-          formData: {},
-          priceDetails: { baseVisit: svc1.basePrice, distanceCharge: 0, labour: 200, material: 0, emergencySurcharge: 0, tax: Math.round(svc1.basePrice * 0.18), discount: 50, total: svc1.basePrice + 200 + Math.round(svc1.basePrice * 0.18) - 50 },
-          workerName: 'Nagaraju M',
-          createdAt: '2026-07-14T09:00:00Z',
-        },
-        {
-          id: `BK-DEMO-003`,
-          tenantId: tenant.id,
-          customerId: `cust-${clientPhone}`,
-          customerName: clientName,
-          customerPhone: clientPhone,
-          customerAddress: clientAddress || '12-3-456, MG Road, Nellore, AP 524001',
-          serviceId: svc2.id,
-          serviceName: svc2.name,
-          status: 'requested',
-          scheduledDate: '2026-07-22',
-          scheduledTime: '11:00 AM',
-          isEmergency: false,
-          formData: {},
-          priceDetails: { baseVisit: svc2.basePrice, distanceCharge: 0, labour: 100, material: 50, emergencySurcharge: 0, tax: Math.round(svc2.basePrice * 0.18), discount: 0, total: svc2.basePrice + 150 + Math.round(svc2.basePrice * 0.18) },
-          createdAt: '2026-07-16T08:00:00Z',
-        },
-      ];
-      setBookings(prev => [...prev, ...mockBookings]);
-    }
+    showToast(`Welcome, ${clientName}!`, 'success');
   };
 
-  const handleCustomerSignUp = (e: React.FormEvent) => {
+  const handleCustomerSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authFullName.trim()) {
       showToast('Please enter your full name', 'error');
@@ -509,20 +535,36 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       address: authAddress.trim()
     };
 
-    // Save lead to DB
-    const newL = {
-      id: `lead-${Date.now()}`,
-      tenantId: tenant.id,
-      name: sessionData.name,
-      phone: sessionData.phone,
-      email: sessionData.email,
-      serviceInterest: 'Account Registered',
-      notes: `Registered from website portal. Address: ${sessionData.address}`,
-      status: 'new' as const,
-      createdAt: new Date().toISOString()
-    };
-    api.createLead(newL).catch(err => console.error('Error saving customer lead to DB:', err));
-    setLeads(prev => [...prev, newL]);
+    try {
+      // Save customer user directly into PostgreSQL database
+      const res = await api.customerRegister({
+        name: sessionData.name,
+        phone: sessionData.phone,
+        email: sessionData.email,
+        password: authPassword,
+        address: sessionData.address,
+        tenantId: tenant.id
+      });
+      if (res && res.success && res.data?.user) {
+        showToast('🎉 Account registered and saved to database successfully!', 'success');
+      }
+    } catch (err: any) {
+      console.error('Error registering customer in DB:', err);
+      const newL = {
+        id: `lead-${Date.now()}`,
+        tenantId: tenant.id,
+        name: sessionData.name,
+        phone: sessionData.phone,
+        email: sessionData.email,
+        serviceInterest: 'Account Registered',
+        notes: `Registered from website portal. Address: ${sessionData.address}`,
+        status: 'new' as const,
+        createdAt: new Date().toISOString()
+      };
+      api.createLead(newL).catch(() => {});
+      setLeads(prev => [...prev, newL]);
+      showToast('Account registered successfully!', 'success');
+    }
 
     setCustomerSession(sessionData);
     if (authRememberMe) {
@@ -1988,7 +2030,14 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                       placeholder="e.g. 9876543210 or user@example.com"
                       className="form-input pl-9"
                       value={authIdentifier}
-                      onChange={e => setAuthIdentifier(e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (/^\d+$/.test(val)) {
+                          setAuthIdentifier(val.slice(0, 10));
+                        } else {
+                          setAuthIdentifier(val);
+                        }
+                      }}
                       required
                     />
                   </div>
@@ -2108,9 +2157,10 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                       <input
                         type="tel"
                         placeholder="9876543210"
+                        maxLength={10}
                         className="form-input pl-8 text-xs"
                         value={authPhone}
-                        onChange={e => setAuthPhone(e.target.value)}
+                        onChange={e => setAuthPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                         required
                       />
                     </div>

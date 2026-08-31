@@ -984,7 +984,7 @@ Manager Signature: ________________________
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className="form-label">Support Call Hotline *</label><input className="form-input" maxLength={10} value={bizPhone} onChange={e => setBizPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} required /></div>
-                    <div><label className="form-label">WhatsApp Contact Number *</label><input className="form-input" value={whatsApp} onChange={e => setWhatsApp(e.target.value)} placeholder="91XXXXXXXXXX" required /></div>
+                    <div><label className="form-label">WhatsApp Contact Number *</label><input className="form-input" maxLength={10} value={whatsApp} onChange={e => setWhatsApp(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="9876543210" required /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className="form-label">Office Address *</label><input className="form-input" value={bizAddr} onChange={e => setBizAddr(e.target.value)} required /></div>
@@ -1137,17 +1137,7 @@ Manager Signature: ________________________
                           <button onClick={() => setServices(prev => prev.filter(s => s.id !== svc.id))} className="text-red-400 hover:text-red-300 font-bold text-xs">Remove Service</button>
                         </div>
                       </div>
-                      <div>
-                        <label className="form-label">Service Description</label>
-                        <textarea className="form-input h-20" value={newSvcDesc} onChange={e => setNewSvcDesc(e.target.value)} placeholder="Service description..." />
-                      </div>
-                      <div className="flex gap-3">
-                        <button type="submit" className="btn-primary flex-1 py-2">{editingServiceId ? 'Update Service Profile' : '+ Create Service Profile'}</button>
-                        {editingServiceId && (
-                           <button type="button" onClick={() => { setEditingServiceId(null); setNewSvcName(''); setNewSvcDesc(''); setNewSvcDuration(60); setNewSvcDurationUnit('Minutes'); }} className="btn-secondary py-2 px-4">Cancel</button>
-                        )}
-                      </div>
-                    </form>
+                    ))}
                   </div>
 
                   <form onSubmit={handleAddService} className="admin-card space-y-4 max-w-xl">

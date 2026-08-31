@@ -202,6 +202,86 @@ export default function App() {
         });
       }
     }).catch(() => {});
+
+    // 3. Sync services from database
+    api.getServices().then(res => {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setServices(prev => {
+          const map = new Map(prev.map(s => [s.id, s]));
+          for (const dbS of res.data) {
+            map.set(dbS.id, {
+              id: dbS.id,
+              tenantId: dbS.tenantId,
+              name: dbS.name,
+              category: dbS.category || 'General',
+              description: dbS.description || '',
+              icon: dbS.icon || '🔧',
+              basePrice: Number(dbS.basePrice) || 350,
+              durationMin: Number(dbS.durationMin) || 45,
+              isActive: dbS.isActive ?? true,
+              rating: 4.9,
+              ratingCount: 120,
+              tags: [dbS.category || 'Service']
+            });
+          }
+          const merged = Array.from(map.values());
+          try {
+            localStorage.setItem('anarav_cached_services', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+    }).catch(() => {});
+
+    // 4. Sync bookings from database
+    api.getBookings().then(res => {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setBookings(prev => {
+          const map = new Map(prev.map(b => [b.id, b]));
+          for (const dbB of res.data) {
+            const formData = (dbB.formData || {}) as any;
+            const price = Number(dbB.priceTotal) || 350;
+            const tax = Number(dbB.taxTotal) || Math.round(price * 0.18);
+            const discount = Number(dbB.discountTotal) || 0;
+            const net = Number(dbB.netTotal) || (price + tax - discount + 150);
+
+            map.set(dbB.id, {
+              id: dbB.id,
+              tenantId: dbB.tenantId,
+              customerId: dbB.customerId,
+              customerName: formData.customerName || dbB.customer?.name || 'Customer',
+              customerPhone: formData.customerPhone || '9876543210',
+              customerAddress: formData.customerAddress || 'Direct site visit',
+              serviceId: dbB.serviceId,
+              serviceName: formData.serviceName || dbB.service?.name || 'General Service',
+              status: (dbB.status || 'requested').toLowerCase() as any,
+              scheduledDate: dbB.scheduledDate || new Date().toISOString().split('T')[0],
+              scheduledTime: dbB.scheduledTime || '10:00 AM',
+              isEmergency: !!formData.isEmergency,
+              formData,
+              priceDetails: {
+                baseVisit: price,
+                distanceCharge: 50,
+                labour: 100,
+                material: 0,
+                emergencySurcharge: 0,
+                tax,
+                discount,
+                total: net
+              },
+              workerId: dbB.workerId || '',
+              workerName: dbB.worker?.user?.name || undefined,
+              createdAt: dbB.createdAt || new Date().toISOString()
+            });
+          }
+          const merged = Array.from(map.values());
+          try {
+            localStorage.setItem('anarav_cached_bookings', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   // ── Hash routing ──

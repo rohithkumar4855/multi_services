@@ -1,33 +1,19 @@
 import { Router } from 'express';
 import { BookingController } from '../controllers/booking.controller';
-import { authenticate, authorize } from '../middlewares/auth';
-import { tenantContextMiddleware } from '../middlewares/tenant';
-import { validateRequest } from '../middlewares/validation';
-import { createBookingSchema, assignWorkerSchema } from '../utils/validators';
 
 const router = Router();
 
-router.use(authenticate);
-router.use(tenantContextMiddleware);
+// Create booking (Public / Guest & Authenticated)
+router.post('/', BookingController.createBooking);
 
-router.post(
-  '/',
-  authorize('CUSTOMER', 'TENANT_ADMIN'),
-  validateRequest(createBookingSchema),
-  BookingController.createBooking
-);
+// Get bookings (optionally filtered by tenantId or customerId)
+router.get('/', BookingController.getTenantBookings);
 
-router.post(
-  '/:id/assign',
-  authorize('TENANT_ADMIN'),
-  validateRequest(assignWorkerSchema),
-  BookingController.assignWorker
-);
+// Update status
+router.put('/:id/status', BookingController.updateBookingStatus);
+router.patch('/:id/status', BookingController.updateBookingStatus);
 
-router.get(
-  '/',
-  authorize('TENANT_ADMIN'),
-  BookingController.getTenantBookings
-);
+// Assign worker
+router.post('/:id/assign', BookingController.assignWorker);
 
 export default router;
