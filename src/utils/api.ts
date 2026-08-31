@@ -55,6 +55,14 @@ export const api = {
     const res = await client.post('/admin/services', service);
     return res.data;
   },
+  updateService: async (id, service) => {
+    const res = await client.put(`/admin/services/${id}`, service);
+    return res.data;
+  },
+  getServices: async () => {
+    const res = await client.get('/admin/services');
+    return res.data;
+  },
   getWorkers: async () => {
     const res = await client.get('/admin/workers');
     return res.data;

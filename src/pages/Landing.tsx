@@ -58,7 +58,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
   const [saError, setSaError] = useState('');
 
   // Tenant login state
-  const [tenantId, setTenantId] = useState(tenants[0]?.id || '');
+  const [tenantEmail, setTenantEmail] = useState('');
   const [tenantPass, setTenantPass] = useState('');
   const [tenantError, setTenantError] = useState('');
 
@@ -76,9 +76,10 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
   };
 
   const [regIndustryType, setRegIndustryType] = useState<keyof typeof INDUSTRY_CATEGORIES>('Home Services');
-  const [regIndustries, setRegIndustries] = useState<string[]>(['Electrician']);
+  const [regIndustries, setRegIndustries] = useState<string[]>([INDUSTRY_CATEGORIES['Home Services'][0]]);
   const [customVertical, setCustomVertical] = useState('');
   const [customVerticalsList, setCustomVerticalsList] = useState<string[]>([]);
+  const [regGstNumber, setRegGstNumber] = useState('');
   const [regPrimaryColor, setRegPrimaryColor] = useState('#2563eb');
   const [regSecondaryColor, setRegSecondaryColor] = useState('#4f46e5');
   const [regFont, setRegFont] = useState('Inter, sans-serif');
@@ -124,31 +125,33 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
   const handleTenantLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setTenantError('');
-    const tenant = tenants.find(t => t.id === tenantId);
-    if (!tenant) {
-      setTenantError('Please select a valid business profile.');
-      return;
-    }
+    const tenant = tenants.find(t => t.ownerEmail === tenantEmail);
 
     try {
       const res = await api.loginTenant({
-        tenantId: tenant.id,
-        email: tenant.ownerEmail,
+        tenantId: tenant?.id,
+        email: tenantEmail,
         password: tenantPass
       });
       if (res && res.success) {
-        onLogin({ role: 'tenant', tenantId: tenant.id, tenantName: tenant.name, email: tenant.ownerEmail });
+        const backendTenant = res.data?.tenant || res.data;
+        const finalId = backendTenant?.id || backendTenant?.tenantId || tenant?.id || '';
+        const finalName = backendTenant?.name || backendTenant?.tenantName || tenant?.name || 'Tenant Workspace';
+        
+        onLogin({ role: 'tenant', tenantId: finalId, tenantName: finalName, email: tenantEmail });
         navigateTo('#/admin');
         return;
       }
     } catch (err: any) {
-      const configuredPassword = (tenant.config as any)?.ownerPassword || 'business123';
-      if (tenantPass === configuredPassword || tenantPass === 'business123') {
-        onLogin({ role: 'tenant', tenantId: tenant.id, tenantName: tenant.name, email: tenant.ownerEmail });
-        navigateTo('#/admin');
-        return;
+      if (tenant) {
+        const configuredPassword = (tenant.config as any)?.ownerPassword || 'business123';
+        if (tenantPass === configuredPassword || tenantPass === 'business123') {
+          onLogin({ role: 'tenant', tenantId: tenant.id, tenantName: tenant.name, email: tenant.ownerEmail });
+          navigateTo('#/admin');
+          return;
+        }
       }
-      setTenantError(err?.response?.data?.message || 'Invalid password. Please enter the password you registered with.');
+      setTenantError(err?.response?.data?.message || 'Invalid email or password.');
     }
   };
 
@@ -157,6 +160,11 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
     if (!regName) return;
     if (regPhone.length !== 10) {
       showToast('Owner phone number must be exactly 10 digits.', 'error');
+      return;
+    }
+    const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+    if (regGstNumber && !GSTIN_REGEX.test(regGstNumber)) {
+      showToast('Please enter a valid 15-character GSTIN.', 'error');
       return;
     }
 
@@ -209,7 +217,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
       ],
       activeBranchId: 'br-1',
       companyVerification: {
-        gstNumber: 'PENDING',
+        gstNumber: regGstNumber || 'PENDING',
         panNumber: 'PENDING',
         aadhaarNumber: 'PENDING',
         licenseNumber: 'PENDING',
@@ -257,7 +265,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
       ]
     };
 
-    const newT: Tenant & { password?: string; industryType?: string; primaryColor?: string; secondaryColor?: string; font?: string } = {
+    const newT: Tenant & { password?: string; industryType?: string; primaryColor?: string; secondaryColor?: string; font?: string; gstNumber?: string | null } = {
       id: `tenant-${Date.now()}`,
       name: regName,
       ownerName: regOwner,
@@ -268,6 +276,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
       primaryColor: regPrimaryColor,
       secondaryColor: regSecondaryColor,
       font: regFont,
+      gstNumber: regGstNumber || null,
       subdomain: regName.toLowerCase().replace(/[^a-z0-9]/g, ''),
       status: 'pending', // Starts as pending so Super Admin must approve it
       plan: regPlan,
@@ -290,14 +299,14 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
       if (res && res.data && res.data.tenant && res.data.tenant.id) {
         newT.id = res.data.tenant.id;
         setTenants(prev => prev.map(t => (t.name === newT.name && t.ownerEmail === newT.ownerEmail) ? { ...t, id: res.data.tenant.id } : t));
-        setTenantId(res.data.tenant.id);
+        setTenantEmail(newT.ownerEmail);
       }
     }).catch(err => {
       console.error('Error saving tenant to database:', err);
     });
 
     setTenants(prev => [...prev, newT]);
-    setTenantId(newT.id); // set as selected
+    setTenantEmail(newT.ownerEmail); // set as selected
     setRegSubmitted(true);
   };
 
@@ -616,15 +625,14 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
             </div>
             <form onSubmit={handleTenantLogin} className="p-6 space-y-4">
               <div>
-                <label className="form-label-light">Select Business Profile</label>
-                <select className="form-input-light text-xs" value={tenantId} onChange={e => setTenantId(e.target.value)}>
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} — {t.ownerEmail || t.status.toUpperCase()}</option>
-                  ))}
-                </select>
+                <label className="form-label-light">Email Address</label>
+                <input className="form-input-light text-xs" type="email" placeholder="Enter your email" value={tenantEmail} onChange={e => setTenantEmail(e.target.value)} required />
               </div>
               <div>
-                <label className="form-label-light">Workspace Password</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="form-label-light mb-0">Workspace Password</label>
+                  <button type="button" className="text-[10px] text-blue-500 hover:text-blue-600 font-semibold" onClick={() => alert('Forgot password functionality to be implemented')}>Forgot password?</button>
+                </div>
                 <input className="form-input-light" type="password" placeholder="••••••••" value={tenantPass} onChange={e => setTenantPass(e.target.value)} required />
               </div>
               {tenantError && <p className="text-red-500 text-[11px] font-semibold bg-red-50 border border-red-200 p-2 rounded">{tenantError}</p>}
@@ -742,6 +750,17 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                       onChange={e => setRegPassword(e.target.value)} 
                       required 
                       minLength={6} 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label-light text-[10px]">GST Tax Number (Optional)</label>
+                    <input 
+                      className="form-input-light text-xs py-1.5 font-mono uppercase" 
+                      placeholder="15-character GSTIN" 
+                      maxLength={15}
+                      value={regGstNumber} 
+                      onChange={e => setRegGstNumber(e.target.value.replace(/\s+/g, '').toUpperCase())} 
                     />
                   </div>
 
