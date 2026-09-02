@@ -13,6 +13,9 @@ async function main() {
   await prisma.worker.deleteMany({});
   await prisma.service.deleteMany({});
   await prisma.user.deleteMany({});
+  await prisma.websitePage.deleteMany({});
+  await prisma.website.deleteMany({});
+  await prisma.tenant.deleteMany({});
   await prisma.tenantRegistration.deleteMany({});
 
   // 2. Create Super Admin User

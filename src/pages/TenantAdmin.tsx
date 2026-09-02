@@ -764,7 +764,7 @@ Manager Signature: ________________________
                 sessionStorage.setItem('anarav_site_tenant_id', tenant.id);
                 localStorage.setItem('anarav_site_tenant_id', tenant.id);
               } catch {}
-              navigateTo('#/site');
+              navigateTo(`#/site?tenant=${tenant.id}`);
             }} 
             className="w-full btn-secondary py-2 text-[10px] font-bold flex items-center justify-center gap-1"
           >

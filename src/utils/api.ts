@@ -15,6 +15,10 @@ client.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const tenantId = sessionStorage.getItem('anarav_site_tenant_id') || localStorage.getItem('anarav_site_tenant_id');
+  if (tenantId) {
+    config.headers['x-tenant-id'] = tenantId;
+  }
   return config;
 }, (err) => Promise.reject(err));
 
@@ -176,13 +180,24 @@ export const api = {
     return res.data;
   },
 
-  // ── Files ─────────────────────────────────────────
+  // ── Files & Supabase S3 ──────────────────────────
   getFiles: async () => {
     const res = await client.get('/files');
     return res.data;
   },
   uploadFile: async (fileData) => {
     const res = await client.post('/files', fileData);
+    return res.data;
+  },
+  uploadBinaryFile: async (file: File | Blob, folder: string = 'uploads') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    const res = await client.post('/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
     return res.data;
   },
   deleteFile: async (id: string) => {

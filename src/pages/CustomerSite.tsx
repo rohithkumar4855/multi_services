@@ -26,31 +26,69 @@ interface BookingFormData {
 export default function CustomerSite({ session, store, navigateTo }: Props) {
   const { tenants, services, workers, bookings, setBookings, coupons, leads, setLeads, quotations, setQuotations } = store;
 
-  // Use active session tenant or first tenant for demo
-  const initialTenantId = session.tenantId || (() => {
+  // Helper to extract tenant ID from URL or storage
+  const getUrlTenantId = () => {
+    try {
+      const hash = window.location.hash || '';
+      const queryIdx = hash.indexOf('?');
+      if (queryIdx !== -1) {
+        const params = new URLSearchParams(hash.substring(queryIdx));
+        const tParam = params.get('tenant');
+        if (tParam) return tParam;
+      }
+      const searchParams = new URLSearchParams(window.location.search);
+      const tSearch = searchParams.get('tenant');
+      if (tSearch) return tSearch;
+    } catch {}
+    return null;
+  };
+
+  const initialTenantId = getUrlTenantId() || session.tenantId || (() => {
     try {
       const saved = sessionStorage.getItem('anarav_site_tenant_id') || localStorage.getItem('anarav_site_tenant_id');
       if (saved) return saved;
     } catch {}
     return tenants[0]?.id || '';
   })();
+
   const [activeTenantId, setActiveTenantId] = useState(initialTenantId);
 
   useEffect(() => {
-    if (session.tenantId && activeTenantId !== session.tenantId) {
+    const handleUrlTenant = () => {
+      const urlTenant = getUrlTenantId();
+      if (urlTenant && urlTenant !== activeTenantId) {
+        setActiveTenantId(urlTenant);
+      }
+    };
+    window.addEventListener('hashchange', handleUrlTenant);
+    return () => window.removeEventListener('hashchange', handleUrlTenant);
+  }, [activeTenantId]);
+
+  useEffect(() => {
+    const urlTenant = getUrlTenantId();
+    if (urlTenant) {
+      setActiveTenantId(urlTenant);
+    } else if (session.tenantId && activeTenantId !== session.tenantId) {
       setActiveTenantId(session.tenantId);
     }
   }, [session.tenantId]);
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem('anarav_site_tenant_id', activeTenantId);
-      localStorage.setItem('anarav_site_tenant_id', activeTenantId);
-    } catch {}
+    if (activeTenantId) {
+      try {
+        sessionStorage.setItem('anarav_site_tenant_id', activeTenantId);
+        localStorage.setItem('anarav_site_tenant_id', activeTenantId);
+      } catch {}
+    }
   }, [activeTenantId]);
 
-  const matchedTenant = tenants.find(t => t.id === activeTenantId || (session.tenantId && t.id === session.tenantId) || (session.email && t.ownerEmail === session.email) || (session.tenantName && t.name === session.tenantName));
-  const tenant = matchedTenant || (session.tenantId ? null : tenants[0]);
+  const tenant = 
+    tenants.find(t => t.id === activeTenantId) ||
+    tenants.find(t => t.id === getUrlTenantId()) ||
+    tenants.find(t => session.tenantId && t.id === session.tenantId) ||
+    tenants.find(t => session.email && t.ownerEmail === session.email) ||
+    tenants.find(t => session.tenantName && t.name === session.tenantName) ||
+    tenants[0];
   if (!tenant) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
@@ -83,7 +121,8 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     alert(`${type.toUpperCase()}: ${msg}`);
   };
 
-  const myServices = services.filter(s => s.tenantId === tenant.id && s.isActive);
+  const directServices = services.filter(s => s.tenantId === tenant.id && s.isActive);
+  const myServices = directServices.length > 0 ? directServices : services.filter(s => s.isActive).slice(0, 8);
   const myWorkers = workers.filter(w => w.tenantId === tenant.id);
   const myCoupons = coupons.filter(cp => cp.tenantId === tenant.id && cp.status === 'active');
 
@@ -1972,13 +2011,17 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         <div className="modal-overlay z-50 p-4" onClick={() => setShowCustomerLoginModal(false)}>
           <div 
             onClick={e => e.stopPropagation()} 
-            className="bg-slate-900 rounded-3xl w-full max-w-md p-6 sm:p-7 border border-slate-800 text-slate-200 shadow-2xl animate-scaleIn font-sans text-left space-y-5 relative"
-            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface, #0f172a)' }}
+            className="bg-[#0f172a] rounded-3xl w-full max-w-md p-6 sm:p-7 border border-slate-700/80 text-white shadow-[0_25px_70px_rgba(0,0,0,0.8)] animate-scaleIn font-sans text-left space-y-5 relative"
+            style={{ 
+              backgroundColor: '#0f172a',
+              boxShadow: `0 20px 60px rgba(0,0,0,0.8), 0 0 30px ${pc}20`,
+              borderColor: 'rgba(255,255,255,0.12)'
+            }}
           >
             {/* Modal Header */}
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md" style={{ color: pc, background: `${pc}18` }}>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md" style={{ color: '#fff', background: `linear-gradient(135deg, ${pc}, ${pc}cc)` }}>
                   Customer Portal
                 </span>
                 <h3 className="text-lg font-black text-white mt-1.5">
@@ -1990,19 +2033,19 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
               </div>
               <button 
                 onClick={() => setShowCustomerLoginModal(false)}
-                className="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs transition-colors"
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center font-bold text-xs transition-colors border border-slate-700"
               >
                 ✕
               </button>
             </div>
 
             {/* Mode Switcher Tabs */}
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800/80">
+            <div className="flex bg-[#0b1120] p-1 rounded-xl border border-slate-800">
               <button 
                 type="button"
                 onClick={() => setAuthMode('signin')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${authMode === 'signin' ? 'text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
-                style={authMode === 'signin' ? { background: pc } : {}}
+                style={authMode === 'signin' ? { background: `linear-gradient(135deg, ${pc}, ${pc}dd)` } : {}}
               >
                 <Lock className="w-3.5 h-3.5" /> Sign In
               </button>
@@ -2010,7 +2053,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 type="button"
                 onClick={() => setAuthMode('signup')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${authMode === 'signup' ? 'text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
-                style={authMode === 'signup' ? { background: pc } : {}}
+                style={authMode === 'signup' ? { background: `linear-gradient(135deg, ${pc}, ${pc}dd)` } : {}}
               >
                 <User className="w-3.5 h-3.5" /> Create Account
               </button>
@@ -2020,15 +2063,15 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
             {authMode === 'signin' ? (
               <form onSubmit={handleCustomerSignIn} className="space-y-3.5 text-xs">
                 <div>
-                  <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Mobile Number or Email</label>
-                  <div className="relative mt-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                  <label className="block text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1.5">Mobile Number or Email</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <User className="w-4 h-4" />
                     </span>
                     <input
                       type="text"
                       placeholder="e.g. 9876543210 or user@example.com"
-                      className="form-input pl-9"
+                      className="w-full bg-[#1e293b] border border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
                       value={authIdentifier}
                       onChange={e => {
                         const val = e.target.value;
@@ -2044,25 +2087,26 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Password</label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-[10px] font-black text-slate-300 uppercase tracking-wider">Password</label>
                     <button 
                       type="button" 
                       onClick={() => showToast('Password reset link sent to registered phone/email.', 'info')}
                       className="text-[10px] font-bold hover:underline"
-                      style={{ color: pc }}
+                      style={{ color: '#60a5fa' }}
                     >
                       Forgot password?
                     </button>
                   </div>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <Lock className="w-4 h-4" />
                     </span>
                     <input
                       type={authShowPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
                       placeholder="Enter account password"
-                      className="form-input pl-9 pr-9"
+                      className="w-full bg-[#1e293b] border border-slate-700 rounded-xl pl-9 pr-9 py-2.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
                       value={authPassword}
                       onChange={e => setAuthPassword(e.target.value)}
                       required
@@ -2083,10 +2127,9 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     id="authRememberCustomer"
                     checked={authRememberMe}
                     onChange={e => setAuthRememberMe(e.target.checked)}
-                    className="rounded border-slate-700 text-blue-600 focus:ring-0"
-                    style={{ accentColor: pc }}
+                    className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-0 cursor-pointer"
                   />
-                  <label htmlFor="authRememberCustomer" className="text-[11px] text-slate-400 cursor-pointer">
+                  <label htmlFor="authRememberCustomer" className="text-[11px] text-slate-300 cursor-pointer select-none">
                     Remember me on this browser
                   </label>
                 </div>
@@ -2095,7 +2138,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                   type="submit"
                   disabled={authLoading}
                   className="w-full py-3 rounded-xl font-black text-white text-center text-xs shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
-                  style={{ background: pc }}
+                  style={{ background: `linear-gradient(135deg, ${pc}, ${pc}dd)`, boxShadow: `0 8px 24px ${pc}40` }}
                 >
                   {authLoading ? 'Signing In...' : 'Sign In to Account ➔'}
                 </button>
@@ -2117,13 +2160,13 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                       setViewMode('dashboard');
                       setCustomerActiveTab('bookings');
                     }}
-                    className="w-full py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 text-slate-300 text-[11px] font-bold transition-all flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 px-3 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     ⚡ 1-Click Demo Customer Login (Ravi Kumar)
                   </button>
 
-                  <p className="text-[11px] text-slate-500 text-center">
-                    New customer? <button type="button" onClick={() => setAuthMode('signup')} className="font-bold hover:underline" style={{ color: pc }}>Create an account</button>
+                  <p className="text-[11px] text-slate-400 text-center">
+                    New customer? <button type="button" onClick={() => setAuthMode('signup')} className="font-bold hover:underline" style={{ color: '#60a5fa' }}>Create an account</button>
                   </p>
                 </div>
               </form>
@@ -2131,15 +2174,15 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
               /* ═══ SIGN UP FORM ═══ */
               <form onSubmit={handleCustomerSignUp} className="space-y-3 text-xs">
                 <div>
-                  <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Full Name</label>
-                  <div className="relative mt-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                  <label className="block text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1">Full Name</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <User className="w-4 h-4" />
                     </span>
                     <input
                       type="text"
                       placeholder="e.g. Pradeep Kumar"
-                      className="form-input pl-9"
+                      className="w-full bg-[#1e293b] border border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
                       value={authFullName}
                       onChange={e => setAuthFullName(e.target.value)}
                       required
@@ -2149,16 +2192,16 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Mobile Phone</label>
-                    <div className="relative mt-1">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500">
+                    <label className="block text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1">Mobile Phone</label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
                         <Phone className="w-3.5 h-3.5" />
                       </span>
                       <input
                         type="tel"
                         placeholder="9876543210"
                         maxLength={10}
-                        className="form-input pl-8 text-xs"
+                        className="w-full bg-[#1e293b] border border-slate-700 rounded-xl pl-8 pr-2.5 py-2.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
                         value={authPhone}
                         onChange={e => setAuthPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                         required
@@ -2166,15 +2209,15 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     </div>
                   </div>
                   <div>
-                    <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Email (Optional)</label>
-                    <div className="relative mt-1">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500">
+                    <label className="block text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1">Email (Optional)</label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
                         <Mail className="w-3.5 h-3.5" />
                       </span>
                       <input
                         type="email"
                         placeholder="user@example.com"
-                        className="form-input pl-8 text-xs"
+                        className="w-full bg-[#1e293b] border border-slate-700 rounded-xl pl-8 pr-2.5 py-2.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
                         value={authEmail}
                         onChange={e => setAuthEmail(e.target.value)}
                       />
@@ -2183,15 +2226,16 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 </div>
 
                 <div>
-                  <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Create Password</label>
-                  <div className="relative mt-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                  <label className="block text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1">Create Password</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <Lock className="w-4 h-4" />
                     </span>
                     <input
                       type={authShowPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
                       placeholder="At least 4 characters"
-                      className="form-input pl-9 pr-9"
+                      className="w-full bg-[#1e293b] border border-slate-700 rounded-xl pl-9 pr-9 py-2.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
                       value={authPassword}
                       onChange={e => setAuthPassword(e.target.value)}
                       required
@@ -2207,15 +2251,15 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 </div>
 
                 <div>
-                  <label className="form-label text-[10px] font-bold text-slate-300 uppercase">Service Address / House / Flat No.</label>
-                  <div className="relative mt-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                  <label className="block text-[10px] font-black text-slate-300 uppercase tracking-wider mb-1">Service Address / House / Flat No.</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                       <MapPin className="w-4 h-4" />
                     </span>
                     <input
                       type="text"
                       placeholder="e.g. Flat 402, Green Meadows, MG Road"
-                      className="form-input pl-9"
+                      className="w-full bg-[#1e293b] border border-slate-700 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium"
                       value={authAddress}
                       onChange={e => setAuthAddress(e.target.value)}
                       required
@@ -2223,22 +2267,22 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium pt-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Addresses & credentials encrypted with end-to-end privacy</span>
                 </div>
 
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="w-full py-3 rounded-xl font-black text-white text-center text-xs shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
-                  style={{ background: pc }}
+                  className="w-full py-3 rounded-xl font-black text-white text-center text-xs shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-2"
+                  style={{ background: `linear-gradient(135deg, ${pc}, ${pc}dd)`, boxShadow: `0 8px 24px ${pc}40` }}
                 >
-                  {authLoading ? 'Creating Account...' : 'Create Account & Sign In ➔'}
+                  {authLoading ? 'Creating Account...' : 'Create Account & Continue ➔'}
                 </button>
 
-                <p className="text-[11px] text-slate-500 text-center pt-1">
-                  Already have an account? <button type="button" onClick={() => setAuthMode('signin')} className="font-bold hover:underline" style={{ color: pc }}>Sign In</button>
+                <p className="text-[11px] text-slate-400 text-center pt-1">
+                  Already have an account? <button type="button" onClick={() => setAuthMode('signin')} className="font-bold hover:underline" style={{ color: '#60a5fa' }}>Sign in</button>
                 </p>
               </form>
             )}
