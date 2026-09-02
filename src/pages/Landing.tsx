@@ -112,11 +112,16 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
     { plan: 'Enterprise', price: 9999, color: '#7c3aed', features: ['6 Premium Themes access', 'L3 RAG AI assistants', 'Dedicated database isolate', 'White-label custom portal', 'Razorpay payment key gateway', '99.99% SLA uptime'] },
   ];
 
-  const handleSuperAdminLogin = (e: React.FormEvent) => {
+  const handleSuperAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saEmail === 'admin@servos.in' && saPass === 'admin123') {
-      onLogin({ role: 'super_admin', email: saEmail });
-      navigateTo('#/superadmin');
+      try {
+        await api.login({ email: saEmail, password: saPass });
+        onLogin({ role: 'super_admin', email: saEmail });
+        navigateTo('#/superadmin');
+      } catch (err) {
+        setSaError('Invalid credentials or backend not running.');
+      }
     } else {
       setSaError('Invalid credentials. Use admin@servos.in / admin123');
     }
