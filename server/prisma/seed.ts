@@ -13,6 +13,9 @@ async function main() {
   await prisma.worker.deleteMany({});
   await prisma.service.deleteMany({});
   await prisma.user.deleteMany({});
+  await prisma.websitePage.deleteMany({});
+  await prisma.website.deleteMany({});
+  await prisma.tenant.deleteMany({});
   await prisma.tenantRegistration.deleteMany({});
 
   // 2. Create Super Admin User
@@ -25,24 +28,15 @@ async function main() {
     }
   });
 
-  // 3. Create Tenant Registrations
-  const voltProTenant = await prisma.tenantRegistration.create({
+  // 3. Create Tenant Records & Registrations
+  const voltProTenant = await prisma.tenant.create({
     data: {
       id: 'tenant-voltpro',
-      businessName: 'VoltPro Electricals',
-      ownerName: 'Ravi Teja',
-      ownerPhone: '9876543210',
-      ownerEmail: 'ravi@voltpro.in',
-      passwordHash,
-      industryType: 'Electrician',
-      industries: ['Electrician', 'Solar'],
-      primaryColor: '#2563eb',
-      secondaryColor: '#1d4ed8',
-      font: 'Inter, sans-serif',
-      plan: 'professional',
+      name: 'VoltPro Electricals',
+      slug: 'voltpro',
       status: 'active',
-      gstNumber: '37AAAAA0000A1Z5',
-      config: {
+      plan: 'PRO',
+      settings: {
         logoText: '⚡ VoltPro Electricals',
         heroTitle: 'Certified Electrical Engineers at Your Doorstep',
         heroSubtitle: 'From circuit repairs to solar rooftop setups — fast, safe, guaranteed 30-day warranty across the city.',
@@ -60,23 +54,33 @@ async function main() {
     }
   });
 
-  const coolFlowTenant = await prisma.tenantRegistration.create({
+  await prisma.tenantRegistration.create({
     data: {
-      id: 'tenant-coolflow',
-      businessName: 'CoolFlow AC & Refrigeration',
-      ownerName: 'Suresh Raina',
-      ownerPhone: '9876543211',
-      ownerEmail: 'suresh@coolflow.in',
+      id: 'tenant-voltpro',
+      businessName: 'VoltPro Electricals',
+      ownerName: 'Ravi Teja',
+      ownerPhone: '9876543210',
+      ownerEmail: 'ravi@voltpro.in',
       passwordHash,
-      industryType: 'AC Service',
-      industries: ['AC Service', 'Appliance Repair'],
-      primaryColor: '#06b6d4',
-      secondaryColor: '#0891b2',
+      industryType: 'Electrician',
+      industries: ['Electrician', 'Solar'],
+      primaryColor: '#2563eb',
+      secondaryColor: '#1d4ed8',
       font: 'Inter, sans-serif',
       plan: 'professional',
       status: 'active',
-      gstNumber: '36AAAAA0000A1Z6',
-      config: {
+      gstNumber: '37AAAAA0000A1Z5'
+    }
+  });
+
+  const coolFlowTenant = await prisma.tenant.create({
+    data: {
+      id: 'tenant-coolflow',
+      name: 'CoolFlow AC & Refrigeration',
+      slug: 'coolflow',
+      status: 'active',
+      plan: 'PRO',
+      settings: {
         logoText: '❄️ CoolFlow AC Services',
         heroTitle: 'Rapid Cooling & AC Repair in 90 Minutes',
         heroSubtitle: 'Expert AC gas refill, deep cleaning, installation and compressor overhaul with genuine parts.',
@@ -93,6 +97,26 @@ async function main() {
       }
     }
   });
+
+  await prisma.tenantRegistration.create({
+    data: {
+      id: 'tenant-coolflow',
+      businessName: 'CoolFlow AC & Refrigeration',
+      ownerName: 'Suresh Raina',
+      ownerPhone: '9876543211',
+      ownerEmail: 'suresh@coolflow.in',
+      passwordHash,
+      industryType: 'AC Service',
+      industries: ['AC Service', 'Appliance Repair'],
+      primaryColor: '#06b6d4',
+      secondaryColor: '#0891b2',
+      font: 'Inter, sans-serif',
+      plan: 'professional',
+      status: 'active',
+      gstNumber: '36AAAAA0000A1Z6'
+    }
+  });
+
 
   // 4. Create Tenant Admin Users
   const voltAdmin = await prisma.user.create({

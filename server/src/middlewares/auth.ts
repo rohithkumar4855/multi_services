@@ -38,3 +38,19 @@ export const authorize = (...allowedRoles: string[]) => {
     next();
   };
 };
+
+export const optionalAuthenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key-1234') as any;
+    req.user = decoded;
+  } catch (error) {
+    // Ignore invalid token for optional endpoints
+  }
+  next();
+};

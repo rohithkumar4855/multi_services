@@ -599,7 +599,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
               </div>
               <div>
                 <label className="form-label-light">Password</label>
-                <input className="form-input-light" type="password" placeholder="••••••••" value={saPass} onChange={e => setSaPass(e.target.value)} required />
+                <input className="form-input-light" type="password" autoComplete="current-password" placeholder="••••••••" value={saPass} onChange={e => setSaPass(e.target.value)} required />
               </div>
               {saError && <p className="text-red-500 text-[11px] font-semibold bg-red-50 border border-red-200 p-2 rounded">{saError}</p>}
               <button type="submit" className="btn-primary w-full py-2.5 text-xs font-bold">
@@ -626,14 +626,14 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
             <form onSubmit={handleTenantLogin} className="p-6 space-y-4">
               <div>
                 <label className="form-label-light">Email Address</label>
-                <input className="form-input-light text-xs" type="email" placeholder="Enter your email" value={tenantEmail} onChange={e => setTenantEmail(e.target.value)} required />
+                <input className="form-input-light text-xs" type="email" autoComplete="email" placeholder="Enter your email" value={tenantEmail} onChange={e => setTenantEmail(e.target.value)} required />
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="form-label-light mb-0">Workspace Password</label>
                   <button type="button" className="text-[10px] text-blue-500 hover:text-blue-600 font-semibold" onClick={() => alert('Forgot password functionality to be implemented')}>Forgot password?</button>
                 </div>
-                <input className="form-input-light" type="password" placeholder="••••••••" value={tenantPass} onChange={e => setTenantPass(e.target.value)} required />
+                <input className="form-input-light" type="password" autoComplete="current-password" placeholder="••••••••" value={tenantPass} onChange={e => setTenantPass(e.target.value)} required />
               </div>
               {tenantError && <p className="text-red-500 text-[11px] font-semibold bg-red-50 border border-red-200 p-2 rounded">{tenantError}</p>}
               <button type="submit" className="btn-primary w-full py-2.5 text-xs font-bold">
@@ -745,6 +745,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                     <input 
                       className="form-input-light text-xs py-1.5 font-mono" 
                       type="password" 
+                      autoComplete="new-password"
                       placeholder="Create login password (min 6 characters)" 
                       value={regPassword} 
                       onChange={e => setRegPassword(e.target.value)} 

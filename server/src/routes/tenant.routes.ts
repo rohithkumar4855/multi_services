@@ -4,8 +4,8 @@ import { sendResponse } from '../utils/response';
 import { AppError } from '../utils/errors';
 import { TenantService } from '../services/tenant.service';
 import { AuthService } from '../services/auth.service';
-import { authenticate, authorize } from '../middlewares/auth';
-import { tenantContextMiddleware, TenantRequest } from '../middlewares/tenant';
+import { authenticate, authorize, optionalAuthenticate } from '../middlewares/auth';
+import { tenantContextMiddleware, optionalTenantContextMiddleware, TenantRequest } from '../middlewares/tenant';
 
 const router = Router();
 
@@ -51,8 +51,8 @@ router.get('/resolve/:slug', async (req: Request, res: Response, next: NextFunct
   }
 });
 
-// Super Admin / Authenticated: Get all tenants
-router.get('/', authenticate, authorize('SUPER_ADMIN'), async (req: Request, res: Response, next: NextFunction) => {
+// Get all tenants (Public/Demo portal + Super Admin)
+router.get('/', optionalAuthenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenants = await prisma.tenant.findMany({
       orderBy: { createdAt: 'desc' },
@@ -76,7 +76,7 @@ router.get('/', authenticate, authorize('SUPER_ADMIN'), async (req: Request, res
 });
 
 // Get current tenant's configuration
-router.get('/current', authenticate, tenantContextMiddleware, async (req: TenantRequest, res: Response, next: NextFunction) => {
+router.get('/current', optionalAuthenticate, optionalTenantContextMiddleware, async (req: TenantRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.tenantId) {
       return next(new AppError('No tenant context available', 400));
@@ -105,12 +105,12 @@ router.get('/current', authenticate, tenantContextMiddleware, async (req: Tenant
 });
 
 // Update tenant configuration & branding
-router.put('/:id', authenticate, tenantContextMiddleware, async (req: TenantRequest, res: Response, next: NextFunction) => {
+router.put('/:id', optionalAuthenticate, optionalTenantContextMiddleware, async (req: TenantRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
 
-    if (!isSuperAdmin && req.tenantId !== id) {
+    if (req.user && !isSuperAdmin && req.tenantId && req.tenantId !== id) {
       return next(new AppError('Forbidden: Cannot modify another tenant configuration', 403));
     }
 

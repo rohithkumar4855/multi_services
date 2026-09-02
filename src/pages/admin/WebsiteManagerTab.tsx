@@ -62,16 +62,16 @@ const GOOGLE_FONTS = [
 ];
 
 const PRESET_COLOR_PALETTES = [
-  { name: 'Blue Sapphire', primary: '#0284c7', secondary: '#0369a1', accent: '#38bdf8', preview: 'linear-gradient(135deg, #0284c7, #38bdf8)' },
-  { name: 'Emerald Clean', primary: '#059669', secondary: '#047857', accent: '#34d399', preview: 'linear-gradient(135deg, #059669, #34d399)' },
-  { name: 'Royal Indigo', primary: '#6366f1', secondary: '#4f46e5', accent: '#a5b4fc', preview: 'linear-gradient(135deg, #6366f1, #a5b4fc)' },
-  { name: 'Amber Gold', primary: '#d97706', secondary: '#b45309', accent: '#fcd34d', preview: 'linear-gradient(135deg, #d97706, #fcd34d)' },
-  { name: 'Violet Luxe', primary: '#8b5cf6', secondary: '#7c3aed', accent: '#c4b5fd', preview: 'linear-gradient(135deg, #8b5cf6, #c4b5fd)' },
-  { name: 'Crimson Bold', primary: '#e11d48', secondary: '#be123c', accent: '#fb7185', preview: 'linear-gradient(135deg, #e11d48, #fb7185)' },
-  { name: 'Teal Cyan', primary: '#0d9488', secondary: '#0f766e', accent: '#2dd4bf', preview: 'linear-gradient(135deg, #0d9488, #2dd4bf)' },
-  { name: 'Cobalt Pro', primary: '#2563eb', secondary: '#1d4ed8', accent: '#60a5fa', preview: 'linear-gradient(135deg, #2563eb, #60a5fa)' },
-  { name: 'Electric Orange', primary: '#ea580c', secondary: '#c2410c', accent: '#fb923c', preview: 'linear-gradient(135deg, #ea580c, #fb923c)' },
-  { name: 'Rose Petal', primary: '#db2777', secondary: '#be185d', accent: '#f472b6', preview: 'linear-gradient(135deg, #db2777, #f472b6)' },
+  { name: '⚡ Electric Royal Indigo', primary: '#4f46e5', secondary: '#3730a3', accent: '#818cf8', preview: 'linear-gradient(135deg, #4f46e5, #818cf8)' },
+  { name: '✨ Vibrant Emerald Mint', primary: '#059669', secondary: '#047857', accent: '#34d399', preview: 'linear-gradient(135deg, #059669, #34d399)' },
+  { name: '🔥 Cyber Amber & Gold', primary: '#d97706', secondary: '#92400e', accent: '#fbbf24', preview: 'linear-gradient(135deg, #d97706, #fbbf24)' },
+  { name: '🌊 Deep Ocean Sapphire', primary: '#0284c7', secondary: '#0369a1', accent: '#38bdf8', preview: 'linear-gradient(135deg, #0284c7, #38bdf8)' },
+  { name: '💎 Neon Violet Luxe', primary: '#7c3aed', secondary: '#5b21b6', accent: '#a78bfa', preview: 'linear-gradient(135deg, #7c3aed, #a78bfa)' },
+  { name: '🌹 Velvet Crimson Bold', primary: '#e11d48', secondary: '#9f1239', accent: '#fb7185', preview: 'linear-gradient(135deg, #e11d48, #fb7185)' },
+  { name: '⚡ Cyber Cyan Aqua', primary: '#0891b2', secondary: '#155e75', accent: '#22d3ee', preview: 'linear-gradient(135deg, #0891b2, #22d3ee)' },
+  { name: '🛡️ Cobalt Pro Navy', primary: '#2563eb', secondary: '#1e40af', accent: '#60a5fa', preview: 'linear-gradient(135deg, #2563eb, #60a5fa)' },
+  { name: '☀️ Sunset Terracotta', primary: '#ea580c', secondary: '#9a3412', accent: '#fb923c', preview: 'linear-gradient(135deg, #ea580c, #fb923c)' },
+  { name: '🌌 Titanium Obsidian Dark', primary: '#334155', secondary: '#0f172a', accent: '#94a3b8', preview: 'linear-gradient(135deg, #334155, #94a3b8)' },
 ];
 
 const PRESET_PAGE_WALLPAPERS = [
@@ -242,6 +242,15 @@ interface MiniSitePreviewProps {
   heroBgOverlayOpacity?: number;
   heroGlowActive?: boolean;
   cardStyle?: 'glassmorphic' | 'solid' | 'bordered' | 'minimal';
+  showLiveAvailability?: boolean;
+  liveAvailTitle?: string;
+  liveAvailText?: string;
+  liveAvailSlot?: string;
+  showEmergencyCard?: boolean;
+  emergencyCardTitle?: string;
+  emergencyCardText?: string;
+  showTrustBadges?: boolean;
+  trustBadgesList?: Array<{ id: string; icon: string; title: string }>;
   activeEditorTab?: EditorTab;
   onSelectTab: (tab: EditorTab) => void;
   onEditService?: (svc: Service) => void;
@@ -255,6 +264,16 @@ function MiniSitePreview({
   bgPattern = 'none', bgOverlayOpacity = 40, bgOverlayColor = '#000000', bgBlur = 0,
   heroBgImage = '', heroBgOverlayOpacity = 50, heroGlowActive = true,
   logoImage, logoText, heroTitle, heroSubtitle, heroBadge, primaryCta, secondaryCta,
+  showLiveAvailability = true, liveAvailTitle = 'Live Availability',
+  liveAvailText = '', liveAvailSlot = 'Today, 3:00 PM',
+  showEmergencyCard = true, emergencyCardTitle = '⚡ Emergency Home Service',
+  emergencyCardText = 'Arriving in 30 Minutes or Free',
+  showTrustBadges = true, trustBadgesList = [
+    { id: 'tb-1', icon: '🪪', title: 'Aadhaar Verified' },
+    { id: 'tb-2', icon: '🛡️', title: 'Police Verified' },
+    { id: 'tb-3', icon: '🔄', title: '30-Day Warranty' },
+    { id: 'tb-4', icon: '💰', title: 'No Hidden Costs' },
+  ],
   announceActive, announceText, announceExpiry, pageComponents, services,
   featuredServiceIds, homepageServiceCount, portfolio, workers, campaigns,
   testimonials, faqs, city, nearbyCities, bizHours, bizPhone, bizWhatsApp, bizAddress,
@@ -738,31 +757,44 @@ function MiniSitePreview({
               </div>
 
               {/* Trust badges */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px' }}>
-                {['🪪 Aadhaar Verified', '🛡️ Police Verified', '🔄 30-Day Warranty', '💰 No Hidden Costs'].map(b => (
-                  <div key={b} style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '8px 10px', fontSize: '10px', color: '#fff', fontWeight: 700, textAlign: 'center' }}>
-                    {b}
-                  </div>
-                ))}
-              </div>
+              {showTrustBadges && trustBadgesList.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : `repeat(${Math.min(trustBadgesList.length, 4)}, 1fr)`, gap: '10px' }}>
+                  {trustBadgesList.map((b) => (
+                    <div key={b.id || b.title} style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '8px 10px', fontSize: '10px', color: '#fff', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                      <span>{b.icon}</span>
+                      <span>{b.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Right Hero Cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: rad, padding: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
-                  <span style={{ fontSize: '11px', fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Live Availability</span>
-                </div>
-                <p style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: '#fff', margin: 0 }}>8 Technicians Available in {city || 'Nellore'}</p>
-                <p style={{ fontSize: '11px', color: '#94a3b8', margin: '6px 0 0' }}>Next Slot: <span style={{ color: primaryColor, fontWeight: 900 }}>Today, 3:00 PM</span></p>
-              </div>
+            {(showLiveAvailability || showEmergencyCard) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {showLiveAvailability && (
+                  <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: rad, padding: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
+                      <span style={{ fontSize: '11px', fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{liveAvailTitle || 'Live Availability'}</span>
+                    </div>
+                    <p style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: '#fff', margin: 0 }}>
+                      {liveAvailText || `${workers?.length || 8} Technicians Available in ${city || 'Nellore, AP'}`}
+                    </p>
+                    <p style={{ fontSize: '11px', color: '#94a3b8', margin: '6px 0 0' }}>Next Slot: <span style={{ color: primaryColor, fontWeight: 900 }}>{liveAvailSlot || 'Today, 3:00 PM'}</span></p>
+                  </div>
+                )}
 
-              <div style={{ background: 'rgba(245,158,11,0.12)', backdropFilter: 'blur(16px)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: rad, padding: '16px 20px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 900, color: '#f59e0b', marginBottom: '6px' }}>⚡ Emergency Home Service</div>
-                <p style={{ fontSize: '14px', fontWeight: 900, color: '#fff', margin: 0 }}>Arriving in <span style={{ color: '#f59e0b' }}>30 Minutes or Free</span></p>
+                {showEmergencyCard && (
+                  <div style={{ background: 'rgba(245,158,11,0.12)', backdropFilter: 'blur(16px)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: rad, padding: '16px 20px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 900, color: '#f59e0b', marginBottom: '6px' }}>{emergencyCardTitle || '⚡ Emergency Home Service'}</div>
+                    <p style={{ fontSize: '14px', fontWeight: 900, color: '#fff', margin: 0 }}>
+                      {emergencyCardText || 'Arriving in 30 Minutes or Free'}
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
         </SectionWrapper>
       )}
@@ -1438,6 +1470,7 @@ function MiniSitePreview({
                   <div style={{ position: 'relative' }}>
                     <input 
                       type={showAuthPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
                       placeholder="Enter your account password"
                       value={authPassword}
                       onChange={e => setAuthPassword(e.target.value)}
@@ -1612,6 +1645,7 @@ function MiniSitePreview({
                   </label>
                   <input 
                     type="password"
+                    autoComplete="new-password"
                     placeholder="At least 6 characters"
                     value={authPassword}
                     onChange={e => setAuthPassword(e.target.value)}
@@ -1748,6 +1782,34 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
   const [primaryCta,     setPrimaryCta]     = useState('Book Service Now');
   const [secondaryCta,   setSecondaryCta]   = useState('Call Now');
 
+  /* ── Hero Feature Cards & Trust Badges ───────────────────── */
+  const [showLiveAvailability, setShowLiveAvailability] = useState<boolean>((c as any).showLiveAvailability ?? true);
+  const [liveAvailTitle, setLiveAvailTitle] = useState<string>((c as any).liveAvailTitle || 'Live Availability');
+  const [liveAvailText, setLiveAvailText] = useState<string>((c as any).liveAvailText || '');
+  const [liveAvailSlot, setLiveAvailSlot] = useState<string>((c as any).liveAvailSlot || 'Today, 3:00 PM');
+
+  const [showEmergencyCard, setShowEmergencyCard] = useState<boolean>((c as any).showEmergencyCard ?? true);
+  const [emergencyCardTitle, setEmergencyCardTitle] = useState<string>((c as any).emergencyCardTitle || '⚡ Emergency Home Service');
+  const [emergencyCardText, setEmergencyCardText] = useState<string>((c as any).emergencyCardText || 'Arriving in 30 Minutes or Free');
+
+  const [showTrustBadges, setShowTrustBadges] = useState<boolean>((c as any).showTrustBadges ?? true);
+  const [trustBadgesList, setTrustBadgesList] = useState<Array<{ id: string; icon: string; title: string }>>(() => {
+    if ((c as any).trustBadgesList && Array.isArray((c as any).trustBadgesList) && (c as any).trustBadgesList.length > 0) {
+      return (c as any).trustBadgesList;
+    }
+    return [
+      { id: 'tb-1', icon: '🪪', title: 'Aadhaar Verified' },
+      { id: 'tb-2', icon: '🛡️', title: 'Police Verified' },
+      { id: 'tb-3', icon: '🔄', title: '30-Day Warranty' },
+      { id: 'tb-4', icon: '💰', title: 'No Hidden Costs' },
+    ];
+  });
+  const [newBadgeIcon, setNewBadgeIcon] = useState('✨');
+  const [newBadgeTitle, setNewBadgeTitle] = useState('');
+  const [editingBadgeId, setEditingBadgeId] = useState<string | null>(null);
+  const [editingBadgeTitle, setEditingBadgeTitle] = useState('');
+  const [editingBadgeIcon, setEditingBadgeIcon] = useState('');
+
   /* ── Navbar Customization ────────────────────────────────── */
   const [navbarTagline, setNavbarTagline] = useState<string>((c as any).navbarTagline || 'One Call. We Do It All.');
   const [navLinksList, setNavLinksList] = useState<Array<{ id: string; name: string; tab?: string; url?: string }>>(() => {
@@ -1847,9 +1909,182 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     setEditModalIsFeatured(featuredServiceIds.includes(svc.id));
   };
 
+  /* ── Service Fallback Images ────────────────────────────── */
+  const SERVICE_FALLBACK_IMAGES: Record<string, string> = {
+    clean:       'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80&auto=format&fit=crop',
+    sofa:        'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80&auto=format&fit=crop',
+    tank:        'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&q=80&auto=format&fit=crop',
+    electric:    'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&q=80&auto=format&fit=crop',
+    wire:        'https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?w=600&q=80&auto=format&fit=crop',
+    plumb:       'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=80&auto=format&fit=crop',
+    pipe:        'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&q=80&auto=format&fit=crop',
+    tap:         'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&q=80&auto=format&fit=crop',
+    mixer:       'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&q=80&auto=format&fit=crop',
+    leak:        'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=80&auto=format&fit=crop',
+    paint:       'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=600&q=80&auto=format&fit=crop',
+    pest:        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80&auto=format&fit=crop',
+    appliance:   'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=600&q=80&auto=format&fit=crop',
+    ac:          'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=600&q=80&auto=format&fit=crop',
+    carpent:     'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&q=80&auto=format&fit=crop',
+    wood:        'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&q=80&auto=format&fit=crop',
+    furniture:   'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=600&q=80&auto=format&fit=crop',
+    interior:    'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80&auto=format&fit=crop',
+    pos:         'https://images.unsplash.com/photo-1556740758-90de374c12ad?w=600&q=80&auto=format&fit=crop',
+    default:     'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80&auto=format&fit=crop',
+  };
+
+  const getServiceImg = (name: string = '', category: string = '') => {
+    const key = `${name} ${category}`.toLowerCase();
+    for (const [k, v] of Object.entries(SERVICE_FALLBACK_IMAGES)) {
+      if (k !== 'default' && key.includes(k)) return v;
+    }
+    return SERVICE_FALLBACK_IMAGES.default;
+  };
+
+  /* ── Universal S3 File Upload Helper ─────────────────────── */
+  const uploadFileToS3 = async (file: File, folder: string = 'uploads'): Promise<string | null> => {
+    try {
+      showToast(`⏳ Uploading "${file.name}" to Supabase S3...`, 'info');
+      const res = await api.uploadBinaryFile(file, folder);
+      if (res?.data?.fileUrl) {
+        showToast(`✅ Uploaded and stored in Supabase S3 bucket!`, 'success');
+        return res.data.fileUrl;
+      }
+    } catch (err: any) {
+      console.error('S3 upload error:', err);
+      showToast(`⚠️ S3 direct upload failed, saving image locally: ${err.message || ''}`, 'error');
+    }
+    // Fallback to local Data URL
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  /* ── Logo Upload Handlers ── */
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadFileToS3(file, 'logos');
+    if (url) setLogoImage(url);
+  };
+
+  const handleApplyLogoUrl = () => {
+    if (!logoUrlInput.trim()) return;
+    setLogoImage(logoUrlInput.trim());
+    setLogoUrlInput('');
+    showToast('Brand logo image updated!', 'success');
+  };
+
+  /* ── Hero Photo Upload Handlers ── */
+  const handleHeroFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadFileToS3(file, 'hero');
+    if (url) setHeroBgImage(url);
+  };
+
+  const handleApplyHeroUrl = () => {
+    if (!heroBgImageUrlInput.trim()) return;
+    setHeroBgImage(heroBgImageUrlInput.trim());
+    setHeroBgImageUrlInput('');
+    showToast('Hero section photo updated!', 'success');
+  };
+
+  /* ── Page Background Wallpaper Upload Handlers ── */
+  const handleBgFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadFileToS3(file, 'backgrounds');
+    if (url) setBgImage(url);
+  };
+
+  const handleApplyBgUrl = () => {
+    if (!bgImageUrlInput.trim()) return;
+    setBgImage(bgImageUrlInput.trim());
+    setBgImageUrlInput('');
+    showToast('Background wallpaper image updated!', 'success');
+  };
+
+  /* ── Service Card Image Upload Handlers ── */
+  const handleServiceCardImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadFileToS3(file, 'services');
+    if (url) {
+      setNewSvcCardImage(url);
+      setNewSvcCardImageUrl(url);
+    }
+  };
+
+  const handleEditModalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadFileToS3(file, 'services');
+    if (url) {
+      setEditModalImage(url);
+      setEditModalImageUrl(url);
+    }
+  };
+
+  const handleAddServiceCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSvcCardName.trim()) return;
+
+    const cardImage = newSvcCardImage || newSvcCardImageUrl || getServiceImg(newSvcCardName, newSvcCardCategory);
+    const newServiceData = {
+      tenantId: tenant.id,
+      name: newSvcCardName.trim(),
+      basePrice: Number(newSvcCardPrice) || 350,
+      durationMin: Number(newSvcCardDuration) || 60,
+      category: newSvcCardCategory || 'General',
+      icon: newSvcCardIcon || '🛠️',
+      imageUrl: cardImage,
+      description: newSvcCardDesc || `${newSvcCardName.trim()} professional verified service with 30-day warranty.`,
+      isActive: true,
+    };
+
+    try {
+      const res = await api.createService(newServiceData);
+      const created = res.data || { ...newServiceData, id: `svc-${Date.now()}` };
+      if (setServices) {
+        setServices(prev => [created, ...prev]);
+      }
+      setFeaturedServiceIds(prev => [created.id, ...prev]);
+      setNewSvcCardName('');
+      setNewSvcCardImage('');
+      setNewSvcCardImageUrl('');
+      setNewSvcCardDesc('');
+      showToast(`🎉 Service "${created.name}" created and saved!`, 'success');
+    } catch (err: any) {
+      const fallbackSvc = { ...newServiceData, id: `svc-${Date.now()}` };
+      if (setServices) {
+        setServices(prev => [fallbackSvc, ...prev]);
+      }
+      setFeaturedServiceIds(prev => [fallbackSvc.id, ...prev]);
+      setNewSvcCardName('');
+      setNewSvcCardImage('');
+      setNewSvcCardImageUrl('');
+      setNewSvcCardDesc('');
+      showToast(`🎉 Service "${fallbackSvc.name}" created!`, 'success');
+    }
+  };
+
+  const handleDeleteService = async (serviceId: string) => {
+    try {
+      await api.deleteService(serviceId);
+    } catch {}
+    if (setServices) {
+      setServices(prev => prev.filter(s => s.id !== serviceId));
+    }
+    setFeaturedServiceIds(prev => prev.filter(id => id !== serviceId));
+    showToast('Service card deleted', 'info');
+  };
+
   const handleSaveEditedService = () => {
     if (!editingServiceModal) return;
-    const finalImage = editModalImage || editModalImageUrl;
+    const finalImage = editModalImage || editModalImageUrl || getServiceImg(editModalName, editModalCategory);
     const updatedSvc: Service = {
       ...editingServiceModal,
       name: editModalName.trim() || editingServiceModal.name,
@@ -1864,6 +2099,9 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     if (setServices) {
       setServices(prev => prev.map(s => s.id === updatedSvc.id ? updatedSvc : s));
     }
+
+    // Save to backend
+    api.updateService(updatedSvc.id, updatedSvc).catch(() => {});
 
     if (editModalIsFeatured && !featuredServiceIds.includes(updatedSvc.id)) {
       setFeaturedServiceIds(prev => [...prev, updatedSvc.id]);
@@ -2000,6 +2238,18 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     ]);
     setHeroTitle(c.heroTitle || '');
     setHeroSubtitle(c.heroSubtitle || '');
+    setHeroBadge((c as any).heroArrivalGuarantee || '30 MIN ARRIVAL GUARANTEE');
+    setShowLiveAvailability((c as any).showLiveAvailability ?? true);
+    setLiveAvailTitle((c as any).liveAvailTitle || 'Live Availability');
+    setLiveAvailText((c as any).liveAvailText || '');
+    setLiveAvailSlot((c as any).liveAvailSlot || 'Today, 3:00 PM');
+    setShowEmergencyCard((c as any).showEmergencyCard ?? true);
+    setEmergencyCardTitle((c as any).emergencyCardTitle || '⚡ Emergency Home Service');
+    setEmergencyCardText((c as any).emergencyCardText || 'Arriving in 30 Minutes or Free');
+    setShowTrustBadges((c as any).showTrustBadges ?? true);
+    if ((c as any).trustBadgesList && Array.isArray((c as any).trustBadgesList)) {
+      setTrustBadgesList((c as any).trustBadgesList);
+    }
     setAnnounceActive(c.announcementActive ?? true);
     setAnnounceText(c.announcementText || '');
     setAnnounceExpiry(c.announcementExpiry || '');
@@ -2062,7 +2312,11 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
       showPoweredBy,
       footerSocials,
       footerColumns,
-      heroTitle, heroSubtitle, announcementActive: announceActive, announcementText: announceText,
+      heroTitle, heroSubtitle, heroArrivalGuarantee: heroBadge,
+      showLiveAvailability, liveAvailTitle, liveAvailText, liveAvailSlot,
+      showEmergencyCard, emergencyCardTitle, emergencyCardText,
+      showTrustBadges, trustBadgesList,
+      announcementActive: announceActive, announcementText: announceText,
       announcementExpiry: announceExpiry,
       allowTechnicianSelection: techSelectionActive,
       enableB2bEnquiry: b2bEnquiryActive,
@@ -2207,72 +2461,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     showToast('Footer columns reset to default', 'info');
   };
 
-  /* ── Service Card Handlers ─────────────────────────────────── */
-  const handleServiceCardImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Image size exceeds 5MB limit', 'error');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (reader.result) {
-        setNewSvcCardImage(reader.result as string);
-        showToast('Service card image uploaded!', 'success');
-      }
-    };
-    reader.readAsDataURL(file);
-  };
 
-
-
-  const handleAddServiceCard = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!newSvcCardName.trim()) {
-      showToast('Please enter an item or service name', 'error');
-      return;
-    }
-    const finalImg = newSvcCardImage || newSvcCardImageUrl || getServiceImg(newSvcCardName, newSvcCardCategory);
-    const newSvc: Service = {
-      id: `srv-${Date.now()}`,
-      tenantId: tenant.id,
-      name: newSvcCardName.trim(),
-      category: newSvcCardCategory.trim() || 'Cleaning',
-      description: newSvcCardDesc.trim() || `${newSvcCardName.trim()} professional verified service with 30-day warranty.`,
-      icon: newSvcCardIcon || '✨',
-      basePrice: Number(newSvcCardPrice) || 299,
-      durationMin: Number(newSvcCardDuration) || 60,
-      emergencyAllowed: true,
-      requiredSkills: [],
-      formFields: [],
-      isActive: true,
-      imageUrl: finalImg,
-    };
-
-    if (setServices) {
-      setServices(prev => [newSvc, ...prev]);
-    }
-    setFeaturedServiceIds(prev => [newSvc.id, ...prev]);
-    api.createService(newSvc).catch(() => {});
-
-    setNewSvcCardName('');
-    setNewSvcCardPrice(499);
-    setNewSvcCardImage('');
-    setNewSvcCardImageUrl('');
-    setNewSvcCardDesc('');
-    showToast(`✨ Service card "${newSvc.name}" (₹${newSvc.basePrice}) added and featured!`, 'success');
-  };
-
-
-
-  const handleDeleteService = (svcId: string) => {
-    if (setServices) {
-      setServices(prev => prev.filter(s => s.id !== svcId));
-    }
-    setFeaturedServiceIds(prev => prev.filter(id => id !== svcId));
-    showToast('Service card removed', 'info');
-  };
 
   /* ── Section Handlers ────────────────────────────────────── */
   const deleteSection = (compId: string) => {
@@ -2313,186 +2502,6 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
   const resetDefaultSections = () => {
     setPageComponents(getInitialComponents(tenant.config));
     showToast('Sections reset to default template', 'info');
-  };
-
-  /* ── Helper: Image Compression & Data URL Converter ──────── */
-  const compressImageFile = (file: File, maxWidth = 450, maxHeight = 160): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (readerEvent) => {
-        const image = new Image();
-        image.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = image.width;
-          let height = image.height;
-
-          if (width > height) {
-            if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
-              height = maxHeight;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(readerEvent.target?.result as string);
-            return;
-          }
-          ctx.drawImage(image, 0, 0, width, height);
-          try {
-            const dataUrl = canvas.toDataURL('image/png', 0.92);
-            resolve(dataUrl);
-          } catch {
-            resolve(readerEvent.target?.result as string);
-          }
-        };
-        image.onerror = () => resolve(readerEvent.target?.result as string);
-        image.src = readerEvent.target?.result as string;
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const compressWallpaperFile = (file: File, maxWidth = 1600, maxHeight = 1000): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (readerEvent) => {
-        const image = new Image();
-        image.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = image.width;
-          let height = image.height;
-
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
-          if (height > maxHeight) {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(readerEvent.target?.result as string);
-            return;
-          }
-          ctx.drawImage(image, 0, 0, width, height);
-          try {
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-            resolve(dataUrl);
-          } catch {
-            resolve(readerEvent.target?.result as string);
-          }
-        };
-        image.onerror = () => resolve(readerEvent.target?.result as string);
-        image.src = readerEvent.target?.result as string;
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-  };
-
-  /* ── File Upload Handlers ─────────────────────────────────── */
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('⚠️ Image size should be under 5MB', 'error');
-      return;
-    }
-
-    try {
-      showToast('⏳ Processing brand logo...', 'info');
-      const optimizedDataUrl = await compressImageFile(file);
-      if (optimizedDataUrl) {
-        setLogoImage(optimizedDataUrl);
-        showToast('✨ Logo uploaded, stored & applied to website preview!', 'success');
-      }
-    } catch (err) {
-      console.error('Error processing logo image:', err);
-      showToast('⚠️ Error processing image file', 'error');
-    }
-  };
-
-  const handleApplyLogoUrl = () => {
-    if (!logoUrlInput.trim()) return;
-    setLogoImage(logoUrlInput.trim());
-    setLogoUrlInput('');
-    showToast('✨ Logo URL applied to website preview!', 'success');
-  };
-
-  const handleBgFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 8 * 1024 * 1024) {
-      showToast('⚠️ Background image size should be under 8MB', 'error');
-      return;
-    }
-
-    try {
-      showToast('⏳ Processing background image wallpaper...', 'info');
-      const dataUrl = await compressWallpaperFile(file, 1600, 1000);
-      if (dataUrl) {
-        setBgImage(dataUrl);
-        setBgType('image');
-        showToast('✨ Page background image uploaded and applied!', 'success');
-      }
-    } catch (err) {
-      console.error('Error processing background image:', err);
-      showToast('⚠️ Error processing background image file', 'error');
-    }
-  };
-
-  const handleApplyBgUrl = () => {
-    if (!bgImageUrlInput.trim()) return;
-    setBgImage(bgImageUrlInput.trim());
-    setBgType('image');
-    setBgImageUrlInput('');
-    showToast('✨ Page background image URL applied!', 'success');
-  };
-
-  const handleHeroFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 8 * 1024 * 1024) {
-      showToast('⚠️ Hero image size should be under 8MB', 'error');
-      return;
-    }
-
-    try {
-      showToast('⏳ Processing hero background photo...', 'info');
-      const dataUrl = await compressWallpaperFile(file, 1600, 900);
-      if (dataUrl) {
-        setHeroBgImage(dataUrl);
-        setHeroBgType('image');
-        showToast('✨ Hero background photo uploaded and applied!', 'success');
-      }
-    } catch (err) {
-      console.error('Error processing hero image:', err);
-      showToast('⚠️ Error processing hero image file', 'error');
-    }
-  };
-
-  const handleApplyHeroUrl = () => {
-    if (!heroBgImageUrlInput.trim()) return;
-    setHeroBgImage(heroBgImageUrlInput.trim());
-    setHeroBgType('image');
-    setHeroBgImageUrlInput('');
-    showToast('✨ Hero background image URL applied!', 'success');
   };
 
   const handleSave = async () => {
@@ -3638,6 +3647,255 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                 <FieldLabel>Secondary Button Label</FieldLabel>
                 <FieldInput value={secondaryCta} onChange={e => setSecondaryCta(e.target.value)} />
               </SectionCard>
+
+              {/* ── Trust Badges & Feature Cards (Add, Edit, Delete) ── */}
+              <SectionCard 
+                title="Trust Badges & Feature Cards" 
+                subtitle="Edit, add or delete the guarantee cards shown on the hero section"
+              >
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+                  <div>
+                    <p className="text-xs font-bold text-slate-200">Show Trust Badges</p>
+                    <p className="text-[10px] text-slate-500">Display verification badges below call-to-action buttons</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setShowTrustBadges(v => !v)} 
+                    className={`w-10 h-5 rounded-full transition-all relative ${showTrustBadges ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${showTrustBadges ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+
+                {showTrustBadges && (
+                  <div className="space-y-3">
+                    {/* List of badges */}
+                    <div className="space-y-2">
+                      {trustBadgesList.map((badge, bIdx) => (
+                        <div key={badge.id || bIdx} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                          {editingBadgeId === badge.id ? (
+                            <div className="flex-1 flex gap-2 items-center">
+                              <input 
+                                type="text"
+                                value={editingBadgeIcon}
+                                onChange={e => setEditingBadgeIcon(e.target.value)}
+                                className="w-10 text-center form-input text-xs py-1 px-1"
+                                placeholder="Icon"
+                              />
+                              <input 
+                                type="text"
+                                value={editingBadgeTitle}
+                                onChange={e => setEditingBadgeTitle(e.target.value)}
+                                className="flex-1 form-input text-xs py-1"
+                                placeholder="Badge Title"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (editingBadgeTitle.trim()) {
+                                    setTrustBadgesList(prev => prev.map(b => b.id === badge.id ? { ...b, icon: editingBadgeIcon.trim() || '✨', title: editingBadgeTitle.trim() } : b));
+                                    setEditingBadgeId(null);
+                                    showToast('✨ Badge updated!', 'success');
+                                  }
+                                }}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingBadgeId(null)}
+                                className="px-2 py-1 bg-slate-800 text-slate-300 rounded-lg text-xs"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="text-base shrink-0">{badge.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-200 truncate">{badge.title}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingBadgeId(badge.id);
+                                  setEditingBadgeIcon(badge.icon);
+                                  setEditingBadgeTitle(badge.title);
+                                }}
+                                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTrustBadgesList(prev => prev.filter(b => b.id !== badge.id));
+                                  showToast('🗑️ Badge deleted', 'info');
+                                }}
+                                className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors"
+                                title="Delete Badge"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add new trust badge form */}
+                    <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2">
+                      <p className="text-[11px] font-bold text-slate-300">+ Add New Trust Badge</p>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text"
+                          value={newBadgeIcon}
+                          onChange={e => setNewBadgeIcon(e.target.value)}
+                          className="w-12 text-center form-input text-xs"
+                          placeholder="Icon"
+                        />
+                        <input 
+                          type="text"
+                          value={newBadgeTitle}
+                          onChange={e => setNewBadgeTitle(e.target.value)}
+                          className="flex-1 form-input text-xs"
+                          placeholder="e.g. 100% Quality Guaranteed"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (newBadgeTitle.trim()) {
+                              const newBadge = {
+                                id: `tb-${Date.now()}`,
+                                icon: newBadgeIcon.trim() || '✨',
+                                title: newBadgeTitle.trim()
+                              };
+                              setTrustBadgesList(prev => [...prev, newBadge]);
+                              setNewBadgeTitle('');
+                              showToast('🎉 Trust badge added!', 'success');
+                            }
+                          }}
+                          disabled={!newBadgeTitle.trim()}
+                          className="btn-primary px-3 py-1.5 text-xs font-bold disabled:opacity-40"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* ── Live Availability Card (Edit & Delete) ── */}
+              <SectionCard 
+                title="Live Availability Card" 
+                subtitle="Live status box on the right of your hero section"
+              >
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+                  <div>
+                    <p className="text-xs font-bold text-slate-200">Show Availability Card</p>
+                    <p className="text-[10px] text-slate-500">Toggle live technician count badge</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setShowLiveAvailability(v => !v)} 
+                    className={`w-10 h-5 rounded-full transition-all relative ${showLiveAvailability ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${showLiveAvailability ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+
+                {showLiveAvailability && (
+                  <div className="space-y-2.5">
+                    <div>
+                      <FieldLabel>Status Tag Label</FieldLabel>
+                      <FieldInput 
+                        value={liveAvailTitle} 
+                        onChange={e => setLiveAvailTitle(e.target.value)} 
+                        placeholder="Live Availability" 
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel>Main Headline (e.g. Technicians Available)</FieldLabel>
+                      <FieldInput 
+                        value={liveAvailText} 
+                        onChange={e => setLiveAvailText(e.target.value)} 
+                        placeholder={`8 Technicians Available in ${cityName || 'Nellore, AP'}`} 
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel>Next Slot Text</FieldLabel>
+                      <FieldInput 
+                        value={liveAvailSlot} 
+                        onChange={e => setLiveAvailSlot(e.target.value)} 
+                        placeholder="Today, 3:00 PM" 
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowLiveAvailability(false);
+                        showToast('🗑️ Live Availability card hidden', 'info');
+                      }}
+                      className="w-full mt-2 py-1.5 px-3 rounded-lg border border-rose-900/50 bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 size={13} /> Delete / Hide Availability Card
+                    </button>
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* ── Emergency Service Card (Edit & Delete) ── */}
+              <SectionCard 
+                title="Emergency Service Card" 
+                subtitle="Fast response guarantee badge on the right of your hero"
+              >
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+                  <div>
+                    <p className="text-xs font-bold text-slate-200">Show Emergency Card</p>
+                    <p className="text-[10px] text-slate-500">Toggle arrival guarantee badge</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setShowEmergencyCard(v => !v)} 
+                    className={`w-10 h-5 rounded-full transition-all relative ${showEmergencyCard ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${showEmergencyCard ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+
+                {showEmergencyCard && (
+                  <div className="space-y-2.5">
+                    <div>
+                      <FieldLabel>Badge Title</FieldLabel>
+                      <FieldInput 
+                        value={emergencyCardTitle} 
+                        onChange={e => setEmergencyCardTitle(e.target.value)} 
+                        placeholder="⚡ Emergency Home Service" 
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel>Guarantee Headline</FieldLabel>
+                      <FieldInput 
+                        value={emergencyCardText} 
+                        onChange={e => setEmergencyCardText(e.target.value)} 
+                        placeholder="Arriving in 30 Minutes or Free" 
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEmergencyCard(false);
+                        showToast('🗑️ Emergency card hidden', 'info');
+                      }}
+                      className="w-full mt-2 py-1.5 px-3 rounded-lg border border-rose-900/50 bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 size={13} /> Delete / Hide Emergency Card
+                    </button>
+                  </div>
+                )}
+              </SectionCard>
             </div>
           )}
 
@@ -4528,7 +4786,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
 
             {/* Live Link Button */}
             <button
-              onClick={() => window.open('#/site', '_blank')}
+              onClick={() => window.open(`#/site?tenant=${tenant.id}`, '_blank')}
               className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center gap-1"
               title="Open Public Site in New Tab"
             >
@@ -4585,6 +4843,15 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
               heroBadge={heroBadge}
               primaryCta={primaryCta}
               secondaryCta={secondaryCta}
+              showLiveAvailability={showLiveAvailability}
+              liveAvailTitle={liveAvailTitle}
+              liveAvailText={liveAvailText}
+              liveAvailSlot={liveAvailSlot}
+              showEmergencyCard={showEmergencyCard}
+              emergencyCardTitle={emergencyCardTitle}
+              emergencyCardText={emergencyCardText}
+              showTrustBadges={showTrustBadges}
+              trustBadgesList={trustBadgesList}
               announceActive={announceActive}
               announceText={announceText}
               announceExpiry={announceExpiry}
@@ -4655,7 +4922,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
             {/* Exit Fullscreen */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => window.open('#/site', '_blank')}
+                onClick={() => window.open(`#/site?tenant=${tenant.id}`, '_blank')}
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5"
               >
                 <ExternalLink size={14} /> Open Live Site
@@ -4707,6 +4974,15 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                 heroBadge={heroBadge}
                 primaryCta={primaryCta}
                 secondaryCta={secondaryCta}
+                showLiveAvailability={showLiveAvailability}
+                liveAvailTitle={liveAvailTitle}
+                liveAvailText={liveAvailText}
+                liveAvailSlot={liveAvailSlot}
+                showEmergencyCard={showEmergencyCard}
+                emergencyCardTitle={emergencyCardTitle}
+                emergencyCardText={emergencyCardText}
+                showTrustBadges={showTrustBadges}
+                trustBadgesList={trustBadgesList}
                 announceActive={announceActive}
                 announceText={announceText}
                 announceExpiry={announceExpiry}
@@ -4788,22 +5064,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                       ref={editModalFileInputRef}
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        if (file.size > 5 * 1024 * 1024) {
-                          showToast('Image size should be under 5MB', 'error');
-                          return;
-                        }
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          if (reader.result) {
-                            setEditModalImage(reader.result as string);
-                            showToast('Photo uploaded for service card!', 'success');
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }}
+                      onChange={handleEditModalImageUpload}
                     />
                     <div className="flex gap-2">
                       <button

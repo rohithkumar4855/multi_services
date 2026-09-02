@@ -9,21 +9,44 @@ import type { Tenant, BasketItem, Service } from '../types';
 
 /* ─── Image Utilities ─────────────────────────────────────── */
 const SERVICE_IMAGES: Record<string, string> = {
-  clean:       'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500&q=80&auto=format&fit=crop',
-  electric:    'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=500&q=80&auto=format&fit=crop',
-  plumb:       'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=500&q=80&auto=format&fit=crop',
-  paint:       'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=500&q=80&auto=format&fit=crop',
-  pest:        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80&auto=format&fit=crop',
-  appliance:   'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=500&q=80&auto=format&fit=crop',
-  carpenter:   'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=500&q=80&auto=format&fit=crop',
-  interior:    'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&q=80&auto=format&fit=crop',
-  default:     'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500&q=80&auto=format&fit=crop',
+  clean:       'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80&auto=format&fit=crop',
+  sofa:        'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80&auto=format&fit=crop',
+  tank:        'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&q=80&auto=format&fit=crop',
+  electric:    'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&q=80&auto=format&fit=crop',
+  wire:        'https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?w=600&q=80&auto=format&fit=crop',
+  panel:       'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&q=80&auto=format&fit=crop',
+  breaker:     'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&q=80&auto=format&fit=crop',
+  substation:  'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=600&q=80&auto=format&fit=crop',
+  transformer: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=600&q=80&auto=format&fit=crop',
+  cable:       'https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?w=600&q=80&auto=format&fit=crop',
+  plumb:       'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=80&auto=format&fit=crop',
+  pipe:        'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&q=80&auto=format&fit=crop',
+  tap:         'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&q=80&auto=format&fit=crop',
+  mixer:       'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&q=80&auto=format&fit=crop',
+  leak:        'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=80&auto=format&fit=crop',
+  paint:       'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=600&q=80&auto=format&fit=crop',
+  pest:        'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80&auto=format&fit=crop',
+  appliance:   'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=600&q=80&auto=format&fit=crop',
+  ac:          'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=600&q=80&auto=format&fit=crop',
+  carpent:     'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&q=80&auto=format&fit=crop',
+  wood:        'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&q=80&auto=format&fit=crop',
+  furniture:   'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=600&q=80&auto=format&fit=crop',
+  interior:    'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80&auto=format&fit=crop',
+  pos:         'https://images.unsplash.com/photo-1556740758-90de374c12ad?w=600&q=80&auto=format&fit=crop',
+  default:     'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80&auto=format&fit=crop',
 };
 
-const getServiceImage = (name: string, category: string) => {
+const isValidImageUrl = (url: any): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null' || trimmed === '[object Object]') return false;
+  return trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image/');
+};
+
+const getServiceImage = (name: string = '', category: string = '') => {
   const key = `${name} ${category}`.toLowerCase();
   for (const [k, v] of Object.entries(SERVICE_IMAGES)) {
-    if (key.includes(k)) return v;
+    if (k !== 'default' && key.includes(k)) return v;
   }
   return SERVICE_IMAGES.default;
 };
@@ -305,6 +328,9 @@ export default function CmsRenderer({
           /* ══════════════════════════════════════════════════
              HERO — Full-bleed photography + glassmorphism
           ══════════════════════════════════════════════════ */
+          /* ══════════════════════════════════════════════════
+             HERO — Split 2-Column with Live Availability & Badges
+          ══════════════════════════════════════════════════ */
           case 'hero': {
             const heroBgImg = (c as any).heroBgImage;
             const heroOverlayDarkness = (c as any).heroBgOverlayOpacity ?? 50;
@@ -314,11 +340,11 @@ export default function CmsRenderer({
               <section
                 key={comp.id}
                 id="hero"
-                className="relative overflow-hidden flex items-center justify-center py-24 px-6 sm:py-36 bg-cover bg-center"
+                className="relative overflow-hidden flex items-center justify-center py-12 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-12 bg-cover bg-center"
                 style={{
                   backgroundColor: localDark ? '#0b0f19' : '#0f172a',
                   backgroundImage: heroBgImg ? `url(${heroBgImg})` : undefined,
-                  minHeight: '520px',
+                  minHeight: '480px',
                 }}
               >
                 {/* Hero Photo Dark Overlay if image active */}
@@ -326,7 +352,7 @@ export default function CmsRenderer({
                   <div 
                     className="absolute inset-0 pointer-events-none transition-opacity duration-300"
                     style={{
-                      backgroundColor: '#000000',
+                      backgroundColor: localDark ? '#000000' : '#0f172a',
                       opacity: heroOverlayDarkness / 100,
                     }}
                   />
@@ -334,112 +360,160 @@ export default function CmsRenderer({
 
                 {/* 🎨 Premium Animated Gradient Mesh Background */}
                 <div
-                  className="absolute inset-0 pointer-events-none opacity-45 mix-blend-screen"
+                  className="absolute inset-0 pointer-events-none opacity-30 mix-blend-screen"
                   style={{
-                    background: `radial-gradient(circle at 50% 50%, ${pc}44 0%, transparent 60%), 
-                                 radial-gradient(circle at 10% 20%, ${pc}22 0%, transparent 40%),
-                                 radial-gradient(circle at 90% 80%, ${pc}22 0%, transparent 40%)`,
-                    filter: 'blur(75px)',
+                    background: `radial-gradient(circle at 70% 30%, ${pc}44 0%, transparent 60%), 
+                                 radial-gradient(circle at 10% 80%, ${pc}22 0%, transparent 40%)`,
+                    filter: 'blur(80px)',
                   }}
                 />
 
-                {/* ✨ Aura Glow Center Ring Effect */}
+                {/* ✨ Aura Glow Effect */}
                 {heroGlowOn && (
                   <div 
-                    className="absolute pointer-events-none w-[320px] h-[320px] rounded-full opacity-35 blur-[80px] animate-pulse"
+                    className="absolute pointer-events-none w-[420px] h-[420px] rounded-full opacity-30 blur-[90px]"
                     style={{
-                      background: pc,
-                      top: '20%',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
+                      background: `${pc}40`,
+                      top: '-10%',
+                      right: '10%',
                     }}
                   />
                 )}
 
-                <div className="relative z-10 max-w-4xl mx-auto text-center space-y-8 animate-fadeIn">
-                  {/* Arrival guarantee badge with float and pulse effects */}
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-white animate-float border"
-                    style={{ 
-                      background: `linear-gradient(135deg, ${pc}, ${pc}dd)`, 
-                      boxShadow: `0 8px 30px ${pc}60`,
-                      borderColor: 'rgba(255,255,255,0.25)',
-                    }}>
-                    <Zap className="w-3 h-3 text-amber-300 animate-pulse" />
-                    {(c as any).heroArrivalGuarantee || '30 Min Arrival Guarantee'}
+                <div className="relative z-10 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                  {/* Left Column: Hero Content */}
+                  <div className="lg:col-span-7 text-left space-y-5 animate-fadeIn">
+                    {/* Arrival Guarantee Badge */}
+                    <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider text-white shadow-lg border"
+                      style={{ 
+                        background: pc, 
+                        boxShadow: `0 4px 20px ${pc}60`,
+                        borderColor: 'rgba(255,255,255,0.2)',
+                      }}>
+                      <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" />
+                      {(c as any).heroArrivalGuarantee || (c as any).heroBadge || '30 MIN ARRIVAL GUARANTEE'}
+                    </div>
+
+                    {/* Main Headline */}
+                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-[1.15] tracking-tight text-white font-sans">
+                      {activeCampaign ? activeCampaign.title : (
+                        c.heroTitle || `Professional Service by ${tenant.name}`
+                      )}
+                    </h1>
+
+                    {/* Subtitle */}
+                    <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed font-normal opacity-90">
+                      {activeCampaign?.subtitle || c.heroSubtitle || 'Expert solutions at your doorstep. Verified and background-checked technicians. Book online today.'}
+                    </p>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <button
+                        onClick={scrollToServices}
+                        className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-black text-xs sm:text-sm text-white transition-all duration-300 hover:scale-[1.03] hover:shadow-xl shadow-lg cursor-pointer"
+                        style={{
+                          background: `linear-gradient(135deg, ${pc}, ${pc}dd)`,
+                          color: getTextColorForBg(pc),
+                          boxShadow: `0 8px 25px ${pc}50`,
+                          borderRadius: 'var(--border-radius)',
+                        }}
+                      >
+                        {(c as any).primaryCta || 'Book Service Now'} →
+                      </button>
+                      <a
+                        href={`tel:${c.phone || '+91 98765 43210'}`}
+                        className="flex items-center gap-2 px-5 py-3.5 rounded-xl font-bold text-xs sm:text-sm text-white border transition-all duration-300 hover:bg-white/10 hover:scale-[1.02] cursor-pointer"
+                        style={{
+                          borderColor: 'rgba(255,255,255,0.25)',
+                          background: 'rgba(255,255,255,0.06)',
+                          backdropFilter: 'blur(8px)',
+                          borderRadius: 'var(--border-radius)',
+                        }}
+                      >
+                        <Phone className="w-3.5 h-3.5" /> {(c as any).secondaryCta || 'Call Now'}
+                      </a>
+                    </div>
+
+                    {/* Trust Badges Grid */}
+                    {(c as any).showTrustBadges !== false && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-4">
+                        {(((c as any).trustBadgesList && Array.isArray((c as any).trustBadgesList) && (c as any).trustBadgesList.length > 0)
+                          ? (c as any).trustBadgesList
+                          : [
+                              { icon: '🪪', title: 'Aadhaar Verified' },
+                              { icon: '🛡️', title: 'Police Verified' },
+                              { icon: '🔄', title: '30-Day Warranty' },
+                              { icon: '💰', title: 'No Hidden Costs' },
+                            ]
+                        ).map((b: any, i: number) => (
+                          <div 
+                            key={b.id || i}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold text-white border text-center shadow-sm"
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              borderColor: 'rgba(255, 255, 255, 0.12)',
+                              backdropFilter: 'blur(8px)',
+                            }}
+                          >
+                            <span>{b.icon}</span>
+                            <span>{b.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Main Headline with dual-color gradient accentuation */}
-                  <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight text-white max-w-4xl mx-auto font-sans">
-                    {activeCampaign ? activeCampaign.title : (
-                      <>
-                        <span className="opacity-95">SV Power Systems</span>
-                        <br />
-                        <span 
+                  {/* Right Column: Live Availability & Emergency Cards */}
+                  {((c as any).showLiveAvailability !== false || (c as any).showEmergencyCard !== false) && (
+                    <div className="lg:col-span-5 flex flex-col gap-3.5 animate-fadeIn">
+                      {/* Live Availability Card */}
+                      {(c as any).showLiveAvailability !== false && (
+                        <div 
+                          className="p-5 sm:p-6 rounded-2xl border shadow-xl transition-all hover:scale-[1.01]"
                           style={{
-                            background: `linear-gradient(135deg, #38bdf8 30%, ${pc} 100%)`,
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            backdropFilter: 'blur(20px)',
+                            borderRadius: 'var(--border-radius)',
                           }}
                         >
-                          Industrial Panels & substations
-                        </span>
-                      </>
-                    )}
-                  </h1>
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                            <span className="text-[11px] font-black text-white uppercase tracking-widest">
+                              {(c as any).liveAvailTitle || 'Live Availability'}
+                            </span>
+                          </div>
+                          <h3 className="text-lg sm:text-xl font-black text-white leading-tight">
+                            {(c as any).liveAvailText || `8 Technicians Available in ${c.city || 'Nellore, AP'}`}
+                          </h3>
+                          <p className="text-xs text-slate-300 mt-1.5">
+                            Next Slot: <span className="font-black" style={{ color: pc }}>{(c as any).liveAvailSlot || 'Today, 3:00 PM'}</span>
+                          </p>
+                        </div>
+                      )}
 
-                  {/* Subtitle with premium line height */}
-                  <p className="text-base sm:text-lg text-slate-300 max-w-xl leading-relaxed font-medium mx-auto opacity-90">
-                    {activeCampaign?.subtitle || c.heroSubtitle || 'Professional. Verified. On-time. Making homes better, every day.'}
-                  </p>
-
-                  {/* CTA Buttons with hover scaling and shadow depth */}
-                  <div className="flex flex-wrap justify-center gap-4 pt-2">
-                    <button
-                      onClick={scrollToServices}
-                      className="group flex items-center gap-2.5 px-8 py-4 rounded-xl font-black text-xs transition-all duration-300 hover:scale-[1.05] hover:shadow-2xl"
-                      style={{
-                        background: `linear-gradient(135deg, ${pc}, ${pc}dd)`,
-                        color: getTextColorForBg(pc),
-                        boxShadow: `0 10px 30px ${pc}60`,
-                        borderRadius: 'var(--border-radius)',
-                      }}
-                    >
-                      Book Service Now
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                    </button>
-                    <a
-                      href={`tel:${c.phone}`}
-                      className="flex items-center gap-2 px-7 py-4 rounded-xl font-bold text-xs border text-white transition-all duration-300 hover:scale-[1.02] hover:bg-white/10"
-                      style={{
-                        borderColor: 'rgba(255,255,255,0.2)',
-                        background: 'rgba(255,255,255,0.06)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: 'var(--border-radius)',
-                      }}
-                    >
-                      <Phone className="w-3.5 h-3.5" /> Call Now
-                    </a>
-                  </div>
-
-                  {/* Trust Badge Row with enhanced glass design */}
-                  <div className="flex flex-wrap justify-center gap-3 pt-6">
-                    {[
-                      { icon: '🪪', title: 'Aadhaar Verified' },
-                      { icon: '🛡️', title: 'Police Verified' },
-                      { icon: '🔄', title: '30-Day Warranty' },
-                      { icon: '💰', title: 'No Hidden Costs' },
-                    ].map((b, i) => (
-                      <div key={i}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-bold text-slate-300 border backdrop-blur-md"
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          borderColor: 'rgba(255, 255, 255, 0.08)',
-                        }}>
-                        <span>{b.icon}</span>
-                        <span>{b.title}</span>
-                      </div>
-                    ))}
-                  </div>
+                      {/* Emergency Home Service Card */}
+                      {(c as any).showEmergencyCard !== false && (
+                        <div 
+                          className="p-4 sm:p-5 rounded-2xl border shadow-xl transition-all hover:scale-[1.01]"
+                          style={{
+                            background: 'rgba(245, 158, 11, 0.12)',
+                            borderColor: 'rgba(245, 158, 11, 0.25)',
+                            backdropFilter: 'blur(16px)',
+                            borderRadius: 'var(--border-radius)',
+                          }}
+                        >
+                          <div className="flex items-center gap-1.5 text-xs font-black text-amber-400 mb-1">
+                            <Zap className="w-3.5 h-3.5 fill-amber-400" />
+                            <span>{(c as any).emergencyCardTitle || '⚡ Emergency Home Service'}</span>
+                          </div>
+                          <p className="text-sm sm:text-base font-black text-white">
+                            {(c as any).emergencyCardText || 'Arriving in 30 Minutes or Free'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </section>
             );
@@ -550,7 +624,7 @@ export default function CmsRenderer({
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
                     {displayedServices.map((svc: any) => {
                         const inBasket = basket.find(item => item.serviceId === svc.id);
-                        const imgUrl = svc.imageUrl || getServiceImage(svc.name, svc.category);
+                        const imgUrl = isValidImageUrl(svc.imageUrl) ? svc.imageUrl : getServiceImage(svc.name, svc.category);
                         const isHovered = hoveredService === svc.id;
                         return (
                           <div
@@ -570,21 +644,39 @@ export default function CmsRenderer({
                             onMouseLeave={() => setHoveredService(null)}
                           >
                             {/* Image */}
-                            <div className="relative h-32 overflow-hidden flex-shrink-0">
+                            <div 
+                              className="relative h-36 overflow-hidden flex-shrink-0 bg-slate-800"
+                              style={{ 
+                                backgroundImage: `url(${imgUrl})`, 
+                                backgroundSize: 'cover', 
+                                backgroundPosition: 'center',
+                                backgroundColor: '#1e293b'
+                              }}
+                            >
                               <img
                                 src={imgUrl}
                                 alt={svc.name}
                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                loading="lazy"
+                                loading="eager"
+                                onError={(e) => {
+                                  const target = e.currentTarget;
+                                  const fallback = getServiceImage(svc.name, svc.category);
+                                  if (target.src !== fallback) {
+                                    target.src = fallback;
+                                    if (target.parentElement) {
+                                      target.parentElement.style.backgroundImage = `url(${fallback})`;
+                                    }
+                                  }
+                                }}
                               />
-                              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)' }} />
+                              <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%)' }} />
                               {/* Price badge */}
-                              <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg text-[10px] font-black text-white"
+                              <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg text-[10px] font-black text-white shadow-md z-10"
                                 style={{ background: `linear-gradient(135deg, ${pc}, ${pc}cc)` }}>
                                 From ₹{svc.basePrice}
                               </div>
                               {svc.isPopular && (
-                                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[8px] font-black bg-amber-400 text-amber-900">
+                                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[8px] font-black bg-amber-400 text-amber-900 shadow z-10">
                                   Popular
                                 </div>
                               )}

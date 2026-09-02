@@ -100,3 +100,24 @@ export const publicTenantResolverMiddleware = async (
   }
 };
 
+/**
+ * Optional Tenant Resolver Middleware
+ * Allows both authenticated and unauthenticated tenant operations.
+ */
+export const optionalTenantContextMiddleware = async (
+  req: TenantRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (req.user) {
+      req.tenantId = req.user.tenantId || (req.headers['x-tenant-id'] as string) || (req.body && req.body.tenantId) || null;
+    } else {
+      req.tenantId = (req.headers['x-tenant-id'] as string) || (req.body && req.body.tenantId) || (req.query && req.query.tenantId as string) || 'tenant-vip';
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
