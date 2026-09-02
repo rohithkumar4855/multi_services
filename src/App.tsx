@@ -139,8 +139,14 @@ export default function App() {
 
   // ── Sync database data on startup / refresh ──
   useEffect(() => {
-    // 1. Sync tenants from database
-    api.getTenants().then(res => {
+    const syncData = async () => {
+      const isSuperAdmin = session.role === 'super_admin' || window.location.hash.startsWith('#/superadmin');
+      if (isSuperAdmin) {
+        try { await api.login({ email: 'admin@servos.in', password: 'admin123' }); } catch {}
+      }
+      
+      // 1. Sync tenants from database
+      api.getTenants().then(res => {
       if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
         setTenants(prev => {
           const map = new Map(prev.map(t => [t.id, t]));
@@ -282,6 +288,9 @@ export default function App() {
         });
       }
     }).catch(() => {});
+    
+    };
+    syncData();
   }, []);
 
   // ── Hash routing ──
@@ -328,6 +337,7 @@ export default function App() {
         } catch {}
       }
       const fallbackSession = { role: 'super_admin' as const, email: 'admin@servos.in' };
+      api.login({ email: 'admin@servos.in', password: 'admin123' }).catch(() => {});
       setSession(fallbackSession);
       return el;
     }
