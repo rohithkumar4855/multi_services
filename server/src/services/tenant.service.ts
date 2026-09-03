@@ -673,28 +673,12 @@ export class TenantService {
       customDomain,
       status,
       plan,
-      gstNumber
+      config
     } = data;
 
-    const mergedConfig = config ? { ...((existing.settings as any)?.config || existing.settings || {}), ...config } : undefined;
-    const mergedSettings = {
-      ...((existing.settings as any) || {}),
-      ...(settings || {}),
-      ...(mergedConfig ? { config: mergedConfig, ...mergedConfig } : {})
-    };
-
-    const mergedBusinessInfo = {
-      ...((existing.businessInfo as any) || {}),
-      ...(businessInfo || {}),
-      ...(config ? {
-        ...(config.email && { email: config.email }),
-        ...(config.phone && { phone: config.phone }),
-        ...(config.address && { address: config.address }),
-        ...(config.city && { city: config.city }),
-        ...(config.gstNumber && { gstNumber: config.gstNumber })
-      } : {}),
-      ...(name && { name })
-    };
+    const mergedSettings = { ...((existing.settings as any) || {}), ...(settings || {}), ...(config || {}) };
+    console.log("TenantService.updateTenantConfig - received config:", JSON.stringify(config, null, 2).slice(0, 500));
+    console.log("mergedSettings keys:", Object.keys(mergedSettings));
 
     const updated = await prisma.tenant.update({
       where: { id: existing.id },
@@ -711,8 +695,8 @@ export class TenantService {
         ...(logo !== undefined && { logo }),
         ...(!logo && config?.logoImage && { logo: config.logoImage }),
         ...(favicon !== undefined && { favicon }),
-        businessInfo: mergedBusinessInfo,
-        settings: mergedSettings,
+        ...(businessInfo && { businessInfo: { ...((existing.businessInfo as any) || {}), ...businessInfo } }),
+        settings: Object.keys(mergedSettings).length > 0 ? mergedSettings : (existing.settings || {}),
         ...(customDomain !== undefined && { customDomain }),
         ...(status && { status }),
         ...(plan && { plan })

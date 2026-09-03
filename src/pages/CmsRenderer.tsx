@@ -488,10 +488,10 @@ export default function CmsRenderer({
                   </div>
 
                   {/* Right Column: Live Availability & Emergency Cards */}
-                  {((c as any).showLiveAvailability !== false || (c as any).showEmergencyCard !== false) && (
+                  {(String((c as any).showLiveAvailability) !== 'false' || String((c as any).showEmergencyCard) !== 'false') && (
                     <div className="lg:col-span-5 flex flex-col gap-3.5 animate-fadeIn">
                       {/* Live Availability Card */}
-                      {(c as any).showLiveAvailability !== false && (
+                      {String((c as any).showLiveAvailability) !== 'false' && (
                         <div 
                           className="p-5 sm:p-6 rounded-2xl border shadow-xl transition-all hover:scale-[1.01]"
                           style={{
@@ -517,7 +517,7 @@ export default function CmsRenderer({
                       )}
 
                       {/* Emergency Home Service Card */}
-                      {(c as any).showEmergencyCard !== false && (
+                      {String((c as any).showEmergencyCard) !== 'false' && (
                         <div 
                           className="p-4 sm:p-5 rounded-2xl border shadow-xl transition-all hover:scale-[1.01]"
                           style={{

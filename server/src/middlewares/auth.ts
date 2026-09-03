@@ -19,7 +19,7 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key-1234') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'servos-super-secret-key-2026-anarav-tech') as any;
     req.user = decoded;
     next();
   } catch (error) {
@@ -47,7 +47,7 @@ export const optionalAuthenticate = (req: AuthenticatedRequest, res: Response, n
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key-1234') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'servos-super-secret-key-2026-anarav-tech') as any;
     req.user = decoded;
   } catch (error) {
     // Ignore invalid token for optional endpoints
