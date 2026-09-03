@@ -23,8 +23,9 @@ interface BookingFormData {
   notes: string;
 }
 
-export default function CustomerSite({ session, store, navigateTo }: Props) {
-  const { tenants, services, workers, bookings, setBookings, coupons, leads, setLeads, quotations, setQuotations } = store;
+export default function CustomerSite(props: Props) {
+  const { session, store, navigateTo } = props;
+  const { tenants } = store;
 
   // Helper to extract tenant ID from URL or storage
   const getUrlTenantId = () => {
@@ -39,7 +40,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       const searchParams = new URLSearchParams(window.location.search);
       const tSearch = searchParams.get('tenant');
       if (tSearch) return tSearch;
-    } catch {}
+    } catch { }
     return null;
   };
 
@@ -47,7 +48,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     try {
       const saved = sessionStorage.getItem('anarav_site_tenant_id') || localStorage.getItem('anarav_site_tenant_id');
       if (saved) return saved;
-    } catch {}
+    } catch { }
     return tenants[0]?.id || '';
   })();
 
@@ -78,17 +79,18 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       try {
         sessionStorage.setItem('anarav_site_tenant_id', activeTenantId);
         localStorage.setItem('anarav_site_tenant_id', activeTenantId);
-      } catch {}
+      } catch { }
     }
   }, [activeTenantId]);
 
-  const tenant = 
+  const tenant =
     tenants.find(t => t.id === activeTenantId) ||
     tenants.find(t => t.id === getUrlTenantId()) ||
     tenants.find(t => session.tenantId && t.id === session.tenantId) ||
     tenants.find(t => session.email && t.ownerEmail === session.email) ||
     tenants.find(t => session.tenantName && t.name === session.tenantName) ||
     tenants[0];
+
   if (!tenant) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
@@ -97,6 +99,12 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       </div>
     );
   }
+
+  return <CustomerSiteContent {...props} tenant={tenant} activeTenantId={activeTenantId} setActiveTenantId={setActiveTenantId} />;
+}
+
+function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantId, setActiveTenantId }: Props & { tenant: any; activeTenantId: any; setActiveTenantId: any }) {
+  const { tenants, services, workers, bookings, setBookings, coupons, leads, setLeads, quotations, setQuotations } = store;
 
   const c = tenant.config;
   const pc = c.primaryColor;
@@ -147,7 +155,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     try {
       const saved = localStorage.getItem(`anarav_customer_session_${tenant.id}`) || sessionStorage.getItem(`anarav_customer_session_${tenant.id}`);
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return null;
   });
   const [showCustomerLoginModal, setShowCustomerLoginModal] = useState(false);
@@ -414,7 +422,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         status: 'new' as const,
         createdAt: new Date().toISOString()
       };
-      api.createLead(newL).catch(() => {});
+      api.createLead(newL).catch(() => { });
       setLeads(prev => [...prev, newL]);
     }
 
@@ -460,7 +468,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         if (authRememberMe) {
           try {
             localStorage.setItem(`anarav_customer_session_${tenant.id}`, JSON.stringify(sessionData));
-          } catch {}
+          } catch { }
         }
 
         // 2. Sync real customer bookings from DB
@@ -501,7 +509,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
               return Array.from(map.values());
             });
           }
-        } catch {}
+        } catch { }
 
         showToast(`Welcome back, ${sessionData.name}!`, 'success');
         setShowCustomerLoginModal(false);
@@ -516,12 +524,12 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
 
     // Fallback local matching
     const isEmail = identifier.includes('@');
-    const foundBooking = bookings.find(b => 
-      b.tenantId === tenant.id && 
+    const foundBooking = bookings.find(b =>
+      b.tenantId === tenant.id &&
       (b.customerPhone === identifier || (b.formData && (b.formData as any).email === identifier))
     );
-    const foundLead = leads.find(l => 
-      l.tenantId === tenant.id && 
+    const foundLead = leads.find(l =>
+      l.tenantId === tenant.id &&
       (l.phone === identifier || l.email === identifier)
     );
 
@@ -541,7 +549,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     if (authRememberMe) {
       try {
         localStorage.setItem(`anarav_customer_session_${tenant.id}`, JSON.stringify(sessionData));
-      } catch {}
+      } catch { }
     }
 
     setShowCustomerLoginModal(false);
@@ -600,7 +608,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         status: 'new' as const,
         createdAt: new Date().toISOString()
       };
-      api.createLead(newL).catch(() => {});
+      api.createLead(newL).catch(() => { });
       setLeads(prev => [...prev, newL]);
       showToast('Account registered successfully!', 'success');
     }
@@ -609,7 +617,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     if (authRememberMe) {
       try {
         localStorage.setItem(`anarav_customer_session_${tenant.id}`, JSON.stringify(sessionData));
-      } catch {}
+      } catch { }
     }
 
     setShowCustomerLoginModal(false);
@@ -623,7 +631,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     try {
       localStorage.removeItem(`anarav_customer_session_${tenant.id}`);
       sessionStorage.removeItem(`anarav_customer_session_${tenant.id}`);
-    } catch {}
+    } catch { }
     setViewMode('website');
   };
 
@@ -700,13 +708,13 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   };
 
   return (
-    <div 
-      className="min-h-screen transition-all pb-16 md:pb-0 relative" 
+    <div
+      className="min-h-screen transition-all pb-16 md:pb-0 relative"
       style={getSiteRootStyles()}
     >
       {/* Background Image / Frosted Overlay */}
       {siteBgType === 'image' && siteBgImage && (
-        <div 
+        <div
           className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-300"
           style={{
             backgroundColor: siteBgOverlayColor,
@@ -719,12 +727,12 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
 
       {/* ===== DEMO SWITCHER ===== */}
       <div className="bg-slate-955 border-b border-slate-850 text-slate-350 text-xs py-2 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
           <span>Demo Engine: Branded customer portal for <strong className="text-white">{tenant.name}</strong></span>
-        </div>
+        </div> */}
         <div className="flex items-center gap-3">
-          <span>Switch Client:</span>
+          {/* <span>Switch Client:</span>
           <select
             className="bg-slate-900 text-white rounded px-2 py-1 text-xs border border-slate-800 font-sans"
             value={activeTenantId}
@@ -733,7 +741,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
             }}
           >
             {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.subdomain})</option>)}
-          </select>
+          </select> */}
           <button
             onClick={() => setLocalModeOverride(activeMode === 'dark' ? 'light' : 'dark')}
             className="p-1 rounded hover:bg-slate-800 transition-colors"
@@ -745,7 +753,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
               onClick={() => navigateTo('#/admin')}
               className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors font-sans"
             >
-              <ArrowLeft className="w-3 h-3" /> Back to Console
+              <ArrowLeft className="w-3 h-3" /> LOGOUT
             </button>
           )}
         </div>
@@ -784,17 +792,17 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       })()}
 
       {/* ===== HEADER ===== */}
-      <header 
-        className="sticky top-0 z-30 border-b transition-all backdrop-blur-md" 
-        style={{ 
-          borderColor: 'var(--color-border)', 
+      <header
+        className="sticky top-0 z-30 border-b transition-all backdrop-blur-md"
+        style={{
+          borderColor: 'var(--color-border)',
           backgroundColor: 'var(--color-navbar)',
           color: 'var(--color-text-primary)'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           {/* Logo */}
-          <div 
+          <div
             onClick={() => {
               setActivePageSlug('home');
               setViewMode('website');
@@ -985,10 +993,10 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 style={customerActiveTab === tab.id
                   ? { background: pc, borderColor: pc, color: getTextColorForBg(pc) }
                   : {
-                      background: 'var(--color-surface)',
-                      borderColor: 'var(--color-border)',
-                      color: 'var(--color-text-secondary)'
-                    }
+                    background: 'var(--color-surface)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-secondary)'
+                  }
                 }
               >
                 {tab.label}
@@ -1045,7 +1053,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                                 🔎 Live Operations Tracker
                               </button>
                             )}
-                            
+
                             <button
                               onClick={() => setInvoiceModalBooking(b)}
                               className="px-4 py-2 rounded-lg text-xs font-bold border transition-all"
@@ -1349,8 +1357,8 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 </div>
                 <div className="px-5 pt-3">
                   <div className="bg-blue-955/30 border border-blue-900/60 p-2.5 rounded-xl text-blue-400 font-bold text-[10px] text-center font-sans">
-                    {tenant.config.enableB2bEnquiry 
-                      ? '💼 Industrial Enquiry — Submit project requirements for offline engineering estimate' 
+                    {tenant.config.enableB2bEnquiry
+                      ? '💼 Industrial Enquiry — Submit project requirements for offline engineering estimate'
                       : '⚡ Instant Guest Checkout — No registration or login required to book!'}
                   </div>
                 </div>
@@ -1430,9 +1438,9 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                   {tenant.config.allowTechnicianSelection && (
                     <div>
                       <label className="form-label">Select Preferred Technician (Optional)</label>
-                      <select 
-                        className="form-input" 
-                        value={selectedWorkerId} 
+                      <select
+                        className="form-input"
+                        value={selectedWorkerId}
                         onChange={e => setSelectedWorkerId(e.target.value)}
                       >
                         <option value="">Any Available Specialist</option>
@@ -1498,9 +1506,9 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     </label>
                   </div>
 
-                  <button 
-                    type="submit" 
-                    className="w-full py-2.5 rounded-xl font-bold shadow-md text-sm mt-3 disabled:opacity-50 disabled:cursor-not-allowed" 
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-xl font-bold shadow-md text-sm mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: pc, color: getTextColorForBg(pc) }}
                     disabled={!agreeTerms}
                   >
@@ -1518,7 +1526,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       {detailService && (
         <div className="modal-overlay z-50 animate-fadeIn" onClick={() => setDetailService(null)}>
           <div onClick={e => e.stopPropagation()} className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden border border-slate-800 text-slate-200 animate-scaleIn font-sans text-left flex flex-col max-h-[85vh]">
-            
+
             {/* Banner/Header */}
             <div className="relative h-44 bg-slate-950 flex-shrink-0">
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-10" />
@@ -1529,8 +1537,8 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                   <h3 className="text-lg font-black text-white mt-1">{detailService.name}</h3>
                 </div>
               </div>
-              <button 
-                onClick={() => setDetailService(null)} 
+              <button
+                onClick={() => setDetailService(null)}
                 className="absolute right-4 top-4 z-20 text-slate-400 hover:text-white font-bold text-xs p-1.5 rounded-lg border border-slate-800 bg-slate-950/40"
               >
                 ✕ Close
@@ -1658,7 +1666,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       {isBasketOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden font-sans">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity animate-fadeIn" onClick={() => setIsBasketOpen(false)} />
-          
+
           <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
             <div className="w-screen max-w-md bg-slate-900 border-l border-slate-800 text-slate-200 flex flex-col shadow-2xl animate-slideOver">
               {/* Header */}
@@ -1698,7 +1706,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                             <p className="text-[9px] text-blue-450 font-bold mt-0.5">{item.variantName}</p>
                             <p className="text-[10px] text-emerald-450 font-black mt-1">₹{item.price} each</p>
                           </div>
-                          
+
                           <div className="flex items-center gap-3">
                             {/* Quantity Selector */}
                             <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
@@ -1726,7 +1734,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                                 +
                               </button>
                             </div>
-                            
+
                             <button
                               type="button"
                               onClick={() => {
@@ -1744,7 +1752,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     {/* Scheduler Panel */}
                     <div className="border-t border-slate-800 pt-4 space-y-3">
                       <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Schedule Details:</p>
-                      
+
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="form-label text-[9px] text-slate-400">Select Date *</label>
@@ -1839,7 +1847,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
               {/* Summary and Proceed (Sticky Footer of drawer) */}
               {basket.length > 0 && (() => {
                 const subtotal = basket.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                
+
                 // Calculate discount if coupon applied
                 let discount = 0;
                 if (basketCoupon) {
@@ -2009,10 +2017,10 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       {/* ===== COMPREHENSIVE CUSTOMER AUTH MODAL (SIGN IN & SIGN UP) ===== */}
       {showCustomerLoginModal && (
         <div className="modal-overlay z-50 p-4" onClick={() => setShowCustomerLoginModal(false)}>
-          <div 
-            onClick={e => e.stopPropagation()} 
+          <div
+            onClick={e => e.stopPropagation()}
             className="bg-[#0f172a] rounded-3xl w-full max-w-md p-6 sm:p-7 border border-slate-700/80 text-white shadow-[0_25px_70px_rgba(0,0,0,0.8)] animate-scaleIn font-sans text-left space-y-5 relative"
-            style={{ 
+            style={{
               backgroundColor: '#0f172a',
               boxShadow: `0 20px 60px rgba(0,0,0,0.8), 0 0 30px ${pc}20`,
               borderColor: 'rgba(255,255,255,0.12)'
@@ -2031,7 +2039,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                   {authMode === 'signin' ? 'Manage bookings, download invoices & schedule appointments' : 'Register to track service requests, warranties & saved addresses'}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowCustomerLoginModal(false)}
                 className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center font-bold text-xs transition-colors border border-slate-700"
               >
@@ -2041,7 +2049,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
 
             {/* Mode Switcher Tabs */}
             <div className="flex bg-[#0b1120] p-1 rounded-xl border border-slate-800">
-              <button 
+              <button
                 type="button"
                 onClick={() => setAuthMode('signin')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${authMode === 'signin' ? 'text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
@@ -2049,7 +2057,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
               >
                 <Lock className="w-3.5 h-3.5" /> Sign In
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={() => setAuthMode('signup')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${authMode === 'signup' ? 'text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
@@ -2089,8 +2097,8 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-[10px] font-black text-slate-300 uppercase tracking-wider">Password</label>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => showToast('Password reset link sent to registered phone/email.', 'info')}
                       className="text-[10px] font-bold hover:underline"
                       style={{ color: '#60a5fa' }}
@@ -2379,10 +2387,9 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                     )}
 
                     {/* Circle Checkmark */}
-                    <div className={`w-5.5 h-5.5 rounded-full flex items-center justify-center font-bold text-[9px] border z-10 ${
-                      isCurrent ? 'bg-blue-600 border-blue-500 text-white animate-pulse' :
+                    <div className={`w-5.5 h-5.5 rounded-full flex items-center justify-center font-bold text-[9px] border z-10 ${isCurrent ? 'bg-blue-600 border-blue-500 text-white animate-pulse' :
                       isPassed ? 'bg-emerald-500/15 border-emerald-550 text-emerald-450' : 'bg-slate-950 border-slate-800 text-slate-655'
-                    }`}>
+                      }`}>
                       {isPassed && step.stage !== trackedBooking.status ? '✓' : idx + 1}
                     </div>
 
@@ -2412,7 +2419,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto font-sans print-invoice-container">
           <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity print:hidden" onClick={() => setInvoiceModalBooking(null)} />
           <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-8 text-slate-200 shadow-2xl animate-scaleIn text-left space-y-6 print:border-0 print:bg-white print:text-black print:p-0">
-            
+
             {/* Header info */}
             <div className="flex justify-between items-start border-b pb-4 border-slate-800 print:border-black">
               <div>
@@ -2482,14 +2489,14 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
 
             {/* Print action CTAs */}
             <div className="flex gap-2 pt-2 print:hidden">
-              <button 
+              <button
                 onClick={() => window.print()}
                 className="flex-1 py-2.5 rounded-xl font-bold text-xs text-white text-center shadow-lg"
                 style={{ background: pc }}
               >
                 🖨️ Print Receipt
               </button>
-              <button 
+              <button
                 onClick={() => setInvoiceModalBooking(null)}
                 className="px-5 py-2.5 rounded-xl font-bold text-xs border text-slate-350"
                 style={{ borderColor: 'var(--color-border)', background: 'transparent' }}
@@ -2504,29 +2511,29 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
 
       {/* ═══════════ CUSTOMIZABLE DYNAMIC FOOTER ═══════════ */}
       {viewMode === 'website' && (
-        <footer 
+        <footer
           className="border-t pt-12 pb-20 md:pb-12 font-sans transition-colors"
-          style={{ 
-            backgroundColor: localDark ? '#060b14' : '#0f172a', 
+          style={{
+            backgroundColor: localDark ? '#060b14' : '#0f172a',
             borderColor: localDark ? '#1e293b' : '#1e293b',
             color: '#94a3b8'
           }}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 pb-10">
-              
+
               {/* Brand Column */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2.5">
                   {c.logoImage ? (
-                    <img 
-                      src={c.logoImage} 
-                      alt={c.logoText || tenant.name} 
-                      className="h-8 w-auto max-w-[120px] rounded-md object-contain" 
+                    <img
+                      src={c.logoImage}
+                      alt={c.logoText || tenant.name}
+                      className="h-8 w-auto max-w-[120px] rounded-md object-contain"
                     />
                   ) : (
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black text-white" 
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black text-white"
                       style={{ background: pc }}
                     >
                       {(c.logoText || tenant.name).charAt(0)}
@@ -2578,7 +2585,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
                             else if (lower.includes('gallery')) targetSlug = 'gallery';
                             else if (lower.includes('faq')) targetSlug = 'faqs';
                             else if (lower.includes('contact') || lower.includes('about')) targetSlug = 'coverage';
-                            
+
                             setActivePageSlug(targetSlug);
                             setViewMode('website');
                             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2638,7 +2645,7 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
           </a>
         )}
         <button
-          onClick={() => { setActivePageSlug('services'); setTimeout(() => { const el = document.getElementById('services'); if(el) el.scrollIntoView({ behavior: 'smooth' }); }, 50); }}
+          onClick={() => { setActivePageSlug('services'); setTimeout(() => { const el = document.getElementById('services'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 50); }}
           className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl font-black text-xs text-white shadow-lg"
           style={{ background: pc, borderRadius: 'var(--border-radius)' }}
         >

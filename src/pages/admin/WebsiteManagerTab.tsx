@@ -1783,12 +1783,12 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
   const [secondaryCta,   setSecondaryCta]   = useState('Call Now');
 
   /* ── Hero Feature Cards & Trust Badges ───────────────────── */
-  const [showLiveAvailability, setShowLiveAvailability] = useState<boolean>((c as any).showLiveAvailability ?? true);
+  const [showLiveAvailability, setShowLiveAvailability] = useState<boolean>(String((c as any).showLiveAvailability) !== 'false');
   const [liveAvailTitle, setLiveAvailTitle] = useState<string>((c as any).liveAvailTitle || 'Live Availability');
   const [liveAvailText, setLiveAvailText] = useState<string>((c as any).liveAvailText || '');
   const [liveAvailSlot, setLiveAvailSlot] = useState<string>((c as any).liveAvailSlot || 'Today, 3:00 PM');
 
-  const [showEmergencyCard, setShowEmergencyCard] = useState<boolean>((c as any).showEmergencyCard ?? true);
+  const [showEmergencyCard, setShowEmergencyCard] = useState<boolean>(String((c as any).showEmergencyCard) !== 'false');
   const [emergencyCardTitle, setEmergencyCardTitle] = useState<string>((c as any).emergencyCardTitle || '⚡ Emergency Home Service');
   const [emergencyCardText, setEmergencyCardText] = useState<string>((c as any).emergencyCardText || 'Arriving in 30 Minutes or Free');
 
@@ -2239,11 +2239,11 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     setHeroTitle(c.heroTitle || '');
     setHeroSubtitle(c.heroSubtitle || '');
     setHeroBadge((c as any).heroArrivalGuarantee || '30 MIN ARRIVAL GUARANTEE');
-    setShowLiveAvailability((c as any).showLiveAvailability ?? true);
+    setShowLiveAvailability(String((c as any).showLiveAvailability) !== 'false');
     setLiveAvailTitle((c as any).liveAvailTitle || 'Live Availability');
     setLiveAvailText((c as any).liveAvailText || '');
     setLiveAvailSlot((c as any).liveAvailSlot || 'Today, 3:00 PM');
-    setShowEmergencyCard((c as any).showEmergencyCard ?? true);
+    setShowEmergencyCard(String((c as any).showEmergencyCard) !== 'false');
     setEmergencyCardTitle((c as any).emergencyCardTitle || '⚡ Emergency Home Service');
     setEmergencyCardText((c as any).emergencyCardText || 'Arriving in 30 Minutes or Free');
     setShowTrustBadges((c as any).showTrustBadges ?? true);
@@ -2355,6 +2355,9 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     logoImage, logoText, navbarTagline, navLinksList, showTrackButton, trackButtonText, showBookButton, bookButtonText, showLoginButton, loginButtonText,
     footerAbout, footerCopyright, showPoweredBy, footerSocials, footerColumns,
     heroTitle, heroSubtitle, heroBadge, primaryCta, secondaryCta,
+    showLiveAvailability, liveAvailTitle, liveAvailText, liveAvailSlot,
+    showEmergencyCard, emergencyCardTitle, emergencyCardText,
+    showTrustBadges, trustBadgesList,
     announceActive, announceText, announceExpiry, techSelectionActive, b2bEnquiryActive,
     pageComponents, portfolio, testimonials, faqs, campaigns, cityName, nearbyCities,
     bizHours, bizPhone, bizWhatsApp, bizAddress, featuredServiceIds, homepageServiceCount
@@ -2537,7 +2540,11 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
       showPoweredBy,
       footerSocials,
       footerColumns,
-      heroTitle, heroSubtitle, announcementActive: announceActive, announcementText: announceText,
+      heroTitle, heroSubtitle, heroArrivalGuarantee: heroBadge,
+      showLiveAvailability, liveAvailTitle, liveAvailText, liveAvailSlot,
+      showEmergencyCard, emergencyCardTitle, emergencyCardText,
+      showTrustBadges, trustBadgesList,
+      announcementActive: announceActive, announcementText: announceText,
       announcementExpiry: announceExpiry,
       allowTechnicianSelection: techSelectionActive,
       enableB2bEnquiry: b2bEnquiryActive,

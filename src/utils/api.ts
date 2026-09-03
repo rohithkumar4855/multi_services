@@ -151,6 +151,16 @@ export const api = {
     return res.data;
   },
 
+  // ── Workers ───────────────────────────────────────
+  getWorkers: async (tenantId?: string) => {
+    const res = await client.get(`/admin/workers${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ''}`);
+    return res.data;
+  },
+  createWorker: async (workerData) => {
+    const res = await client.post('/admin/workers', workerData);
+    return res.data;
+  },
+
   // ── Orders & Checkout ─────────────────────────────
   createOrder: async (orderData) => {
     const res = await client.post('/orders', orderData);

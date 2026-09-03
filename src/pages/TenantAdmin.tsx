@@ -40,7 +40,24 @@ type SidebarTab =
   | 'templates'
   | 'support';
 
-export default function TenantAdmin({ session, store, onLogout, navigateTo }: Props) {
+export default function TenantAdmin(props: Props) {
+  const { tenants } = props.store;
+  const matchedTenant = tenants.find(t => t.id === props.session.tenantId || (props.session.email && t.ownerEmail === props.session.email) || (props.session.tenantName && t.name === props.session.tenantName));
+  const tenant = matchedTenant || (props.session.role === 'tenant' ? null : tenants[0]);
+
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-slate-300">Loading {props.session.tenantName || 'Tenant'} workspace...</p>
+      </div>
+    );
+  }
+
+  return <TenantAdminContent {...props} tenant={tenant} />;
+}
+
+function TenantAdminContent({ session, store, onLogout, navigateTo, tenant }: Props & { tenant: Tenant }) {
   const { tenants, setTenants, services, setServices, workers, setWorkers,
     bookings, setBookings, leads, setLeads,
     coupons, setCoupons, quotations, setQuotations, campaigns, setCampaigns,
@@ -74,17 +91,7 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   const [selectedTenantTicketId, setSelectedTenantTicketId] = useState<string | null>(null);
   const [tenantTicketReply, setTenantTicketReply] = useState('');
 
-  const matchedTenant = tenants.find(t => t.id === session.tenantId || (session.email && t.ownerEmail === session.email) || (session.tenantName && t.name === session.tenantName));
-  const tenant = matchedTenant || (session.role === 'tenant' ? null : tenants[0]);
-
-  if (!tenant) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-300">Loading {session.tenantName || 'Tenant'} workspace...</p>
-      </div>
-    );
-  }
+  // Tenant is guaranteed to exist by wrapper
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -111,6 +118,35 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
     }).catch(err => {
       // Backend not running or offline
     });
+
+    api.getWorkers(tenant.id).then(res => {
+      if (res && res.data && Array.isArray(res.data)) {
+        setWorkers(prev => {
+          const map = new Map(prev.map(item => [item.id, item]));
+          for (const dbWrk of res.data) {
+            map.set(dbWrk.id, {
+              id: dbWrk.id,
+              tenantId: dbWrk.tenantId,
+              name: dbWrk.user?.name || dbWrk.name || 'Worker',
+              phone: dbWrk.user?.phone || dbWrk.phone || '',
+              skills: dbWrk.skills || [],
+              availability: dbWrk.availability || 'available',
+              rating: dbWrk.rating || 5.0,
+              aadhaarStatus: dbWrk.aadhaarValid ? 'verified' : 'pending',
+              panStatus: dbWrk.panValid ? 'verified' : 'pending',
+              currentJobsCount: 0,
+              photoUrl: '',
+              completedJobs: 0,
+              earningsToday: 0,
+              earningsMonth: 0,
+              joinedDate: (dbWrk.createdAt ? new Date(dbWrk.createdAt) : new Date()).toISOString().split('T')[0],
+              attendanceToday: 'present',
+            });
+          }
+          return Array.from(map.values());
+        });
+      }
+    }).catch(err => console.error('Failed to load workers', err));
 
     api.getServices().then(res => {
       if (res && res.data && Array.isArray(res.data)) {
@@ -440,14 +476,20 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
     }, 1500);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) setter(reader.result.toString());
-      };
-      reader.readAsDataURL(file);
+      try {
+        showToast('Uploading image to Supabase...');
+        const res = await api.uploadBinaryFile(file, 'uploads');
+        if (res?.data?.fileUrl) {
+          setter(res.data.fileUrl);
+          showToast('Image uploaded successfully!', 'success');
+        }
+      } catch (err) {
+        console.error('Failed to upload image:', err);
+        showToast('Failed to upload image', 'error');
+      }
     }
   };
 
@@ -536,34 +578,93 @@ export default function TenantAdmin({ session, store, onLogout, navigateTo }: Pr
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSvcName) return;
-    const ns: Service = {
-      id: `srv-${Date.now()}`, tenantId: tenant.id, name: newSvcName, category: newSvcCategory,
+    const payload = {
+      tenantId: tenant.id, name: newSvcName, category: newSvcCategory,
       description: newSvcDesc, icon: newSvcIcon, basePrice: newSvcPrice, durationMin: newSvcDuration,
       emergencyAllowed: true, requiredSkills: [], formFields: [], isActive: true,
       imageUrl: newSvcImage || undefined,
     };
-    setServices(prev => [...prev, ns]);
-    setNewSvcName(''); setNewSvcDesc(''); setNewSvcImage('');
-    showToast(`Service "${ns.name}" added to list!`);
+    
+    if (editingServiceId) {
+      try {
+        await api.updateService(editingServiceId, payload);
+      } catch (err) {
+        console.error('Failed to update service in DB:', err);
+      }
+      setServices(prev => prev.map(s => s.id === editingServiceId ? { ...s, ...payload } as any : s));
+      setEditingServiceId(null);
+      setNewSvcName(''); setNewSvcDesc(''); setNewSvcImage('');
+      showToast(`Service updated successfully!`);
+    } else {
+      let serviceId = `srv-${Date.now()}`;
+      try {
+        const res = await api.createService(payload);
+        if (res?.data?.id) serviceId = res.data.id;
+      } catch (err) {
+        console.error('Failed to create service in DB:', err);
+      }
+      
+      const ns: Service = { ...payload, id: serviceId } as any;
+      setServices(prev => [...prev, ns]);
+      setNewSvcName(''); setNewSvcDesc(''); setNewSvcImage('');
+      showToast(`Service "${ns.name}" added to list!`);
+    }
   };
 
-  const handleAddWorker = (e: React.FormEvent) => {
+  const handleEditService = (svc: Service) => {
+    setEditingServiceId(svc.id);
+    setNewSvcName(svc.name);
+    setNewSvcCategory(svc.category);
+    setNewSvcPrice(svc.basePrice);
+    setNewSvcDesc(svc.description || '');
+    setNewSvcDuration(svc.durationMin);
+    setNewSvcImage(svc.imageUrl || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteService = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this service?")) return;
+    setServices(prev => prev.filter(s => s.id !== id));
+    try {
+      await api.deleteService(id);
+      showToast("Service deleted");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
+  const handleAddWorker = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWrkName) return;
+    
+    const payload = {
+      tenantId: tenant.id,
+      name: newWrkName,
+      phone: newWrkPhone,
+      skills: newWrkSkills.split(',').map(s => s.trim()),
+      availability: 'available',
+      aadhaarStatus: newWrkAadhaar ? 'verified' : 'pending'
+    };
+
+    let workerId = `wrk-${Date.now()}`;
+    try {
+      const res = await api.createWorker(payload);
+      if (res && res.data && res.data.id) {
+        workerId = res.data.id;
+      }
+    } catch (err) {
+      console.error('Failed to save worker to db:', err);
+    }
+
     const nw: Worker = {
-      id: `wrk-${Date.now()}`, tenantId: tenant.id, name: newWrkName, phone: newWrkPhone,
-      skills: newWrkSkills.split(',').map(s => s.trim()), availability: 'available',
-      rating: 5.0, aadhaarStatus: newWrkAadhaar ? 'verified' : 'pending', panStatus: 'verified', currentJobsCount: 0,
+      id: workerId, tenantId: tenant.id, name: newWrkName, phone: newWrkPhone,
+      skills: payload.skills, availability: 'available',
+      rating: 5.0, aadhaarStatus: payload.aadhaarStatus as any, panStatus: 'verified', currentJobsCount: 0,
       photoUrl: newWrkPhoto ? URL.createObjectURL(newWrkPhoto) : '', completedJobs: 0, earningsToday: 0, earningsMonth: 0,
       joinedDate: new Date().toISOString().split('T')[0], attendanceToday: 'present',
     };
     setWorkers(prev => [...prev, nw]);
-    
-    // Save to DB via tenant config
-    const newConfig = { ...tenant.config, workers: [...(tenant.config.workers || []), nw] };
-    setTenants(prev => prev.map(t => t.id === tenant.id ? { ...t, config: newConfig } : t));
-    api.saveConfig({ ...newConfig, businessName: tenant.name })
-      .catch(err => console.error('Failed to save worker to db:', err));
 
     if (newWrkAadhaarFile) {
       console.log(`Worker Aadhaar document logged: ${newWrkAadhaarFile.name}`);
@@ -1134,7 +1235,10 @@ Manager Signature: ________________________
                         </div>
                         <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between">
                           <span className="text-emerald-400 font-black text-sm">₹{svc.basePrice.toLocaleString()}</span>
-                          <button onClick={() => setServices(prev => prev.filter(s => s.id !== svc.id))} className="text-red-400 hover:text-red-300 font-bold text-xs">Remove Service</button>
+                          <div className="flex gap-3">
+                            <button onClick={() => handleEditService(svc)} className="text-[10px] font-bold text-blue-400 hover:text-blue-300 uppercase tracking-wider">Edit</button>
+                            <button onClick={() => handleDeleteService(svc.id)} className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider">Delete</button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1153,10 +1257,36 @@ Manager Signature: ________________________
                     </div>
                     <div>
                       <label className="form-label">Service Card Image (File / URL)</label>
-                      <input className="form-input" value={newSvcImage} onChange={e => setNewSvcImage(e.target.value)} placeholder="https://images.unsplash.com/... or data:image/..." />
+                      <div className="flex gap-2">
+                        <input className="form-input flex-1" value={newSvcImage} onChange={e => setNewSvcImage(e.target.value)} placeholder="https://images.unsplash.com/... or select file ->" />
+                        <input type="file" accept="image/*" className="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-700 file:text-white hover:file:bg-slate-600 cursor-pointer" onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            try {
+                              showToast('Uploading to Supabase S3...');
+                              const res = await api.uploadBinaryFile(f, 'services');
+                              if (res?.data?.fileUrl) {
+                                setNewSvcImage(res.data.fileUrl);
+                                showToast('Image uploaded successfully!', 'success');
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              showToast('Failed to upload image', 'error');
+                            }
+                          }
+                        }} />
+                      </div>
                     </div>
                     <div><label className="form-label">Service Description</label><textarea className="form-input resize-none" rows={2} value={newSvcDesc} onChange={e => setNewSvcDesc(e.target.value)} placeholder="Service description..." /></div>
-                    <button type="submit" className="btn-primary py-2.5 font-bold">+ Create Service Profile</button>
+                    <button type="submit" className="btn-primary py-2.5 font-bold">
+                      {editingServiceId ? 'Update Service Profile' : '+ Create Service Profile'}
+                    </button>
+                    {editingServiceId && (
+                      <button type="button" onClick={() => {
+                        setEditingServiceId(null);
+                        setNewSvcName(''); setNewSvcDesc(''); setNewSvcImage('');
+                      }} className="btn-secondary py-2.5 font-bold mt-2 w-full">Cancel Edit</button>
+                    )}
                   </form>
                 </div>
               )}
@@ -1365,6 +1495,9 @@ Manager Signature: ________________________
                               className={`text-[8px] font-black px-2 py-0.5 rounded-full border transition-all ${w.showOnWebsite !== false ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-500 border-slate-700'}`}
                             >
                               {w.showOnWebsite !== false ? '🌐 Shown on Site' : '🔒 Hidden from Site'}
+                            </button>
+                            <button onClick={() => setWorkers(prev => prev.filter(ww => ww.id !== w.id))} className="text-[8px] font-black px-2 py-0.5 rounded-full border bg-red-950/40 text-red-400 border-red-900/30 transition-all hover:bg-red-900/60 mt-1">
+                              🗑 Delete
                             </button>
                           </div>
                         </div>

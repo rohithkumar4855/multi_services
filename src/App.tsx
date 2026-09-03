@@ -147,12 +147,13 @@ export default function App() {
       
       // 1. Sync tenants from database
       api.getTenants().then(res => {
+        console.log("Super Admin Sync - getTenants res:", res);
       if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
         setTenants(prev => {
           const map = new Map(prev.map(t => [t.id, t]));
           for (const dbT of res.data) {
             const existing = map.get(dbT.id);
-            const dbCfg = (dbT.config || {}) as any;
+            const dbCfg = ({ ...((dbT.settings as any) || {}), ...((dbT.businessInfo as any) || {}), ...((dbT.config as any) || {}) }) as any;
             const mergedCfg = {
               ...(existing?.config || {}),
               ...dbCfg

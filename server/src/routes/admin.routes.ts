@@ -43,9 +43,43 @@ router.get('/workers', authorize('TENANT_ADMIN'), async (req: AuthenticatedReque
   try {
     const workers = await prisma.worker.findMany({
       where: { tenantId: req.user!.tenantId! },
-      include: { user: { select: { name: true, email: true } } }
+      include: { user: { select: { name: true, email: true, phone: true } } }
     });
     sendResponse(res, 200, 'Workers retrieved successfully', workers);
+  } catch (err) { next(err); }
+});
+
+router.post('/workers', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId || req.body.tenantId;
+    if (!tenantId) {
+      return next(new AppError('Tenant ID is required', 400));
+    }
+    
+    // Create a user for the worker first
+    const workerEmail = req.body.email || `worker_${Date.now()}@tenant${tenantId}.com`;
+    const user = await prisma.user.create({
+      data: {
+        name: req.body.name,
+        email: workerEmail,
+        passwordHash: 'Worker@Password123', // Default placeholder
+        role: 'WORKER',
+        tenantId,
+        phone: req.body.phone
+      }
+    });
+
+    const worker = await prisma.worker.create({
+      data: {
+        userId: user.id,
+        tenantId,
+        skills: req.body.skills || [],
+        availability: req.body.availability || 'available',
+        aadhaarValid: req.body.aadhaarStatus === 'verified',
+      }
+    });
+
+    sendResponse(res, 201, 'Worker created successfully', { ...worker, user: { name: user.name, phone: user.phone, email: user.email } });
   } catch (err) { next(err); }
 });
 

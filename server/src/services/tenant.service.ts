@@ -570,8 +570,13 @@ export class TenantService {
       settings,
       customDomain,
       status,
-      plan
+      plan,
+      config
     } = data;
+
+    const mergedSettings = { ...((existing.settings as any) || {}), ...(settings || {}), ...(config || {}) };
+    console.log("TenantService.updateTenantConfig - received config:", JSON.stringify(config, null, 2).slice(0, 500));
+    console.log("mergedSettings keys:", Object.keys(mergedSettings));
 
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
@@ -584,7 +589,7 @@ export class TenantService {
         ...(logo !== undefined && { logo }),
         ...(favicon !== undefined && { favicon }),
         ...(businessInfo && { businessInfo: { ...((existing.businessInfo as any) || {}), ...businessInfo } }),
-        ...(settings && { settings: { ...((existing.settings as any) || {}), ...settings } }),
+        settings: Object.keys(mergedSettings).length > 0 ? mergedSettings : (existing.settings || {}),
         ...(customDomain !== undefined && { customDomain }),
         ...(status && { status }),
         ...(plan && { plan })
