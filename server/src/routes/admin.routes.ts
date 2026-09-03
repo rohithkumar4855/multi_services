@@ -62,30 +62,14 @@ router.put('/tenant/config', authorize('TENANT_ADMIN'), async (req: Authenticate
     }
 
     const tenantId = req.user!.tenantId!;
+    const { TenantService } = await import('../services/tenant.service');
+    const updated = await TenantService.updateTenantConfig(tenantId, {
+      name: businessName,
+      gstNumber,
+      config: configData
+    }, req.user!.id);
 
-    try {
-      const existingReg = await prisma.tenantRegistration.findUnique({ where: { id: tenantId } });
-      const currentConfig = (existingReg?.config as object) || {};
-      const mergedConfig = { ...currentConfig, ...configData };
-
-      const updateData: any = {
-        config: mergedConfig,
-        gstNumber: gstNumber || null
-      };
-
-      if (businessName) {
-        updateData.businessName = businessName;
-      }
-
-      await prisma.tenantRegistration.update({
-        where: { id: tenantId },
-        data: updateData
-      });
-    } catch (err) {
-      console.error("Error updating tenant registration config:", err);
-    }
-
-    sendResponse(res, 200, 'Tenant configuration saved', { tenantId, config: req.body });
+    sendResponse(res, 200, 'Tenant configuration saved', updated);
   } catch (err) { next(err); }
 });
 

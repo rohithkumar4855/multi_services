@@ -274,7 +274,7 @@ export default function SuperAdminDashboard({ session, store, onLogout, navigate
                         <p className="text-xs text-slate-500 font-mono">{t.ownerPhone} · {t.ownerEmail}</p>
                       </td>
                       <td>
-                        <p className="font-mono text-xs text-blue-400">{t.subdomain}.servos.in</p>
+                        <p className="font-mono text-xs text-blue-400">{t.defaultDomain || `${t.slug || t.subdomain}.vercel.app`}</p>
                         {t.customDomain && <p className="font-mono text-[10px] text-emerald-400 mt-0.5">🌐 {t.customDomain}</p>}
                       </td>
                       <td>
@@ -319,7 +319,7 @@ export default function SuperAdminDashboard({ session, store, onLogout, navigate
                         <h3 className="font-black text-white text-base">🏪 {t.name}</h3>
                         <p className="text-xs text-slate-400 mt-1">Owner: {t.ownerName} · {t.ownerPhone} · {t.ownerEmail}</p>
                         <p className="text-[11px] text-slate-500 mt-1 font-mono">
-                          Desired URL: <strong className="text-blue-400">{t.subdomain}.servos.in</strong>
+                          Desired URL: <strong className="text-blue-400">{t.defaultDomain || `${t.slug || t.subdomain}.vercel.app`}</strong>
                           &nbsp;·&nbsp; Vertical Pack: <strong className="text-white">{t.industries.join(', ')}</strong>
                           &nbsp;·&nbsp; Subscription: <strong className="capitalize" style={{ color: planColors[t.plan] }}>{t.plan}</strong>
                         </p>

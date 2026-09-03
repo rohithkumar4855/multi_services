@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { Tenant, Service, Worker } from '../../types';
 import { getContrastRatio } from '../../utils/themeEngine';
 import { api } from '../../utils/api';
+import { getTenantPublicUrl, getTenantSlug } from '../../utils/domain';
 import { 
   Upload, Trash2, Sparkles, Check, 
   Copy, ChevronDown, ChevronUp, ShoppingBag,
@@ -19,25 +20,27 @@ interface Props {
 }
 
 type EditorTab =
-  | 'appearance' | 'navbar' | 'hero' | 'sections' | 'services'
+  | 'appearance' | 'navbar' | 'hero' | 'stats' | 'sections' | 'how_it_works' | 'services'
   | 'gallery' | 'team' | 'offers' | 'reviews'
   | 'faqs' | 'coverage' | 'footer' | 'publish';
 
 /* ─── Constants ──────────────────────────────────────────── */
 const EDITOR_TABS: { id: EditorTab; icon: string; label: string }[] = [
-  { id: 'appearance', icon: '🎨', label: 'Appearance' },
-  { id: 'navbar',     icon: '🧭', label: 'Navbar' },
-  { id: 'hero',       icon: '🏠', label: 'Hero' },
-  { id: 'sections',   icon: '📋', label: 'Sections' },
-  { id: 'services',   icon: '🛠️', label: 'Services' },
-  { id: 'gallery',    icon: '🖼️', label: 'Gallery' },
-  { id: 'team',       icon: '👥', label: 'Team' },
-  { id: 'offers',     icon: '🎟️', label: 'Offers' },
-  { id: 'reviews',    icon: '⭐', label: 'Reviews' },
-  { id: 'faqs',       icon: '❓', label: 'FAQs' },
-  { id: 'coverage',   icon: '📍', label: 'Coverage' },
-  { id: 'footer',     icon: '🦶', label: 'Footer' },
-  { id: 'publish',    icon: '🚀', label: 'Publish' },
+  { id: 'appearance',   icon: '🎨', label: 'Appearance' },
+  { id: 'navbar',       icon: '🧭', label: 'Navbar' },
+  { id: 'hero',         icon: '🏠', label: 'Hero' },
+  { id: 'stats',        icon: '📊', label: 'Statistics' },
+  { id: 'sections',     icon: '📋', label: 'Sections' },
+  { id: 'how_it_works', icon: '⚡', label: 'How It Works' },
+  { id: 'services',     icon: '🛠️', label: 'Services' },
+  { id: 'gallery',      icon: '🖼️', label: 'Gallery' },
+  { id: 'team',         icon: '👥', label: 'Team' },
+  { id: 'offers',       icon: '🎟️', label: 'Offers' },
+  { id: 'reviews',      icon: '⭐', label: 'Reviews' },
+  { id: 'faqs',         icon: '❓', label: 'FAQs' },
+  { id: 'coverage',     icon: '📍', label: 'Coverage' },
+  { id: 'footer',       icon: '🦶', label: 'Footer' },
+  { id: 'publish',      icon: '🚀', label: 'Publish' },
 ];
 
 const ALL_SECTIONS = [
@@ -251,6 +254,12 @@ interface MiniSitePreviewProps {
   emergencyCardText?: string;
   showTrustBadges?: boolean;
   trustBadgesList?: Array<{ id: string; icon: string; title: string }>;
+  howItWorksBadge?: string;
+  howItWorksTitle?: string;
+  howItWorksSubtitle?: string;
+  howItWorksStepsList?: Array<{ id?: string; n?: string; icon: string; title: string; desc: string }>;
+  statsList?: Array<{ id?: string; icon?: string; value: string; label: string; color?: string }>;
+  bizEmail?: string;
   activeEditorTab?: EditorTab;
   onSelectTab: (tab: EditorTab) => void;
   onEditService?: (svc: Service) => void;
@@ -274,9 +283,25 @@ function MiniSitePreview({
     { id: 'tb-3', icon: '🔄', title: '30-Day Warranty' },
     { id: 'tb-4', icon: '💰', title: 'No Hidden Costs' },
   ],
+  howItWorksBadge = '— Simple 3-Step Process —',
+  howItWorksTitle = 'How It Works',
+  howItWorksSubtitle = 'Book, relax, and let our experts handle everything in 3 easy steps',
+  howItWorksStepsList = [
+    { id: 'step-1', n: '01', icon: '📱', title: 'Choose a Service', desc: 'Select from 100+ verified home services with upfront clear pricing.' },
+    { id: 'step-2', n: '02', icon: '📅', title: 'Schedule & Pay', desc: 'Pick your preferred arrival time and pay securely online or on-site.' },
+    { id: 'step-3', n: '03', icon: '✅', title: 'Relax, We Handle It', desc: 'A background-verified technician arrives with full toolkit & warranty.' },
+  ],
+  statsList = [
+    { id: 'stat-1', icon: '⭐', value: '4.9/5', label: '1,240+ Reviews', color: '#f59e0b' },
+    { id: 'stat-2', icon: '💼', value: '5,250+', label: 'Jobs Completed', color: '#2563eb' },
+    { id: 'stat-3', icon: '😊', value: '1,850+', label: 'Happy Customers', color: '#22c55e' },
+    { id: 'stat-4', icon: '⏱️', value: '30 Min', label: 'Avg. Response', color: '#38bdf8' },
+    { id: 'stat-5', icon: '✅', value: '100%', label: 'Satisfaction', color: '#a78bfa' },
+    { id: 'stat-6', icon: '🕐', value: '24/7', label: 'Support Active', color: '#f97316' },
+  ],
   announceActive, announceText, announceExpiry, pageComponents, services,
   featuredServiceIds, homepageServiceCount, portfolio, workers, campaigns,
-  testimonials, faqs, city, nearbyCities, bizHours, bizPhone, bizWhatsApp, bizAddress,
+  testimonials, faqs, city, nearbyCities, bizHours, bizPhone, bizWhatsApp, bizAddress, bizEmail,
   navbarTagline, navLinksList, showTrackButton, trackButtonText, showBookButton, bookButtonText,
   showLoginButton, loginButtonText,
   footerAbout, footerCopyright, showPoweredBy, footerSocials, footerColumns,
@@ -698,26 +723,50 @@ function MiniSitePreview({
             )}
 
             <div>
-              <div style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '6px', 
-                background: primaryColor, 
-                color: '#fff', 
-                padding: '6px 14px', 
-                borderRadius: '999px', 
-                fontSize: '11px', 
-                fontWeight: 900, 
-                marginBottom: '20px', 
-                boxShadow: `0 4px 20px ${primaryColor}60` 
-              }}>
-                ⚡ {heroBadge || '30 MIN ARRIVAL GUARANTEE'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                <div style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  backgroundColor: primaryColor, 
+                  color: '#fff', 
+                  padding: '6px 14px', 
+                  borderRadius: '999px', 
+                  fontSize: '11px', 
+                  fontWeight: 900, 
+                  boxShadow: `0 4px 20px ${primaryColor}60` 
+                }}>
+                  ⚡ {heroBadge || '30 MIN ARRIVAL GUARANTEE'}
+                </div>
+
+                {campaigns.filter(c => c.enabled !== false).length > 0 && (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: `${primaryColor}25`,
+                    border: `1px solid ${primaryColor}50`,
+                    padding: '5px 12px',
+                    borderRadius: '999px',
+                    fontSize: '11px',
+                    color: '#fff',
+                    fontWeight: 800,
+                  }}>
+                    <span>🔥</span>
+                    <span>{campaigns.filter(c => c.enabled !== false)[0].title}</span>
+                    {campaigns.filter(c => c.enabled !== false)[0].offerCode && (
+                      <span style={{ background: primaryColor, padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 900 }}>
+                        {campaigns.filter(c => c.enabled !== false)[0].offerCode}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <h1 style={{ fontSize: isMobile ? '28px' : '42px', fontWeight: 900, color: '#fff', lineHeight: 1.1, marginBottom: '16px', letterSpacing: '-0.02em' }}>
-                {heroTitle || 'All Home Services One Trusted Team'}
+                {heroTitle && heroTitle.trim().length > 3 ? heroTitle : 'All Home Services One Trusted Team'}
               </h1>
               <p style={{ fontSize: isMobile ? '13px' : '15px', color: '#cbd5e1', marginBottom: '28px', lineHeight: 1.6, maxWidth: '520px' }}>
-                {heroSubtitle || 'Professional. Verified. On-time. Making homes better, every day.'}
+                {heroSubtitle && heroSubtitle.trim().length > 3 ? heroSubtitle : 'Professional. Verified. On-time. Making homes better, every day.'}
               </p>
               <div style={{ display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>
                 <button 
@@ -801,28 +850,24 @@ function MiniSitePreview({
 
       {/* Statistics Strip */}
       {enabled.includes('stats') && (
-        <SectionWrapper id="preview-stats" tab="hero" label="Statistics">
+        <SectionWrapper id="preview-stats" tab="stats" label="Statistics">
           <div style={{ 
             backgroundColor: isDark ? '#060b14' : '#0f172a', 
             padding: isMobile ? '20px 16px' : '24px 48px', 
             display: 'grid', 
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', 
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : `repeat(${Math.min(statsList.length, 6)}, 1fr)`, 
             gap: '12px', 
             textAlign: 'center', 
             borderTop: `1px solid ${borderClr}`, 
             borderBottom: `1px solid ${borderClr}` 
           }}>
-            {[
-              { v: '4.9/5', s: '1,240+ Reviews', c: '#f59e0b' },
-              { v: '5,250+', s: 'Jobs Completed', c: primaryColor },
-              { v: '1,850+', s: 'Happy Customers', c: '#22c55e' },
-              { v: '30 Min', s: 'Avg. Response', c: '#38bdf8' },
-              { v: '100%', s: 'Satisfaction', c: '#a78bfa' },
-              { v: '24/7', s: 'Support Active', c: '#f97316' },
-            ].map((s, i) => (
-              <div key={i} className="hover:scale-105 transition-transform p-1">
-                <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: s.c }}>{s.v}</div>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>{s.s}</div>
+            {statsList.map((s, i) => (
+              <div key={s.id || i} className="hover:scale-105 transition-transform p-1">
+                <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: s.color || primaryColor }}>
+                  {s.icon ? <span className="mr-1 text-sm">{s.icon}</span> : null}
+                  {s.value}
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -965,22 +1010,29 @@ function MiniSitePreview({
 
       {/* How It Works */}
       {enabled.includes('how_it_works') && (
-        <SectionWrapper id="preview-how-it-works" tab="sections" label="How It Works">
+        <SectionWrapper id="preview-how-it-works" tab="how_it_works" label="How It Works">
           <div style={{ padding: isMobile ? '36px 16px' : '52px 48px', backgroundColor: isDark ? '#0d1526' : '#f1f5fd' }}>
             <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 900, color: primaryColor, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>— Simple 3-Step Process —</div>
-              <h2 style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: 900, color: textClr, margin: 0 }}>How It Works</h2>
+              <div style={{ fontSize: '11px', fontWeight: 900, color: primaryColor, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+                {howItWorksBadge || '— Simple 3-Step Process —'}
+              </div>
+              <h2 style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: 900, color: textClr, margin: 0 }}>
+                {howItWorksTitle || 'How It Works'}
+              </h2>
+              {howItWorksSubtitle && (
+                <p style={{ fontSize: '12px', color: mutedClr, margin: '8px 0 0', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto' }}>
+                  {howItWorksSubtitle}
+                </p>
+              )}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '28px', textAlign: 'center' }}>
-              {[
-                { n: '01', icon: '📱', title: 'Choose a Service', desc: 'Select from 100+ verified home services with upfront clear pricing.' },
-                { n: '02', icon: '📅', title: 'Schedule & Pay', desc: 'Pick your preferred arrival time and pay securely online or on-site.' },
-                { n: '03', icon: '✅', title: 'Relax, We Handle It', desc: 'A background-verified technician arrives with full toolkit & warranty.' },
-              ].map(step => (
-                <div key={step.n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : `repeat(${Math.min(howItWorksStepsList.length, 4)}, 1fr)`, gap: '28px', textAlign: 'center' }}>
+              {howItWorksStepsList.map((step, idx) => (
+                <div key={step.id || idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '76px', height: '76px', borderRadius: '50%', background: `${primaryColor}18`, border: `2px solid ${primaryColor}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', marginBottom: '16px', position: 'relative' }}>
-                    {step.icon}
-                    <div style={{ position: 'absolute', top: '-6px', right: '-6px', width: '24px', height: '24px', borderRadius: '50%', backgroundColor: primaryColor, color: '#fff', fontSize: '11px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{step.n}</div>
+                    {step.icon || '⚡'}
+                    <div style={{ position: 'absolute', top: '-6px', right: '-6px', width: '24px', height: '24px', borderRadius: '50%', backgroundColor: primaryColor, color: '#fff', fontSize: '11px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {step.n || `0${idx + 1}`}
+                    </div>
                   </div>
                   <h3 style={{ fontSize: '15px', fontWeight: 900, color: textClr, marginBottom: '6px' }}>{step.title}</h3>
                   <p style={{ fontSize: '12px', color: mutedClr, lineHeight: 1.5, maxWidth: '280px' }}>{step.desc}</p>
@@ -1240,6 +1292,7 @@ function MiniSitePreview({
                   ))}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px', color: textClr }}>
+                  {bizEmail && <div>✉️ <strong>Email:</strong> {bizEmail}</div>}
                   <div>📞 <strong>Phone:</strong> {bizPhone || '+91 98765 43210'}</div>
                   <div>💬 <strong>WhatsApp:</strong> +{bizWhatsApp || '919876543210'}</div>
                   <div>⏰ <strong>Hours:</strong> {bizHours || 'Mon–Sun, 8 AM – 8 PM'}</div>
@@ -2156,6 +2209,44 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
   const [bizPhone,      setBizPhone]      = useState(c.phone || '');
   const [bizWhatsApp,   setBizWhatsApp]   = useState(c.whatsAppNumber || '');
   const [bizAddress,    setBizAddress]    = useState(c.address || '');
+  const [bizEmail,      setBizEmail]      = useState(c.email || (tenant as any).ownerEmail || (tenant as any).businessInfo?.email || '');
+
+  /* ── How It Works / Process ─────────────────────────────── */
+  const [howItWorksBadge,    setHowItWorksBadge]    = useState<string>((c as any).howItWorksBadge || '— Simple 3-Step Process —');
+  const [howItWorksTitle,    setHowItWorksTitle]    = useState<string>((c as any).howItWorksTitle || 'How It Works');
+  const [howItWorksSubtitle, setHowItWorksSubtitle] = useState<string>((c as any).howItWorksSubtitle || 'Book, relax, and let our experts handle everything in 3 easy steps');
+  const [howItWorksStepsList, setHowItWorksStepsList] = useState<Array<{ id: string; n: string; icon: string; title: string; desc: string }>>(() => {
+    if ((c as any).howItWorksSteps && Array.isArray((c as any).howItWorksSteps) && (c as any).howItWorksSteps.length > 0) {
+      return (c as any).howItWorksSteps;
+    }
+    return [
+      { id: 'step-1', n: '01', icon: '📱', title: 'Choose a Service', desc: 'Select from 100+ verified home services with upfront clear pricing.' },
+      { id: 'step-2', n: '02', icon: '📅', title: 'Schedule & Pay', desc: 'Pick your preferred arrival time and pay securely online or on-site.' },
+      { id: 'step-3', n: '03', icon: '✅', title: 'Relax, We Handle It', desc: 'A background-verified technician arrives with full toolkit & warranty.' },
+    ];
+  });
+  const [newStepIcon,  setNewStepIcon]  = useState('⚡');
+  const [newStepTitle, setNewStepTitle] = useState('');
+  const [newStepDesc,  setNewStepDesc]  = useState('');
+
+  /* ── Statistics Strip ────────────────────────────────────── */
+  const [statsList, setStatsList] = useState<Array<{ id: string; icon: string; value: string; label: string; color: string }>>(() => {
+    if ((c as any).statsList && Array.isArray((c as any).statsList) && (c as any).statsList.length > 0) {
+      return (c as any).statsList;
+    }
+    return [
+      { id: 'stat-1', icon: '⭐', value: '4.9/5', label: '1,240+ Reviews', color: '#f59e0b' },
+      { id: 'stat-2', icon: '💼', value: '5,250+', label: 'Jobs Completed', color: c.primaryColor || '#2563eb' },
+      { id: 'stat-3', icon: '😊', value: '1,850+', label: 'Happy Customers', color: '#22c55e' },
+      { id: 'stat-4', icon: '⏱️', value: '30 Min', label: 'Avg. Response', color: '#38bdf8' },
+      { id: 'stat-5', icon: '✅', value: '100%', label: 'Satisfaction', color: '#a78bfa' },
+      { id: 'stat-6', icon: '🕐', value: '24/7', label: 'Support Active', color: '#f97316' },
+    ];
+  });
+  const [newStatValue, setNewStatValue] = useState('');
+  const [newStatLabel, setNewStatLabel] = useState('');
+  const [newStatIcon,  setNewStatIcon]  = useState('📊');
+  const [newStatColor, setNewStatColor] = useState('#2563eb');
 
   /* ── UI State ───────────────────────────────────────────── */
   const [editorTab, setEditorTab] = useState<EditorTab>(() => {
@@ -2266,6 +2357,16 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
     setBizPhone(c.phone || '');
     setBizWhatsApp(c.whatsAppNumber || '');
     setBizAddress(c.address || '');
+    setBizEmail(c.email || (tenant as any).ownerEmail || (tenant as any).businessInfo?.email || '');
+    setHowItWorksBadge((c as any).howItWorksBadge || '— Simple 3-Step Process —');
+    setHowItWorksTitle((c as any).howItWorksTitle || 'How It Works');
+    setHowItWorksSubtitle((c as any).howItWorksSubtitle || 'Book, relax, and let our experts handle everything in 3 easy steps');
+    if ((c as any).howItWorksSteps && Array.isArray((c as any).howItWorksSteps) && (c as any).howItWorksSteps.length > 0) {
+      setHowItWorksStepsList((c as any).howItWorksSteps);
+    }
+    if ((c as any).statsList && Array.isArray((c as any).statsList) && (c as any).statsList.length > 0) {
+      setStatsList((c as any).statsList);
+    }
   }, [tenant.id]);
 
   // WCAG check whenever primary color changes
@@ -2544,8 +2645,13 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
       cmsPages: updatedCmsPages,
       portfolio, testimonials, faqs, campaigns,
       city: cityName, businessHours: bizHours, phone: bizPhone,
-      whatsAppNumber: bizWhatsApp, address: bizAddress,
+      whatsAppNumber: bizWhatsApp, address: bizAddress, email: bizEmail,
       localSeoConfig: { ...(tenant.config.localSeoConfig as any), nearbyCities } as any,
+      howItWorksBadge,
+      howItWorksTitle,
+      howItWorksSubtitle,
+      howItWorksSteps: howItWorksStepsList,
+      statsList,
       featuredServiceIds, homepageServiceCount,
     };
 
@@ -3632,13 +3738,51 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                 )}
               </SectionCard>
 
-              <SectionCard title="Hero Content">
+              <SectionCard title="Hero Content" subtitle="Customize the main headline, subtitle and badge on your homepage">
                 <FieldLabel>Main Headline</FieldLabel>
                 <FieldTextarea rows={2} value={heroTitle} onChange={e => setHeroTitle(e.target.value)} placeholder="All Home Services One Trusted Team" />
+                <div className="flex gap-1.5 mb-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setHeroTitle(`Professional Services by ${tenant.name}`)}
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium"
+                  >
+                    ↺ Reset: "Professional Services by {tenant.name}"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHeroTitle('All Home Services — One Trusted Team')}
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium"
+                  >
+                    ↺ Reset: "All Home Services — One Trusted Team"
+                  </button>
+                </div>
+
                 <FieldLabel>Subtitle</FieldLabel>
-                <FieldTextarea rows={2} value={heroSubtitle} onChange={e => setHeroSubtitle(e.target.value)} />
+                <FieldTextarea rows={2} value={heroSubtitle} onChange={e => setHeroSubtitle(e.target.value)} placeholder="Expert solutions at your doorstep. Verified and background-checked technicians." />
+                <div className="flex gap-1.5 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setHeroSubtitle('Expert solutions at your doorstep. Verified and background-checked technicians. Book online today.')}
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium"
+                  >
+                    ↺ Reset: "Expert solutions at your doorstep..."
+                  </button>
+                </div>
+
                 <FieldLabel>Arrival Badge Text</FieldLabel>
-                <FieldInput value={heroBadge} onChange={e => setHeroBadge(e.target.value)} />
+                <FieldInput value={heroBadge} onChange={e => setHeroBadge(e.target.value)} placeholder="30 MIN ARRIVAL GUARANTEE" />
+
+                <div className="mt-3 p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-800/40 flex items-center justify-between">
+                  <span className="text-[11px] text-indigo-300">💡 Looking to add coupon codes / discounts?</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditorTab('offers')}
+                    className="text-[11px] font-bold text-indigo-400 hover:text-indigo-200 underline shrink-0"
+                  >
+                    Go to 🎟️ Offers →
+                  </button>
+                </div>
               </SectionCard>
 
               <SectionCard title="Call-to-Action Buttons">
@@ -3899,6 +4043,278 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
             </div>
           )}
 
+          {/* ═══ STATISTICS STRIP ═══ */}
+          {editorTab === 'stats' && (
+            <div className="space-y-4">
+              {/* 1. Counter List Editor */}
+              <SectionCard title="Performance Counters" subtitle="Customize the metrics, numbers, labels, and colors in your stats strip">
+                <div className="space-y-3">
+                  {statsList.map((stat, idx) => (
+                    <div key={stat.id || idx} className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span 
+                            className="w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center border"
+                            style={{ 
+                              background: `${stat.color || primaryColor}20`, 
+                              color: stat.color || primaryColor,
+                              borderColor: `${stat.color || primaryColor}40`
+                            }}
+                          >
+                            {idx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-200">
+                            Counter {idx + 1}: {stat.value || '0'} — {stat.label || 'Metric'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => {
+                              setStatsList(prev => {
+                                const next = [...prev];
+                                [next[idx], next[idx - 1]] = [next[idx - 1], next[idx]];
+                                return next;
+                              });
+                            }}
+                            className="p-1 text-slate-500 hover:text-slate-300 disabled:opacity-20 text-xs"
+                            title="Move Up"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === statsList.length - 1}
+                            onClick={() => {
+                              setStatsList(prev => {
+                                const next = [...prev];
+                                [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                                return next;
+                              });
+                            }}
+                            className="p-1 text-slate-500 hover:text-slate-300 disabled:opacity-20 text-xs"
+                            title="Move Down"
+                          >
+                            ▼
+                          </button>
+                          {statsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStatsList(prev => prev.filter((_, i) => i !== idx));
+                                showToast('Counter removed from stats strip', 'info');
+                              }}
+                              className="p-1 text-slate-500 hover:text-rose-400 text-xs ml-1"
+                              title="Delete Counter"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <FieldLabel>Main Number / Value</FieldLabel>
+                          <FieldInput
+                            value={stat.value}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setStatsList(prev => prev.map((s, i) => i === idx ? { ...s, value: val } : s));
+                            }}
+                            placeholder="e.g. 5,250+"
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel>Label / Subtext</FieldLabel>
+                          <FieldInput
+                            value={stat.label}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setStatsList(prev => prev.map((s, i) => i === idx ? { ...s, label: val } : s));
+                            }}
+                            placeholder="e.g. Jobs Completed"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <FieldLabel>Icon / Emoji</FieldLabel>
+                          <FieldInput
+                            value={stat.icon || ''}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setStatsList(prev => prev.map((s, i) => i === idx ? { ...s, icon: val } : s));
+                            }}
+                            placeholder="⭐"
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel>Highlight Color</FieldLabel>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={stat.color || primaryColor}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setStatsList(prev => prev.map((s, i) => i === idx ? { ...s, color: val } : s));
+                              }}
+                              className="w-8 h-8 rounded border border-slate-700 bg-transparent cursor-pointer"
+                            />
+                            <FieldInput
+                              value={stat.color || primaryColor}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setStatsList(prev => prev.map((s, i) => i === idx ? { ...s, color: val } : s));
+                              }}
+                              placeholder="#2563eb"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Color Swatches */}
+                      <div className="flex flex-wrap gap-1 items-center pt-1">
+                        <span className="text-[10px] text-slate-500 font-bold mr-1">Quick Colors:</span>
+                        {['#f59e0b', '#2563eb', '#22c55e', '#38bdf8', '#a78bfa', '#f97316', '#ef4444', '#10b981'].map(hex => (
+                          <button
+                            key={hex}
+                            type="button"
+                            onClick={() => {
+                              setStatsList(prev => prev.map((s, i) => i === idx ? { ...s, color: hex } : s));
+                            }}
+                            className="w-5 h-5 rounded-full border border-slate-700 hover:scale-110 transition-transform"
+                            style={{ backgroundColor: hex }}
+                            title={hex}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+
+              {/* 2. Add New Counter */}
+              <SectionCard title="Add Counter" subtitle="Add another metric to your live stats bar">
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <FieldLabel>Value / Metric</FieldLabel>
+                      <FieldInput
+                        value={newStatValue}
+                        onChange={e => setNewStatValue(e.target.value)}
+                        placeholder="e.g. 99.9%"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel>Label Description</FieldLabel>
+                      <FieldInput
+                        value={newStatLabel}
+                        onChange={e => setNewStatLabel(e.target.value)}
+                        placeholder="e.g. On-Time Arrival"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <FieldLabel>Icon (Optional)</FieldLabel>
+                      <FieldInput
+                        value={newStatIcon}
+                        onChange={e => setNewStatIcon(e.target.value)}
+                        placeholder="⏱️"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel>Color</FieldLabel>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={newStatColor}
+                          onChange={e => setNewStatColor(e.target.value)}
+                          className="w-8 h-8 rounded border border-slate-700 bg-transparent cursor-pointer"
+                        />
+                        <FieldInput
+                          value={newStatColor}
+                          onChange={e => setNewStatColor(e.target.value)}
+                          placeholder="#2563eb"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newStatValue.trim() || !newStatLabel.trim()) {
+                        showToast('Please enter both a value and a label', 'error');
+                        return;
+                      }
+                      const newStat = {
+                        id: `stat-${Date.now()}`,
+                        icon: newStatIcon.trim() || '📊',
+                        value: newStatValue.trim(),
+                        label: newStatLabel.trim(),
+                        color: newStatColor || primaryColor
+                      };
+                      setStatsList(prev => [...prev, newStat]);
+                      setNewStatValue('');
+                      setNewStatLabel('');
+                      setNewStatIcon('📊');
+                      showToast('Added counter to Statistics Strip!', 'success');
+                    }}
+                    className="btn-primary w-full py-2 text-xs font-bold"
+                  >
+                    + Add Counter to Stats Strip
+                  </button>
+                </div>
+              </SectionCard>
+
+              {/* 3. Preset Templates */}
+              <SectionCard title="Statistics Presets" subtitle="Click to load pre-configured counter packs">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatsList([
+                        { id: 'stat-1', icon: '⭐', value: '4.9/5', label: '1,240+ Reviews', color: '#f59e0b' },
+                        { id: 'stat-2', icon: '💼', value: '5,250+', label: 'Jobs Completed', color: primaryColor },
+                        { id: 'stat-3', icon: '😊', value: '1,850+', label: 'Happy Customers', color: '#22c55e' },
+                        { id: 'stat-4', icon: '⏱️', value: '30 Min', label: 'Avg. Response', color: '#38bdf8' },
+                        { id: 'stat-5', icon: '✅', value: '100%', label: 'Satisfaction', color: '#a78bfa' },
+                        { id: 'stat-6', icon: '🕐', value: '24/7', label: 'Support Active', color: '#f97316' },
+                      ]);
+                      showToast('Loaded Top Rated Services preset!', 'success');
+                    }}
+                    className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition-all group"
+                  >
+                    <p className="text-xs font-bold text-white group-hover:text-emerald-400">🏠 Top Rated Home Service</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">4.9/5 &bull; 5,250+ Jobs &bull; 30-Min</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatsList([
+                        { id: 'stat-1', icon: '⚡', value: '15 Min', label: 'Rapid Dispatch', color: '#ef4444' },
+                        { id: 'stat-2', icon: '🛡️', value: '100%', label: 'Parts Guarantee', color: '#10b981' },
+                        { id: 'stat-3', icon: '🔧', value: '8,000+', label: 'Repairs Fixed', color: '#3b82f6' },
+                        { id: 'stat-4', icon: '💰', value: '₹0', label: 'Inspection Fee', color: '#f59e0b' },
+                        { id: 'stat-5', icon: '🪪', value: '100%', label: 'Police Verified', color: '#8b5cf6' },
+                        { id: 'stat-6', icon: '📞', value: '24x7', label: 'Emergency Hotline', color: '#ec4899' },
+                      ]);
+                      showToast('Loaded Emergency Repair preset!', 'success');
+                    }}
+                    className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition-all group"
+                  >
+                    <p className="text-xs font-bold text-white group-hover:text-emerald-400">⚡ Emergency & Rapid Response</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">15 Min &bull; ₹0 Inspection &bull; 24x7</p>
+                  </button>
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
           {/* ═══ SECTIONS ═══ */}
           {editorTab === 'sections' && (
             <div className="space-y-4">
@@ -4007,6 +4423,312 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                   Reset to default template layout
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* ═══ HOW IT WORKS / PROCESS STEPS ═══ */}
+          {editorTab === 'how_it_works' && (
+            <div className="space-y-4">
+              {/* 1. Header & Badging */}
+              <SectionCard title="Section Headings" subtitle="Customize the title, subtitle, and badge of your process section">
+                <div className="space-y-3">
+                  <div>
+                    <FieldLabel>Eyebrow / Badge Text</FieldLabel>
+                    <FieldInput
+                      value={howItWorksBadge}
+                      onChange={e => setHowItWorksBadge(e.target.value)}
+                      placeholder="e.g. — Simple 3-Step Process —"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Main Section Title</FieldLabel>
+                    <FieldInput
+                      value={howItWorksTitle}
+                      onChange={e => setHowItWorksTitle(e.target.value)}
+                      placeholder="e.g. How It Works"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Section Subtitle / Description</FieldLabel>
+                    <FieldTextarea
+                      rows={2}
+                      value={howItWorksSubtitle}
+                      onChange={e => setHowItWorksSubtitle(e.target.value)}
+                      placeholder="e.g. Book, relax, and let our experts handle everything in 3 easy steps"
+                    />
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* 2. Process Steps List */}
+              <SectionCard title="Step-by-Step Workflow" subtitle="Configure icons, step labels, titles, and explanations">
+                <div className="space-y-3">
+                  {howItWorksStepsList.map((step, idx) => (
+                    <div key={step.id || idx} className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-3 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs flex items-center justify-center border border-emerald-500/30">
+                            {idx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-200">
+                            Step {idx + 1}: {step.title || 'Untitled Step'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => {
+                              setHowItWorksStepsList(prev => {
+                                const next = [...prev];
+                                [next[idx], next[idx - 1]] = [next[idx - 1], next[idx]];
+                                return next;
+                              });
+                            }}
+                            className="p-1 text-slate-500 hover:text-slate-300 disabled:opacity-20 text-xs"
+                            title="Move Up"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === howItWorksStepsList.length - 1}
+                            onClick={() => {
+                              setHowItWorksStepsList(prev => {
+                                const next = [...prev];
+                                [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                                return next;
+                              });
+                            }}
+                            className="p-1 text-slate-500 hover:text-slate-300 disabled:opacity-20 text-xs"
+                            title="Move Down"
+                          >
+                            ▼
+                          </button>
+                          {howItWorksStepsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setHowItWorksStepsList(prev => prev.filter((_, i) => i !== idx));
+                                showToast('Step removed from workflow', 'info');
+                              }}
+                              className="p-1 text-slate-500 hover:text-rose-400 text-xs ml-1"
+                              title="Delete Step"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <FieldLabel>Icon / Emoji</FieldLabel>
+                          <FieldInput
+                            value={step.icon}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setHowItWorksStepsList(prev => prev.map((s, i) => i === idx ? { ...s, icon: val } : s));
+                            }}
+                            placeholder="📱"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <FieldLabel>Step Badge / Number</FieldLabel>
+                          <FieldInput
+                            value={step.n || `0${idx + 1}`}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setHowItWorksStepsList(prev => prev.map((s, i) => i === idx ? { ...s, n: val } : s));
+                            }}
+                            placeholder="01"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Quick Emoji Helpers */}
+                      <div className="flex flex-wrap gap-1 items-center">
+                        <span className="text-[10px] text-slate-500 font-bold mr-1">Quick Icons:</span>
+                        {['📱', '📅', '✅', '⚡', '🪪', '🚚', '🔧', '🛡️', '💳', '⭐', '💬', '📋'].map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setHowItWorksStepsList(prev => prev.map((s, i) => i === idx ? { ...s, icon: emoji } : s));
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-xs hover:bg-slate-800 transition-all ${step.icon === emoji ? 'bg-emerald-600/30 border border-emerald-500' : 'bg-slate-950 border border-slate-800'}`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div>
+                        <FieldLabel>Step Title</FieldLabel>
+                        <FieldInput
+                          value={step.title}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setHowItWorksStepsList(prev => prev.map((s, i) => i === idx ? { ...s, title: val } : s));
+                          }}
+                          placeholder="e.g. Choose a Service"
+                        />
+                      </div>
+
+                      <div>
+                        <FieldLabel>Step Description</FieldLabel>
+                        <FieldTextarea
+                          rows={2}
+                          value={step.desc}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setHowItWorksStepsList(prev => prev.map((s, i) => i === idx ? { ...s, desc: val } : s));
+                          }}
+                          placeholder="Explain what the customer does in this step..."
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+
+              {/* 3. Add Step Form */}
+              <SectionCard title="Add New Step" subtitle="Include another step in your process flow">
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-4 gap-2">
+                    <div>
+                      <FieldLabel>Icon</FieldLabel>
+                      <FieldInput
+                        value={newStepIcon}
+                        onChange={e => setNewStepIcon(e.target.value)}
+                        placeholder="⚡"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <FieldLabel>Step Title</FieldLabel>
+                      <FieldInput
+                        value={newStepTitle}
+                        onChange={e => setNewStepTitle(e.target.value)}
+                        placeholder="e.g. Instant Confirmation"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <FieldLabel>Step Description</FieldLabel>
+                    <FieldTextarea
+                      rows={2}
+                      value={newStepDesc}
+                      onChange={e => setNewStepDesc(e.target.value)}
+                      placeholder="Receive WhatsApp update with technician live tracking..."
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newStepTitle.trim()) {
+                        showToast('Please provide a step title', 'error');
+                        return;
+                      }
+                      const newStep = {
+                        id: `step-${Date.now()}`,
+                        n: `0${howItWorksStepsList.length + 1}`,
+                        icon: newStepIcon || '⚡',
+                        title: newStepTitle.trim(),
+                        desc: newStepDesc.trim() || 'Step details and clear instructions.'
+                      };
+                      setHowItWorksStepsList(prev => [...prev, newStep]);
+                      setNewStepTitle('');
+                      setNewStepDesc('');
+                      setNewStepIcon('⚡');
+                      showToast('Added step to How It Works!', 'success');
+                    }}
+                    className="btn-primary w-full py-2 text-xs font-bold"
+                  >
+                    + Add Step to Process
+                  </button>
+                </div>
+              </SectionCard>
+
+              {/* 4. Instant Industry Presets */}
+              <SectionCard title="Workflow Presets" subtitle="Click to load pre-crafted process templates">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHowItWorksBadge('— Simple 3-Step Process —');
+                      setHowItWorksTitle('How It Works');
+                      setHowItWorksSubtitle('Book, relax, and let our experts handle everything in 3 easy steps');
+                      setHowItWorksStepsList([
+                        { id: 'step-1', n: '01', icon: '📱', title: 'Choose a Service', desc: 'Select from 100+ verified home services with upfront clear pricing.' },
+                        { id: 'step-2', n: '02', icon: '📅', title: 'Schedule & Pay', desc: 'Pick your preferred arrival time and pay securely online or on-site.' },
+                        { id: 'step-3', n: '03', icon: '✅', title: 'Relax, We Handle It', desc: 'A background-verified technician arrives with full toolkit & warranty.' },
+                      ]);
+                      showToast('Loaded Standard Home Services preset!', 'success');
+                    }}
+                    className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition-all group"
+                  >
+                    <p className="text-xs font-bold text-white group-hover:text-emerald-400">🏠 Standard Home Service</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Choose &rarr; Schedule &rarr; Relax</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHowItWorksBadge('— Fast 30-Min Response —');
+                      setHowItWorksTitle('Emergency Service Protocol');
+                      setHowItWorksSubtitle('Emergency repairs dispatched instantly with live tracking');
+                      setHowItWorksStepsList([
+                        { id: 'step-1', n: '01', icon: '⚡', title: 'Call Hotline / Tap SOS', desc: 'Direct priority dispatch connects you immediately with duty technician.' },
+                        { id: 'step-2', n: '02', icon: '🚚', title: '30-Min Doorstep Arrival', desc: 'Technician arrives with complete diagnostic & spare parts inventory.' },
+                        { id: 'step-3', n: '03', icon: '🛡️', title: 'Fixed & Guaranteed', desc: 'Work completed with transparent bill and 90-day parts warranty.' },
+                      ]);
+                      showToast('Loaded Emergency Response preset!', 'success');
+                    }}
+                    className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition-all group"
+                  >
+                    <p className="text-xs font-bold text-white group-hover:text-emerald-400">⚡ Emergency Response</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">SOS &rarr; 30-Min &rarr; Fixed</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHowItWorksBadge('— Transparent & Honest —');
+                      setHowItWorksTitle('Quote & Booking Workflow');
+                      setHowItWorksSubtitle('Get accurate quotes with zero hidden charges or upfront fees');
+                      setHowItWorksStepsList([
+                        { id: 'step-1', n: '01', icon: '📋', title: 'Request Free Estimate', desc: 'Submit service requirement and get instant ballpark quote online.' },
+                        { id: 'step-2', n: '02', icon: '🔍', title: 'Inspection & Approval', desc: 'Technician inspects on-site and locks final price before starting.' },
+                        { id: 'step-3', n: '03', icon: '💳', title: 'Pay After Satisfaction', desc: 'Pay seamlessly via UPI, card, or cash only when 100% satisfied.' },
+                      ]);
+                      showToast('Loaded Quote & Booking preset!', 'success');
+                    }}
+                    className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition-all group"
+                  >
+                    <p className="text-xs font-bold text-white group-hover:text-emerald-400">📋 Quote & Approval</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Estimate &rarr; Inspect &rarr; Pay</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHowItWorksBadge('— Seamless Digital Experience —');
+                      setHowItWorksTitle('App & Online Experience');
+                      setHowItWorksSubtitle('Track your service from booking to completion on mobile');
+                      setHowItWorksStepsList([
+                        { id: 'step-1', n: '01', icon: '📱', title: 'Instant 1-Click Booking', desc: 'Select date & time in 30 seconds with automated WhatsApp alerts.' },
+                        { id: 'step-2', n: '02', icon: '📍', title: 'Real-time GPS Tracking', desc: 'Track your assigned technician location live on Google Maps.' },
+                        { id: 'step-3', n: '03', icon: '⭐', title: 'Digital Invoice & Rating', desc: 'Get GST invoice on email and rate your technician directly.' },
+                      ]);
+                      showToast('Loaded Digital App preset!', 'success');
+                    }}
+                    className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition-all group"
+                  >
+                    <p className="text-xs font-bold text-white group-hover:text-emerald-400">📱 Mobile & GPS App</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">1-Click &rarr; GPS &rarr; Invoice</p>
+                  </button>
+                </div>
+              </SectionCard>
             </div>
           )}
 
@@ -4417,8 +5139,18 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
           {/* ═══ OFFERS ═══ */}
           {editorTab === 'offers' && (
             <div className="space-y-4">
-              <SectionCard title="Add New Offer" subtitle="Create coupon codes that appear on your website">
-                <FieldLabel>Offer Title</FieldLabel>
+              {/* Info Notice */}
+              <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-800/40 text-xs text-emerald-300 flex items-start gap-2">
+                <span className="text-base">🔥</span>
+                <div>
+                  <p className="font-bold">Active Offers in Hero & Discounts</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Enabled offers automatically display as an animated promo ribbon in your Hero section and in the Exclusive Discounts coupon row.</p>
+                </div>
+              </div>
+
+              {/* Add New Offer */}
+              <SectionCard title="Add New Offer / Coupon" subtitle="Create promotional deals and discount coupon codes">
+                <FieldLabel>Offer Title / Headline</FieldLabel>
                 <FieldInput value={newCampTitle} onChange={e => setNewCampTitle(e.target.value)} placeholder="Flat ₹50 Off on First Booking" />
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -4431,29 +5163,98 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                   </div>
                 </div>
                 <FieldLabel>Discount Description</FieldLabel>
-                <FieldInput value={newCampDisc} onChange={e => setNewCampDisc(e.target.value)} placeholder="Flat ₹50 off, min order ₹300" />
+                <FieldInput value={newCampDisc} onChange={e => setNewCampDisc(e.target.value)} placeholder="Flat ₹50 off on orders above ₹299" />
                 <button onClick={addCampaign} className="btn-primary w-full py-2 text-xs font-bold">+ Add Offer</button>
               </SectionCard>
 
-              <div className="space-y-2">
-                {campaigns.map((camp: any) => (
-                  <div key={camp.id} className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5">
-                    <div className="px-2.5 py-1.5 rounded-lg text-[10px] font-black text-white shrink-0" style={{ background: primaryColor }}>{camp.offerCode}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{camp.title}</p>
-                      <p className="text-[10px] text-slate-500">Valid till {camp.endDate}</p>
+              {/* Quick Offer Templates */}
+              <SectionCard title="Quick Offer Presets" subtitle="Click to quickly create popular promotional deals">
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const camp = {
+                        id: `camp-${Date.now()}`,
+                        title: 'Flat ₹50 Off on First Service',
+                        offerCode: 'FIRST50',
+                        endDate: '2026-12-31',
+                        subtitle: 'Flat ₹50 discount for all first-time bookings',
+                        enabled: true,
+                        priority: 1,
+                        targetSlug: 'services',
+                      };
+                      setCampaigns(prev => [...prev, camp]);
+                      showToast('Added FIRST50 offer preset!', 'success');
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition-all flex items-center justify-between group"
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-white group-hover:text-emerald-400">🎟️ Flat ₹50 Off First Booking</p>
+                      <p className="text-[10px] text-slate-500">Code: FIRST50 &bull; Min ₹299</p>
                     </div>
-                    <button
-                      onClick={() => setCampaigns(prev => prev.map(c => c.id === camp.id ? { ...c, enabled: !c.enabled } : c))}
-                      className={`w-9 h-5 rounded-full transition-all relative shrink-0 ${camp.enabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${camp.enabled ? 'left-4' : 'left-0.5'}`} />
-                    </button>
-                    <button onClick={() => setCampaigns(prev => prev.filter(c => c.id !== camp.id))} className="text-slate-500 hover:text-red-400 text-xs shrink-0">✕</button>
-                  </div>
-                ))}
-                {campaigns.length === 0 && <p className="text-[10px] text-slate-500 text-center py-4">No offers yet.</p>}
-              </div>
+                    <span className="text-[10px] px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded-md font-bold">+ Use</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const camp = {
+                        id: `camp-${Date.now()}`,
+                        title: '60% Off Seasonal Deep Cleaning',
+                        offerCode: 'SAVE60',
+                        endDate: '2026-12-31',
+                        subtitle: 'Up to 60% off on full home sanitization & deep cleaning',
+                        enabled: true,
+                        priority: 2,
+                        targetSlug: 'services',
+                      };
+                      setCampaigns(prev => [...prev, camp]);
+                      showToast('Added SAVE60 offer preset!', 'success');
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition-all flex items-center justify-between group"
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-white group-hover:text-emerald-400">✨ 60% Off Seasonal Cleaning</p>
+                      <p className="text-[10px] text-slate-500">Code: SAVE60 &bull; Max ₹500 discount</p>
+                    </div>
+                    <span className="text-[10px] px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded-md font-bold">+ Use</span>
+                  </button>
+                </div>
+              </SectionCard>
+
+              {/* Active Offers List */}
+              <SectionCard title={`Active Offers (${campaigns.length})`} subtitle="Toggle on/off or delete existing coupons">
+                <div className="space-y-2">
+                  {campaigns.map((camp: any) => (
+                    <div key={camp.id} className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5">
+                      <div className="px-2.5 py-1.5 rounded-lg text-[10px] font-black text-white shrink-0" style={{ background: primaryColor }}>{camp.offerCode || 'OFFER'}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-white truncate">{camp.title}</p>
+                        <p className="text-[10px] text-slate-500 truncate">{camp.subtitle || `Valid till ${camp.endDate}`}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCampaigns(prev => prev.map(c => c.id === camp.id ? { ...c, enabled: !c.enabled } : c))}
+                        className={`w-9 h-5 rounded-full transition-all relative shrink-0 ${camp.enabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                        title={camp.enabled ? 'Enabled' : 'Disabled'}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${camp.enabled ? 'left-4' : 'left-0.5'}`} />
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setCampaigns(prev => prev.filter(c => c.id !== camp.id));
+                          showToast('Offer deleted', 'info');
+                        }} 
+                        className="text-slate-500 hover:text-red-400 text-xs shrink-0 p-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  {campaigns.length === 0 && <p className="text-[10px] text-slate-500 text-center py-4">No offers configured yet.</p>}
+                </div>
+              </SectionCard>
             </div>
           )}
 
@@ -4557,6 +5358,8 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
               </SectionCard>
 
               <SectionCard title="Contact Information">
+                <FieldLabel>Support Email</FieldLabel>
+                <FieldInput type="email" value={bizEmail} onChange={e => setBizEmail(e.target.value)} placeholder="support@prservices.in" />
                 <FieldLabel>Support Phone</FieldLabel>
                 <FieldInput maxLength={10} value={bizPhone} onChange={e => setBizPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="9876543210" />
                 <FieldLabel>WhatsApp Number</FieldLabel>
@@ -4730,10 +5533,28 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
               </SectionCard>
 
               <SectionCard title="Live Website URL">
-                <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl p-3">
+                <div 
+                  onClick={() => {
+                    try {
+                      sessionStorage.setItem('anarav_site_tenant_id', tenant.id);
+                      localStorage.setItem('anarav_site_tenant_id', tenant.id);
+                    } catch {}
+                    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                      window.open(`${window.location.origin}/#/site?tenant=${getTenantSlug(tenant)}`, '_blank');
+                    } else {
+                      window.open(getTenantPublicUrl(tenant), '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                  className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl p-3 cursor-pointer hover:border-emerald-500/60 hover:bg-slate-900 transition-all group"
+                  title="Click to view live customer website"
+                >
                   <span className="text-emerald-400 text-sm">🔗</span>
-                  <p className="text-xs font-mono text-slate-300 flex-1 truncate">{tenant.customDomain || `${tenant.subdomain}.servos.in`}</p>
-                  <span className="text-[9px] px-2 py-0.5 rounded-full font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">LIVE</span>
+                  <p className="text-xs font-mono text-slate-300 flex-1 truncate group-hover:text-emerald-300 transition-colors">
+                    {tenant.customDomain || tenant.defaultDomain || `${tenant.slug || tenant.subdomain}.vercel.app`}
+                  </p>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-all flex items-center gap-1">
+                    LIVE <ExternalLink size={10} />
+                  </span>
                 </div>
               </SectionCard>
             </div>
@@ -4750,9 +5571,24 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
             <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm" />
             <div className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" />
             <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm" />
-            <div className="ml-2 bg-slate-800 rounded-lg px-3 py-1 flex items-center gap-1.5 border border-slate-700/60">
+            <div 
+              onClick={() => {
+                try {
+                  sessionStorage.setItem('anarav_site_tenant_id', tenant.id);
+                  localStorage.setItem('anarav_site_tenant_id', tenant.id);
+                } catch {}
+                if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                  window.open(`${window.location.origin}/#/site?tenant=${getTenantSlug(tenant)}`, '_blank');
+                } else {
+                  window.open(getTenantPublicUrl(tenant), '_blank', 'noopener,noreferrer');
+                }
+              }}
+              className="ml-2 bg-slate-800 hover:bg-slate-750 cursor-pointer rounded-lg px-3 py-1 flex items-center gap-1.5 border border-slate-700/60 hover:border-slate-500 transition-all"
+              title="Click to open public website in new tab"
+            >
               <span className="text-slate-400 text-[10px]">🌐</span>
-              <span className="text-slate-300 text-[10px] font-mono truncate">{tenant.customDomain || `${tenant.subdomain}.servos.in`}</span>
+              <span className="text-slate-300 text-[10px] font-mono truncate">{tenant.customDomain || tenant.defaultDomain || `${tenant.slug || tenant.subdomain}.vercel.app`}</span>
+              <ExternalLink size={10} className="text-slate-400" />
             </div>
           </div>
 
@@ -4786,7 +5622,17 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
 
             {/* Live Link Button */}
             <button
-              onClick={() => window.open(`#/site?tenant=${tenant.id}`, '_blank')}
+              onClick={() => {
+                try {
+                  sessionStorage.setItem('anarav_site_tenant_id', tenant.id);
+                  localStorage.setItem('anarav_site_tenant_id', tenant.id);
+                } catch {}
+                if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                  window.open(`${window.location.origin}/#/site?tenant=${getTenantSlug(tenant)}`, '_blank');
+                } else {
+                  window.open(getTenantPublicUrl(tenant), '_blank', 'noopener,noreferrer');
+                }
+              }}
               className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center gap-1"
               title="Open Public Site in New Tab"
             >
@@ -4852,6 +5698,11 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
               emergencyCardText={emergencyCardText}
               showTrustBadges={showTrustBadges}
               trustBadgesList={trustBadgesList}
+              howItWorksBadge={howItWorksBadge}
+              howItWorksTitle={howItWorksTitle}
+              howItWorksSubtitle={howItWorksSubtitle}
+              howItWorksStepsList={howItWorksStepsList}
+              statsList={statsList}
               announceActive={announceActive}
               announceText={announceText}
               announceExpiry={announceExpiry}
@@ -4870,6 +5721,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
               bizPhone={bizPhone}
               bizWhatsApp={bizWhatsApp}
               bizAddress={bizAddress}
+              bizEmail={bizEmail}
               navbarTagline={navbarTagline}
               navLinksList={navLinksList}
               showTrackButton={showTrackButton}
@@ -4899,7 +5751,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
           <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6">
             <div className="flex items-center gap-3">
               <span className="text-sm font-black text-white flex items-center gap-2">🌐 Full Page Website Preview</span>
-              <span className="text-[10px] text-slate-400 font-mono px-2 py-0.5 bg-slate-800 rounded-md border border-slate-700">{tenant.subdomain}.servos.in</span>
+              <span className="text-[10px] text-slate-400 font-mono px-2 py-0.5 bg-slate-800 rounded-md border border-slate-700">{tenant.customDomain || tenant.defaultDomain || `${tenant.slug || tenant.subdomain}.vercel.app`}</span>
             </div>
 
             {/* Device Switcher in Modal */}
@@ -4922,7 +5774,17 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
             {/* Exit Fullscreen */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => window.open(`#/site?tenant=${tenant.id}`, '_blank')}
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem('anarav_site_tenant_id', tenant.id);
+                    localStorage.setItem('anarav_site_tenant_id', tenant.id);
+                  } catch {}
+                  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                    window.open(`${window.location.origin}/#/site?tenant=${getTenantSlug(tenant)}`, '_blank');
+                  } else {
+                    window.open(getTenantPublicUrl(tenant), '_blank', 'noopener,noreferrer');
+                  }
+                }}
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5"
               >
                 <ExternalLink size={14} /> Open Live Site
@@ -4983,6 +5845,11 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                 emergencyCardText={emergencyCardText}
                 showTrustBadges={showTrustBadges}
                 trustBadgesList={trustBadgesList}
+                howItWorksBadge={howItWorksBadge}
+                howItWorksTitle={howItWorksTitle}
+                howItWorksSubtitle={howItWorksSubtitle}
+                howItWorksStepsList={howItWorksStepsList}
+                statsList={statsList}
                 announceActive={announceActive}
                 announceText={announceText}
                 announceExpiry={announceExpiry}
@@ -5001,6 +5868,7 @@ export default function WebsiteManagerTab({ tenant, myServices, myWorkers, setTe
                 bizPhone={bizPhone}
                 bizWhatsApp={bizWhatsApp}
                 bizAddress={bizAddress}
+                bizEmail={bizEmail}
                 navbarTagline={navbarTagline}
                 navLinksList={navLinksList}
                 showTrackButton={showTrackButton}

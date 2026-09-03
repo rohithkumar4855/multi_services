@@ -69,7 +69,9 @@ router.get('/', optionalAuthenticate, async (req: Request, res: Response, next: 
       }
     });
 
-    sendResponse(res, 200, 'Tenants retrieved successfully', tenants);
+    const formattedTenants = tenants.map(t => TenantService.formatTenant(t));
+
+    sendResponse(res, 200, 'Tenants retrieved successfully', formattedTenants);
   } catch (err) {
     next(err);
   }
@@ -98,7 +100,7 @@ router.get('/current', optionalAuthenticate, optionalTenantContextMiddleware, as
       return next(new AppError('Tenant not found', 404));
     }
 
-    sendResponse(res, 200, 'Current tenant configuration retrieved', tenant);
+    sendResponse(res, 200, 'Current tenant configuration retrieved', TenantService.formatTenant(tenant));
   } catch (err) {
     next(err);
   }

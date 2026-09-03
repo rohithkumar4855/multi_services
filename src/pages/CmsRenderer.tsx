@@ -383,15 +383,39 @@ export default function CmsRenderer({
                 <div className="relative z-10 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
                   {/* Left Column: Hero Content */}
                   <div className="lg:col-span-7 text-left space-y-5 animate-fadeIn">
-                    {/* Arrival Guarantee Badge */}
-                    <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider text-white shadow-lg border"
-                      style={{ 
-                        background: pc, 
-                        boxShadow: `0 4px 20px ${pc}60`,
-                        borderColor: 'rgba(255,255,255,0.2)',
-                      }}>
-                      <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" />
-                      {(c as any).heroArrivalGuarantee || (c as any).heroBadge || '30 MIN ARRIVAL GUARANTEE'}
+                    {/* Badges Row: Arrival Guarantee + Top Active Offer */}
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider text-white shadow-lg border"
+                        style={{ 
+                          background: pc, 
+                          boxShadow: `0 4px 20px ${pc}60`,
+                          borderColor: 'rgba(255,255,255,0.2)',
+                        }}>
+                        <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" />
+                        {(c as any).heroArrivalGuarantee || (c as any).heroBadge || '30 MIN ARRIVAL GUARANTEE'}
+                      </div>
+
+                      {activeCampaign && (
+                        <div 
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border backdrop-blur-md shadow-md animate-bounce"
+                          style={{
+                            backgroundColor: `${pc}25`,
+                            borderColor: `${pc}50`,
+                            color: '#ffffff',
+                          }}
+                        >
+                          <span>🔥</span>
+                          <span className="font-extrabold">{activeCampaign.title}</span>
+                          {activeCampaign.offerCode && (
+                            <span 
+                              className="px-2 py-0.5 rounded-md font-mono text-[10px] font-black text-white"
+                              style={{ background: pc }}
+                            >
+                              {activeCampaign.offerCode}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Main Headline */}
@@ -522,7 +546,24 @@ export default function CmsRenderer({
           /* ══════════════════════════════════════════════════
              STATS — Dark animated numbers strip
           ══════════════════════════════════════════════════ */
-          case 'stats':
+          case 'stats': {
+            const customStats = (tenant.config as any)?.statsList;
+            const items = Array.isArray(customStats) && customStats.length > 0
+              ? customStats.map((s: any, i: number) => ({
+                  icon: s.icon || '📊',
+                  value: s.value,
+                  sub: s.label,
+                  color: s.color || (i === 1 ? pc : '#38bdf8')
+                }))
+              : [
+                  { icon: '⭐', value: '4.9/5', sub: `${animatedStats.fiveStarReviews.toLocaleString()}+ Reviews`, color: '#f59e0b' },
+                  { icon: '💼', value: `${animatedStats.jobsCompleted.toLocaleString()}+`, sub: 'Jobs Completed', color: pc },
+                  { icon: '😊', value: `${animatedStats.happyClients.toLocaleString()}+`, sub: 'Happy Customers', color: '#22c55e' },
+                  { icon: '⏱️', value: '30 Min', sub: 'Avg. Response', color: '#38bdf8' },
+                  { icon: '✅', value: '100%', sub: 'Satisfaction', color: '#a78bfa' },
+                  { icon: '🕐', value: '24/7', sub: 'Support Active', color: '#f97316' },
+                ];
+
             return (
               <section
                 key={comp.id}
@@ -537,17 +578,10 @@ export default function CmsRenderer({
                   }
                 }}
               >
-                <div className="max-w-7xl mx-auto grid grid-cols-3 sm:grid-cols-6 gap-6 text-center">
-                  {[
-                    { icon: '⭐', value: '4.9/5', sub: `${animatedStats.fiveStarReviews.toLocaleString()}+ Reviews`, color: '#f59e0b' },
-                    { icon: '💼', value: `${animatedStats.jobsCompleted.toLocaleString()}+`, sub: 'Jobs Completed', color: pc },
-                    { icon: '😊', value: `${animatedStats.happyClients.toLocaleString()}+`, sub: 'Happy Customers', color: '#22c55e' },
-                    { icon: '⏱️', value: '30 Min', sub: 'Avg. Response', color: '#38bdf8' },
-                    { icon: '✅', value: '100%', sub: 'Satisfaction', color: '#a78bfa' },
-                    { icon: '🕐', value: '24/7', sub: 'Support', color: '#f97316' },
-                  ].map((stat, i) => (
+                <div className={`max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-${Math.min(items.length, 6)} gap-4 sm:gap-6 text-center`}>
+                  {items.map((stat: any, i: number) => (
                     <div key={i} className="flex flex-col items-center gap-1">
-                      <span className="text-2xl">{stat.icon}</span>
+                      {stat.icon && <span className="text-2xl">{stat.icon}</span>}
                       <span className="text-xl sm:text-2xl font-black leading-none" style={{ color: stat.color }}>{stat.value}</span>
                       <span className="text-[10px] text-slate-400 font-medium leading-tight">{stat.sub}</span>
                     </div>
@@ -555,6 +589,7 @@ export default function CmsRenderer({
                 </div>
               </section>
             );
+          }
 
           /* ══════════════════════════════════════════════════
              SERVICES — Premium image cards with hover effects
@@ -765,7 +800,18 @@ export default function CmsRenderer({
           /* ══════════════════════════════════════════════════
              HOW IT WORKS — 3-step premium process
           ══════════════════════════════════════════════════ */
-          case 'how_it_works':
+          case 'how_it_works': {
+            const rawBadge = comp.settings?.badge || (tenant.config as any)?.howItWorksBadge || '— Simple Process —';
+            const cleanBadge = rawBadge.replace(/^—\s*|\s*—$/g, '').trim();
+            const title = comp.settings?.title || (tenant.config as any)?.howItWorksTitle || 'How It Works';
+            const subtitle = comp.settings?.subtitle || (tenant.config as any)?.howItWorksSubtitle || 'Book, relax, and let our experts handle everything in 3 easy steps';
+            const customSteps = (tenant.config as any)?.howItWorksSteps;
+            const stepsList = Array.isArray(customSteps) && customSteps.length > 0 ? customSteps : [
+              { n: '01', icon: '📱', title: 'Choose a Service', desc: 'Browse 100+ home services and pick what you need. Filter by category, price, or availability.', color: pc },
+              { n: '02', icon: '📅', title: 'Schedule & Pay', desc: 'Pick your preferred date, time slot, and payment method. Secure checkout in under 60 seconds.', color: '#10b981' },
+              { n: '03', icon: '✅', title: 'Relax, We Handle It', desc: 'A verified professional arrives on time, completes the job, and you get a satisfaction guarantee.', color: '#f59e0b' },
+            ];
+
             return (
               <section key={comp.id} className="py-20 px-4 sm:px-6 relative overflow-hidden" style={{ backgroundColor: bg2 }}>
                 {/* Subtle pattern */}
@@ -777,61 +823,52 @@ export default function CmsRenderer({
                 />
                 <div className="max-w-7xl mx-auto relative">
                   <div className="text-center mb-14">
-                    <SectionLabel text="Simple Process" color={pc} />
-                    <SectionTitle color={textPrimary}>How It Works</SectionTitle>
-                    <p className="text-sm sm:text-base mt-3" style={{ color: textMuted }}>
-                      Book, relax, and let our experts handle everything in 3 easy steps
-                    </p>
+                    <SectionLabel text={cleanBadge || 'Simple Process'} color={pc} />
+                    <SectionTitle color={textPrimary}>{title}</SectionTitle>
+                    {subtitle && (
+                      <p className="text-sm sm:text-base mt-3 max-w-xl mx-auto" style={{ color: textMuted }}>
+                        {subtitle}
+                      </p>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative">
+                  <div className={`grid grid-cols-1 sm:grid-cols-${Math.min(stepsList.length, 3)} gap-8 relative`}>
                     {/* Connecting line (desktop) */}
-                    <div className="hidden sm:block absolute top-12 left-[22%] right-[22%] h-0.5"
-                      style={{ background: `linear-gradient(to right, ${pc}, ${pc}40, ${pc})`, opacity: 0.3 }}
-                    />
+                    {stepsList.length > 1 && (
+                      <div className="hidden sm:block absolute top-12 left-[22%] right-[22%] h-0.5"
+                        style={{ background: `linear-gradient(to right, ${pc}, ${pc}40, ${pc})`, opacity: 0.3 }}
+                      />
+                    )}
 
-                    {[
-                      {
-                        step: '01', icon: '📱', title: 'Choose a Service',
-                        desc: 'Browse 100+ home services and pick what you need. Filter by category, price, or availability.',
-                        color: pc,
-                      },
-                      {
-                        step: '02', icon: '📅', title: 'Schedule & Pay',
-                        desc: 'Pick your preferred date, time slot, and payment method. Secure checkout in under 60 seconds.',
-                        color: '#10b981',
-                      },
-                      {
-                        step: '03', icon: '✅', title: 'Relax, We Handle It',
-                        desc: 'A verified professional arrives on time, completes the job, and you get a satisfaction guarantee.',
-                        color: '#f59e0b',
-                      },
-                    ].map((step, i) => (
-                      <div key={i} className="flex flex-col items-center text-center group">
-                        {/* Step circle */}
-                        <div
-                          className="relative w-24 h-24 rounded-full flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-105"
-                          style={{
-                            background: `linear-gradient(135deg, ${step.color}22, ${step.color}11)`,
-                            border: `2px solid ${step.color}40`,
-                            boxShadow: `0 8px 32px ${step.color}20`,
-                          }}
-                        >
-                          <span className="text-4xl">{step.icon}</span>
+                    {stepsList.map((step: any, i: number) => {
+                      const stepColor = step.color || (i === 0 ? pc : i === 1 ? '#10b981' : '#f59e0b');
+                      return (
+                        <div key={step.id || i} className="flex flex-col items-center text-center group">
+                          {/* Step circle */}
                           <div
-                            className="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black text-white"
-                            style={{ background: step.color }}
+                            className="relative w-24 h-24 rounded-full flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-105"
+                            style={{
+                              background: `linear-gradient(135deg, ${stepColor}22, ${stepColor}11)`,
+                              border: `2px solid ${stepColor}40`,
+                              boxShadow: `0 8px 32px ${stepColor}20`,
+                            }}
                           >
-                            {step.step}
+                            <span className="text-4xl">{step.icon || '⚡'}</span>
+                            <div
+                              className="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black text-white"
+                              style={{ background: stepColor }}
+                            >
+                              {step.n || step.step || `0${i + 1}`}
+                            </div>
+                          </div>
+
+                          <div className="max-w-xs">
+                            <h3 className="text-lg font-black mb-2" style={{ color: textPrimary }}>{step.title}</h3>
+                            <p className="text-sm leading-relaxed" style={{ color: textMuted }}>{step.desc}</p>
                           </div>
                         </div>
-
-                        <div className="max-w-xs">
-                          <h3 className="text-lg font-black mb-2" style={{ color: textPrimary }}>{step.title}</h3>
-                          <p className="text-sm leading-relaxed" style={{ color: textMuted }}>{step.desc}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* CTA under how it works */}
@@ -852,6 +889,7 @@ export default function CmsRenderer({
                 </div>
               </section>
             );
+          }
 
           /* ══════════════════════════════════════════════════
              OFFERS ROW — 3-column: Coupons | Why Us | Gallery
@@ -1513,6 +1551,11 @@ export default function CmsRenderer({
 
                       {/* Contact details */}
                       <div className="space-y-2 text-xs pt-1">
+                        {(c.email || (tenant as any).ownerEmail) && (
+                          <div className="flex items-center gap-2 font-medium" style={{ color: textPrimary }}>
+                            <span>✉️</span> <strong>Email:</strong> <a href={`mailto:${c.email || (tenant as any).ownerEmail}`} className="hover:underline">{c.email || (tenant as any).ownerEmail}</a>
+                          </div>
+                        )}
                         {c.phone && (
                           <div className="flex items-center gap-2 font-medium" style={{ color: textPrimary }}>
                             <span>📞</span> <strong>Phone:</strong> <a href={`tel:${c.phone}`} className="hover:underline">{c.phone}</a>

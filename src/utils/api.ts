@@ -1,7 +1,7 @@
 // @ts-nocheck
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? '/api' : 'http://localhost:5000/api');
 
 const client = axios.create({
   baseURL: API_BASE,
@@ -265,6 +265,28 @@ export const api = {
   },
   deleteLead: async (id: string) => {
     const res = await client.delete(`/leads/${id}`);
+    return res.data;
+  },
+
+  // ── Custom Domains & Vercel Mapping ───────────────
+  getDomainStatus: async (tenantId: string) => {
+    const res = await client.get(`/domains/status?tenantId=${encodeURIComponent(tenantId)}`);
+    return res.data;
+  },
+  addDomain: async (tenantId: string, domain: string) => {
+    const res = await client.post('/domains/add', { tenantId, domain });
+    return res.data;
+  },
+  verifyDomain: async (tenantId: string, domain: string) => {
+    const res = await client.post('/domains/verify', { tenantId, domain });
+    return res.data;
+  },
+  removeDomain: async (tenantId: string, domain?: string) => {
+    const res = await client.delete('/domains/remove', { data: { tenantId, domain } });
+    return res.data;
+  },
+  resolveDomain: async (domain: string) => {
+    const res = await client.get(`/domains/resolve?domain=${encodeURIComponent(domain)}`);
     return res.data;
   }
 };

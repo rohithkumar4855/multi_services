@@ -198,6 +198,20 @@ export interface TenantConfig {
   publishHistory?: Array<{ version: string; publishedAt: string; seoScore: number; performanceScore: number; status: 'active' | 'rollback' }>;
 }
 
+export interface TenantDomain {
+  id: string;
+  tenantId: string;
+  domain: string;
+  type: 'custom' | 'vercel';
+  status: 'active' | 'pending' | 'failed';
+  verified: boolean;
+  isPrimary: boolean;
+  dnsDetails?: any;
+  verifiedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Tenant {
   id: string;
   name: string;
@@ -205,7 +219,12 @@ export interface Tenant {
   ownerEmail: string;
   ownerPhone: string;
   subdomain: string;
+  defaultDomain?: string;
   customDomain?: string;
+  domainStatus?: 'active' | 'pending' | 'failed';
+  domainVerified?: boolean;
+  lastDomainVerifiedAt?: string | null;
+  domains?: TenantDomain[];
   status: 'active' | 'suspended' | 'pending';
   plan: SubscriptionPlan;
   industries: string[];

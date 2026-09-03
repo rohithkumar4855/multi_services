@@ -1,3 +1,4 @@
+// Backend API Entry Point
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -15,6 +16,7 @@ import websiteRoutes from './routes/website.routes';
 import fileRoutes from './routes/file.routes';
 import notificationRoutes from './routes/notification.routes';
 import auditRoutes from './routes/audit.routes';
+import domainRoutes from './routes/domain.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { logger } from './utils/logger';
 
@@ -46,6 +48,7 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/domains', domainRoutes);
 
 // Base Health Check
 app.get('/health', (req, res) => {

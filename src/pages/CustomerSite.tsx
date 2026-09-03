@@ -7,6 +7,7 @@ import { Phone, MessageCircle, ArrowLeft, Moon, Sun, Search, ShoppingBag, MapPin
 import CmsRenderer from './CmsRenderer';
 import { generateThemeTokens } from '../utils/themeEngine';
 import { api } from '../utils/api';
+import { getTenantSlug } from '../utils/domain';
 
 interface Props {
   session: AuthSession;
@@ -24,7 +25,7 @@ interface BookingFormData {
 }
 
 export default function CustomerSite({ session, store, navigateTo }: Props) {
-  const { tenants, services, workers, bookings, setBookings, coupons, leads, setLeads, quotations, setQuotations } = store;
+  const { tenants, setTenants, services, setServices, workers, bookings, setBookings, coupons, leads, setLeads, quotations, setQuotations } = store;
 
   // Helper to extract tenant ID from URL or storage
   const getUrlTenantId = () => {
@@ -39,8 +40,33 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
       const searchParams = new URLSearchParams(window.location.search);
       const tSearch = searchParams.get('tenant');
       if (tSearch) return tSearch;
+
+      // Hostname lookup (e.g. www.prservices.com, prservices.vercel.app)
+      const host = window.location.hostname.toLowerCase();
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        const matched = tenants.find(t =>
+          (t.customDomain && t.customDomain.toLowerCase() === host) ||
+          (t.defaultDomain && t.defaultDomain.toLowerCase() === host) ||
+          (t.subdomain && `${t.subdomain.toLowerCase()}.vercel.app` === host) ||
+          (t.slug && `${t.slug.toLowerCase()}.vercel.app` === host)
+        );
+        if (matched) return matched.id;
+      }
     } catch {}
     return null;
+  };
+
+  const findTenant = (idOrSlug: string | null | undefined) => {
+    if (!idOrSlug) return null;
+    const clean = idOrSlug.trim().toLowerCase();
+    return tenants.find(t => 
+      t.id.toLowerCase() === clean ||
+      (t.slug && t.slug.toLowerCase() === clean) ||
+      (t.subdomain && t.subdomain.toLowerCase() === clean) ||
+      (t.customDomain && t.customDomain.toLowerCase() === clean) ||
+      (t.defaultDomain && t.defaultDomain.toLowerCase() === clean) ||
+      (t.name && t.name.toLowerCase() === clean)
+    ) || null;
   };
 
   const initialTenantId = getUrlTenantId() || session.tenantId || (() => {
@@ -56,22 +82,17 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
   useEffect(() => {
     const handleUrlTenant = () => {
       const urlTenant = getUrlTenantId();
-      if (urlTenant && urlTenant !== activeTenantId) {
-        setActiveTenantId(urlTenant);
+      if (urlTenant) {
+        const matched = findTenant(urlTenant);
+        if (matched && matched.id !== activeTenantId) {
+          setActiveTenantId(matched.id);
+        }
       }
     };
+    handleUrlTenant();
     window.addEventListener('hashchange', handleUrlTenant);
     return () => window.removeEventListener('hashchange', handleUrlTenant);
-  }, [activeTenantId]);
-
-  useEffect(() => {
-    const urlTenant = getUrlTenantId();
-    if (urlTenant) {
-      setActiveTenantId(urlTenant);
-    } else if (session.tenantId && activeTenantId !== session.tenantId) {
-      setActiveTenantId(session.tenantId);
-    }
-  }, [session.tenantId]);
+  }, [activeTenantId, tenants]);
 
   useEffect(() => {
     if (activeTenantId) {
@@ -82,24 +103,100 @@ export default function CustomerSite({ session, store, navigateTo }: Props) {
     }
   }, [activeTenantId]);
 
-  const tenant = 
-    tenants.find(t => t.id === activeTenantId) ||
-    tenants.find(t => t.id === getUrlTenantId()) ||
-    tenants.find(t => session.tenantId && t.id === session.tenantId) ||
+  useEffect(() => {
+    const urlId = getUrlTenantId();
+    if (urlId && setTenants) {
+      api.getTenants().then(res => {
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setTenants(prev => {
+            const map = new Map(prev.map(t => [t.id, t]));
+            for (const dbT of res.data) {
+              const existing = map.get(dbT.id);
+              const dbCfg = (dbT.config || {}) as any;
+              map.set(dbT.id, {
+                id: dbT.id,
+                name: dbT.name || existing?.name || 'Business',
+                ownerName: dbCfg.ownerName || dbT.users?.[0]?.name || existing?.ownerName || dbT.name,
+                ownerEmail: dbCfg.ownerEmail || dbT.users?.[0]?.email || existing?.ownerEmail || '',
+                ownerPhone: dbCfg.ownerPhone || dbCfg.phone || existing?.ownerPhone || '',
+                subdomain: dbT.subdomain || existing?.subdomain || dbT.id.replace(/^tenant-/, ''),
+                defaultDomain: dbT.defaultDomain || existing?.defaultDomain || `${dbT.slug || dbT.subdomain}.vercel.app`,
+                customDomain: dbT.customDomain || existing?.customDomain,
+                domainStatus: dbT.domainStatus || existing?.domainStatus || 'active',
+                domainVerified: dbT.domainVerified ?? existing?.domainVerified ?? false,
+                lastDomainVerifiedAt: dbT.lastDomainVerifiedAt || existing?.lastDomainVerifiedAt,
+                status: dbT.status || dbCfg.status || existing?.status || 'active',
+                plan: dbT.plan || existing?.plan || 'starter',
+                industries: dbCfg.industries || existing?.industries || ['Electrician'],
+                theme: dbCfg.theme || existing?.theme || 'modern',
+                config: { ...(existing?.config || {}), ...dbCfg },
+                features: dbCfg.features || existing?.features || { crm: true, ai: false, quotation: true, emergencyBooking: true, analytics: false, marketing: false, inventory: false },
+                registeredAt: dbT.createdAt ? new Date(dbT.createdAt).toISOString().split('T')[0] : existing?.registeredAt || new Date().toISOString().split('T')[0]
+              });
+            }
+            return Array.from(map.values());
+          });
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
+  const fallbackTenant: Tenant = {
+    id: activeTenantId || 'tenant_prservices',
+    name: 'prservices',
+    ownerName: 'Business Owner',
+    ownerEmail: 'owner@prservices.com',
+    ownerPhone: '+91 9876543210',
+    subdomain: 'prservices',
+    defaultDomain: 'prservices.vercel.app',
+    status: 'active',
+    plan: 'starter',
+    industries: ['Electrician', 'Plumber'],
+    theme: 'modern',
+    config: {
+      heroTitle: 'Professional Services by prservices',
+      heroSubtitle: 'Expert solutions at your doorstep. Verified and background-checked technicians. Book online today.',
+      primaryColor: '#f97316',
+      secondaryColor: '#2563eb',
+      themeMode: 'light',
+      sections: {
+        announcement: true,
+        hero: true,
+        badges: true,
+        stats: true,
+        services: true,
+        portfolio: true,
+        reviews: true,
+        coverage: true,
+        faq: true
+      }
+    },
+    features: { crm: true, ai: true, quotation: true, emergencyBooking: true, analytics: true, marketing: true, inventory: true },
+    registeredAt: new Date().toISOString()
+  };
+
+  const tenant: Tenant = 
+    findTenant(getUrlTenantId()) ||
+    findTenant(activeTenantId) ||
+    findTenant(session.tenantId) ||
     tenants.find(t => session.email && t.ownerEmail === session.email) ||
     tenants.find(t => session.tenantName && t.name === session.tenantName) ||
-    tenants[0];
-  if (!tenant) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-300">Loading {session.tenantName || 'Site'}...</p>
-      </div>
-    );
-  }
+    tenants[0] ||
+    fallbackTenant;
 
-  const c = tenant.config;
-  const pc = c.primaryColor;
+  // Clean and sync address bar URL to human-friendly slug (e.g. ?tenant=prservices)
+  useEffect(() => {
+    if (tenant && typeof window !== 'undefined') {
+      const cleanSlug = getTenantSlug(tenant);
+      const currentHash = window.location.hash || '';
+      if (currentHash.startsWith('#/site') && (!currentHash.includes(`tenant=${cleanSlug}`) || currentHash.includes('tenant=tenant-'))) {
+        window.history.replaceState(null, '', `#/site?tenant=${cleanSlug}`);
+      }
+    }
+  }, [tenant?.id, tenant?.slug, tenant?.name, tenant?.subdomain]);
+
+  const c = (tenant?.config || {}) as any;
+  const pc = c.primaryColor || '#f97316';
   const sc = c.secondaryColor || '#2563eb';
 
   const getTextColorForBg = (hexColor: string) => {

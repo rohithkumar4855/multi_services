@@ -41,7 +41,7 @@ export const INDUSTRY_PACKS: IndustryPack[] = [
 // ============================================================
 // INITIAL TENANTS
 // ============================================================
-const makeConfig = (pack: typeof INDUSTRY_PACKS[0], overrides: Partial<{ heroTitle: string; heroSubtitle: string; logoText: string; phone: string; email: string; whatsApp: string; gst: string; about: string; city: string; address: string; enableB2bEnquiry: boolean; testimonials: Array<{ id: string; author: string; role: string; text: string; rating: number; service?: string; verified?: boolean }>; seoTitle: string; seoDescription: string; seoKeywords: string; announcementActive: boolean; announcementText: string; navLinks: Array<{ label: string; url: string }>; trustBadgesActive: boolean; }> = {}) => ({
+export const makeConfig = (pack: typeof INDUSTRY_PACKS[0], overrides: Partial<{ heroTitle: string; heroSubtitle: string; logoText: string; phone: string; email: string; whatsApp: string; gst: string; about: string; city: string; address: string; enableB2bEnquiry: boolean; testimonials: Array<{ id: string; author: string; role: string; text: string; rating: number; service?: string; verified?: boolean }>; seoTitle: string; seoDescription: string; seoKeywords: string; announcementActive: boolean; announcementText: string; navLinks: Array<{ label: string; url: string }>; trustBadgesActive: boolean; }> = {}) => ({
   primaryColor: pack.color,
   secondaryColor: pack.color,
   logoText: overrides.logoText || `${pack.icon} ${pack.name} Pro`,
@@ -260,7 +260,7 @@ export const INITIAL_LEADS: Lead[] = [];
 export const INITIAL_COUPONS: Coupon[] = [];
 export const INITIAL_QUOTATIONS: Quotation[] = [];
 export const INITIAL_CAMPAIGNS: Campaign[] = [];
-export const INITIAL_AUDIT_LOGS = [];
+export const INITIAL_AUDIT_LOGS: any[] = [];
 export const INITIAL_TICKETS: SupportTicket[] = [];
 if (typeof window !== 'undefined') {
   localStorage.removeItem('anarav_cached_tenants');
