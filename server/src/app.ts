@@ -1,5 +1,6 @@
+// Backend API Entry Point
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import authRoutes from './routes/auth.routes';
@@ -15,6 +16,7 @@ import websiteRoutes from './routes/website.routes';
 import fileRoutes from './routes/file.routes';
 import notificationRoutes from './routes/notification.routes';
 import auditRoutes from './routes/audit.routes';
+import domainRoutes from './routes/domain.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { logger } from './utils/logger';
 
@@ -23,7 +25,14 @@ const PORT = process.env.PORT || 5000;
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '50mb' }));
+
+// Express JSON parser with rawBody capture for cryptographic webhook validation
+app.use(express.json({
+  limit: '50mb',
+  verify: (req: Request, res: Response, buf: Buffer) => {
+    (req as any).rawBody = buf.toString();
+  }
+}));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Log incoming requests
@@ -46,6 +55,10 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/domains', domainRoutes);
+
+// Public Root Webhook Route for Razorpay: /api/webhooks/razorpay
+app.use('/api/webhooks', paymentRoutes);
 
 // Base Health Check
 app.get('/health', (req, res) => {
@@ -67,4 +80,3 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export default app;
-

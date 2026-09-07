@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 export interface RegisterTenantInput {
+  id?: string;
   name: string;
   ownerName: string;
   ownerEmail: string;
@@ -18,12 +19,53 @@ export interface RegisterTenantInput {
   plan?: string;
   theme?: string;
   config?: any;
+  status?: string;
+  gstNumber?: string | null;
   customDomain?: string;
   ipAddress?: string;
   userAgent?: string;
 }
 
 export class TenantService {
+  /**
+   * Formats a database Tenant record to include frontend compatible fields (subdomain, ownerName, ownerEmail, config, etc.)
+   */
+  static formatTenant(tenant: any) {
+    if (!tenant) return null;
+    const businessInfo = (tenant.businessInfo || {}) as any;
+    const settings = (tenant.settings || {}) as any;
+    const config = settings.config || settings || {};
+
+    return {
+      ...tenant,
+      subdomain: tenant.slug || tenant.subdomain,
+      defaultDomain: tenant.defaultDomain || `${tenant.slug}.vercel.app`,
+      customDomain: tenant.customDomain || null,
+      domainStatus: tenant.domainStatus || 'active',
+      domainVerified: tenant.domainVerified ?? false,
+      lastDomainVerifiedAt: tenant.lastDomainVerifiedAt,
+      ownerName: businessInfo.ownerName || tenant.ownerName || tenant.users?.[0]?.name || tenant.name,
+      ownerEmail: businessInfo.email || tenant.ownerEmail || tenant.users?.[0]?.email || '',
+      ownerPhone: businessInfo.phone || tenant.ownerPhone || tenant.users?.[0]?.phone || '',
+      industries: businessInfo.industries || tenant.industries || [],
+      industryType: businessInfo.industryType || tenant.industryType || 'Home Services',
+      config: {
+        ...config,
+        primaryColor: tenant.primaryColor || config.primaryColor,
+        secondaryColor: tenant.secondaryColor || config.secondaryColor,
+        themeFont: tenant.font || config.themeFont || 'Inter, sans-serif',
+        themeMode: tenant.theme || config.themeMode || 'light',
+        logoText: config.logoText || tenant.name,
+        logoImage: tenant.logo || config.logoImage || '',
+        email: businessInfo.email || tenant.ownerEmail || config.email || '',
+        phone: businessInfo.phone || tenant.ownerPhone || config.phone || '',
+        address: businessInfo.address || config.address || 'Main Road, City Centre',
+        city: businessInfo.city || config.city || 'Nellore, AP',
+        gstNumber: businessInfo.gstNumber || config.gstNumber || ''
+      }
+    };
+  }
+
   /**
    * Generates a collision-safe unique tenant slug.
    * e.g., "ABC Legal Services" -> "abc-legal-services", "abc-legal-services-2"
@@ -56,6 +98,7 @@ export class TenantService {
    */
   static async registerTenant(input: RegisterTenantInput) {
     const {
+      id,
       name,
       ownerName,
       ownerEmail,
@@ -69,6 +112,8 @@ export class TenantService {
       plan = 'starter',
       theme = 'modern',
       config = {},
+      status = 'pending',
+      gstNumber,
       customDomain,
       ipAddress,
       userAgent
@@ -88,7 +133,7 @@ export class TenantService {
     }
 
     const slug = await this.generateUniqueSlug(name);
-    const tenantId = `tenant_${slug.replace(/[^a-z0-9]/g, '_')}`;
+    const tenantId = id || `tenant_${slug.replace(/[^a-z0-9]/g, '_')}`;
     const passwordHash = await bcrypt.hash(password || 'admin123', 10);
 
     const defaultBusinessInfo = {
@@ -99,6 +144,7 @@ export class TenantService {
       address: '100 Business Parkway, Suite 400',
       industryType,
       industries,
+      gstNumber: gstNumber || null,
       tagline: `Premier ${industryType} Solutions`,
       socialLinks: {
         facebook: 'https://facebook.com',
@@ -109,9 +155,9 @@ export class TenantService {
     };
 
     const defaultSettings = {
-      currency: 'USD',
-      currencySymbol: '$',
-      taxRate: 8.5,
+      currency: 'INR',
+      currencySymbol: 'INR',
+      taxRate: 18,
       allowOnlineBooking: true,
       allowOnlinePayments: true,
       paymentGateways: {
@@ -124,6 +170,7 @@ export class TenantService {
         orderAlerts: true,
         paymentAlerts: true
       },
+      config: { ...config, gstNumber: gstNumber || config.gstNumber || null },
       ...config
     };
 
@@ -140,7 +187,7 @@ export class TenantService {
       font,
       theme,
       headerStyle: 'glassmorphism',
-      footerText: `© ${new Date().getFullYear()} ${name}. All rights reserved.`
+      footerText: `(c) ${new Date().getFullYear()} ${name}. All rights reserved.`
     };
 
     // Execute atomic transaction
@@ -153,7 +200,7 @@ export class TenantService {
           slug,
           customDomain: customDomain || null,
           plan,
-          status: 'active',
+          status,
           primaryColor,
           secondaryColor,
           font,
@@ -162,6 +209,43 @@ export class TenantService {
           favicon: `https://api.dicebear.com/7.x/identicon/svg?seed=${slug}`,
           businessInfo: defaultBusinessInfo,
           settings: defaultSettings
+        }
+      });
+
+      // 1.1 Persist into TenantRegistration for complete database synchronization
+      await tx.tenantRegistration.upsert({
+        where: { ownerEmail: cleanEmail },
+        update: {
+          businessName: name,
+          ownerName: ownerName || name,
+          ownerPhone: ownerPhone || '',
+          passwordHash,
+          industryType,
+          industries,
+          primaryColor,
+          secondaryColor,
+          font,
+          plan,
+          status,
+          config: defaultSettings.config,
+          gstNumber: gstNumber || null
+        },
+        create: {
+          id: tenant.id,
+          businessName: name,
+          ownerName: ownerName || name,
+          ownerPhone: ownerPhone || '',
+          ownerEmail: cleanEmail,
+          passwordHash,
+          industryType,
+          industries,
+          primaryColor,
+          secondaryColor,
+          font,
+          plan,
+          status,
+          config: defaultSettings.config,
+          gstNumber: gstNumber || null
         }
       });
 
@@ -211,7 +295,7 @@ export class TenantService {
             hero: {
               headline: `Excellence in ${industryType}`,
               subheadline: `Delivering trusted, premium solutions for all your requirements with prompt delivery and 100% satisfaction guarantee.`,
-              badge: '✨ Verified & Certified Partner',
+              badge: 'Verified & Certified Partner',
               primaryCta: 'Explore Services',
               secondaryCta: 'Shop Catalog'
             },
@@ -335,7 +419,7 @@ export class TenantService {
           description: 'Comprehensive system check, diagnostic testing, and detailed quote assessment.',
           basePrice: 49.00,
           durationMin: 45,
-          icon: '🔍'
+          icon: 'search'
         },
         {
           name: 'Premium Full-Service Package',
@@ -343,7 +427,7 @@ export class TenantService {
           description: 'Complete expert repair, component optimization, replacement, and warranty coverage.',
           basePrice: 129.00,
           durationMin: 90,
-          icon: '⚡'
+          icon: 'zap'
         },
         {
           name: 'Emergency Priority Response',
@@ -351,7 +435,7 @@ export class TenantService {
           description: 'Guaranteed under 60-minute on-site arrival by a senior technician.',
           basePrice: 89.00,
           durationMin: 30,
-          icon: '🚨'
+          icon: 'alert'
         }
       ];
 
@@ -446,6 +530,14 @@ export class TenantService {
       return { tenant, adminUser, website };
     });
 
+    // Automatically initialize Razorpay payment configuration for the new tenant
+    try {
+      const { PaymentGatewayService } = await import('./paymentGateway.service');
+      await PaymentGatewayService.autoInitTenantGateway(result.tenant.id);
+    } catch (err: any) {
+      console.error('Error auto-initializing payment gateway for new tenant:', err.message);
+    }
+
     // Record Audit Log outside transaction
     await AuditService.log({
       tenantId: result.tenant.id,
@@ -477,7 +569,7 @@ export class TenantService {
 
     return {
       token,
-      tenant: result.tenant,
+      tenant: TenantService.formatTenant(result.tenant),
       user: {
         id: result.adminUser.id,
         name: result.adminUser.name,
@@ -529,10 +621,20 @@ export class TenantService {
       });
     }
 
-    // 3. Try custom domain
+    // 3. Try custom domain or default domain
     if (!tenant) {
-      tenant = await prisma.tenant.findUnique({
-        where: { customDomain: clean },
+      tenant = await prisma.tenant.findFirst({
+        where: {
+          OR: [
+            { customDomain: clean },
+            { defaultDomain: clean },
+            {
+              domains: {
+                some: { domain: clean }
+              }
+            }
+          ]
+        },
         include: {
           websites: {
             include: {
@@ -546,14 +648,21 @@ export class TenantService {
       });
     }
 
-    return tenant;
+    return TenantService.formatTenant(tenant);
   }
 
   /**
    * Updates Tenant branding, settings, and website configuration
    */
   static async updateTenantConfig(tenantId: string, data: any, userId?: string) {
-    const existing = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    let existing = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!existing) {
+      // Check if found by slug or registration ID
+      const reg = await prisma.tenantRegistration.findUnique({ where: { id: tenantId } });
+      if (reg) {
+        existing = await prisma.tenant.findFirst({ where: { slug: reg.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-') } });
+      }
+    }
     if (!existing) {
       throw new AppError('Tenant not found', 404);
     }
@@ -568,10 +677,10 @@ export class TenantService {
       favicon,
       businessInfo,
       settings,
+      config,
       customDomain,
       status,
-      plan,
-      config
+      plan
     } = data;
 
     const mergedSettings = { ...((existing.settings as any) || {}), ...(settings || {}), ...(config || {}) };
@@ -579,14 +688,19 @@ export class TenantService {
     console.log("mergedSettings keys:", Object.keys(mergedSettings));
 
     const updated = await prisma.tenant.update({
-      where: { id: tenantId },
+      where: { id: existing.id },
       data: {
         ...(name && { name }),
         ...(primaryColor && { primaryColor }),
+        ...(!primaryColor && config?.primaryColor && { primaryColor: config.primaryColor }),
         ...(secondaryColor && { secondaryColor }),
+        ...(!secondaryColor && config?.secondaryColor && { secondaryColor: config.secondaryColor }),
         ...(font && { font }),
+        ...(!font && config?.themeFont && { font: config.themeFont }),
         ...(theme && { theme }),
+        ...(!theme && config?.themeMode && { theme: config.themeMode }),
         ...(logo !== undefined && { logo }),
+        ...(!logo && config?.logoImage && { logo: config.logoImage }),
         ...(favicon !== undefined && { favicon }),
         ...(businessInfo && { businessInfo: { ...((existing.businessInfo as any) || {}), ...businessInfo } }),
         settings: Object.keys(mergedSettings).length > 0 ? mergedSettings : (existing.settings || {}),
@@ -597,9 +711,9 @@ export class TenantService {
     });
 
     // Also update associated Website branding
-    if (primaryColor || secondaryColor || font || theme) {
+    if (primaryColor || secondaryColor || font || theme || config?.primaryColor || config?.secondaryColor || config?.themeFont || config?.themeMode) {
       await prisma.website.updateMany({
-        where: { tenantId },
+        where: { tenantId: existing.id },
         data: {
           branding: {
             primaryColor: updated.primaryColor,
@@ -611,16 +725,53 @@ export class TenantService {
       });
     }
 
+    // Also update TenantRegistration table so it stays in sync
+    try {
+      const gstNum = data.gstNumber || (data.config as any)?.gstNumber || (existing.businessInfo as any)?.gstNumber || null;
+      await prisma.tenantRegistration.upsert({
+        where: { id: existing.id },
+        update: {
+          ...(name && { businessName: name }),
+          ...(mergedSettings && { config: mergedSettings }),
+          ...(gstNum !== undefined && { gstNumber: gstNum }),
+          ...(status && { status }),
+          ...(plan && { plan }),
+          primaryColor: updated.primaryColor,
+          secondaryColor: updated.secondaryColor,
+          font: updated.font
+        },
+        create: {
+          id: existing.id,
+          businessName: updated.name,
+          ownerName: (updated.businessInfo as any)?.ownerName || updated.name,
+          ownerEmail: (updated.businessInfo as any)?.email || '',
+          ownerPhone: (updated.businessInfo as any)?.phone || '',
+          passwordHash: '',
+          industryType: (updated.businessInfo as any)?.industryType || 'Home Services',
+          industries: (updated.businessInfo as any)?.industries || [],
+          primaryColor: updated.primaryColor,
+          secondaryColor: updated.secondaryColor,
+          font: updated.font,
+          plan: updated.plan,
+          status: updated.status,
+          config: mergedSettings || updated.settings || {},
+          gstNumber: gstNum
+        }
+      });
+    } catch (err) {
+      console.error('Error syncing TenantRegistration:', err);
+    }
+
     await AuditService.log({
-      tenantId,
+      tenantId: existing.id,
       userId,
       action: 'TENANT_CONFIG_UPDATED',
       entityType: 'TENANT',
-      entityId: tenantId,
+      entityId: existing.id,
       oldValue: existing,
       newValue: updated
     });
 
-    return updated;
+    return TenantService.formatTenant(updated);
   }
 }

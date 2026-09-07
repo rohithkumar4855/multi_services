@@ -7,6 +7,7 @@ import { Phone, MessageCircle, ArrowLeft, Moon, Sun, Search, ShoppingBag, MapPin
 import CmsRenderer from './CmsRenderer';
 import { generateThemeTokens } from '../utils/themeEngine';
 import { api } from '../utils/api';
+import { getTenantSlug } from '../utils/domain';
 
 interface Props {
   session: AuthSession;
@@ -44,6 +45,19 @@ export default function CustomerSite(props: Props) {
     return null;
   };
 
+  const findTenant = (idOrSlug: string | null | undefined) => {
+    if (!idOrSlug) return null;
+    const clean = idOrSlug.trim().toLowerCase();
+    return tenants.find(t => 
+      t.id.toLowerCase() === clean ||
+      (t.slug && t.slug.toLowerCase() === clean) ||
+      (t.subdomain && t.subdomain.toLowerCase() === clean) ||
+      (t.customDomain && t.customDomain.toLowerCase() === clean) ||
+      (t.defaultDomain && t.defaultDomain.toLowerCase() === clean) ||
+      (t.name && t.name.toLowerCase() === clean)
+    ) || null;
+  };
+
   const initialTenantId = getUrlTenantId() || session.tenantId || (() => {
     try {
       const saved = sessionStorage.getItem('anarav_site_tenant_id') || localStorage.getItem('anarav_site_tenant_id');
@@ -57,22 +71,17 @@ export default function CustomerSite(props: Props) {
   useEffect(() => {
     const handleUrlTenant = () => {
       const urlTenant = getUrlTenantId();
-      if (urlTenant && urlTenant !== activeTenantId) {
-        setActiveTenantId(urlTenant);
+      if (urlTenant) {
+        const matched = findTenant(urlTenant);
+        if (matched && matched.id !== activeTenantId) {
+          setActiveTenantId(matched.id);
+        }
       }
     };
+    handleUrlTenant();
     window.addEventListener('hashchange', handleUrlTenant);
     return () => window.removeEventListener('hashchange', handleUrlTenant);
-  }, [activeTenantId]);
-
-  useEffect(() => {
-    const urlTenant = getUrlTenantId();
-    if (urlTenant) {
-      setActiveTenantId(urlTenant);
-    } else if (session.tenantId && activeTenantId !== session.tenantId) {
-      setActiveTenantId(session.tenantId);
-    }
-  }, [session.tenantId]);
+  }, [activeTenantId, tenants]);
 
   useEffect(() => {
     if (activeTenantId) {
@@ -381,12 +390,136 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
 
 
 
+  // Public Tenant Payment Gateway State
+  const [publicPaymentGateway, setPublicPaymentGateway] = useState<any>(null);
+
+  useEffect(() => {
+    api.getPublicPaymentConfig(tenant.id).then(res => {
+      if (res && res.data) {
+        setPublicPaymentGateway(res.data);
+      }
+    }).catch(() => {});
+  }, [tenant.id]);
+
+  const loadRazorpaySdk = () => {
+    return new Promise<boolean>((resolve) => {
+      if ((window as any).Razorpay) {
+        return resolve(true);
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleProcessPayment = async () => {
     if (!tempBooking) return;
     setIsProcessingPayment(true);
 
+    // If Razorpay is enabled on the tenant and method is online
+    if (selectedPaymentMethod !== 'cod' && publicPaymentGateway?.enabled) {
+      try {
+        // 1. Create order on server
+        const orderRes = await api.createRazorpayOrder({
+          tenantId: tenant.id,
+          items: [
+            {
+              name: tempBooking.serviceName,
+              price: tempBooking.priceDetails.total,
+              quantity: 1
+            }
+          ],
+          customerDetails: {
+            name: tempBooking.customerName,
+            phone: tempBooking.customerPhone,
+            email: ''
+          },
+          notes: tempBooking.formData?.notes
+        });
+
+        const checkoutData = orderRes?.data;
+        if (checkoutData && checkoutData.razorpayOrderId) {
+          const sdkLoaded = await loadRazorpaySdk();
+
+          if (sdkLoaded && (window as any).Razorpay) {
+            const rzpOptions = {
+              key: checkoutData.keyId,
+              amount: checkoutData.amountInPaisa,
+              currency: checkoutData.currency || 'INR',
+              name: checkoutData.businessName || tenant.name,
+              description: `Booking - ${tempBooking.serviceName}`,
+              order_id: checkoutData.razorpayOrderId,
+              handler: async function (response: any) {
+                try {
+                  // 2. Server-side signature verification
+                  await api.verifyRazorpayPayment({
+                    tenantId: tenant.id,
+                    orderId: checkoutData.orderId,
+                    razorpayOrderId: response.razorpay_order_id,
+                    razorpayPaymentId: response.razorpay_payment_id,
+                    razorpaySignature: response.razorpay_signature,
+                    paymentMethod: selectedPaymentMethod.toUpperCase()
+                  });
+
+                  // 3. Save confirmed booking
+                  const res = await api.createBooking({
+                    ...tempBooking,
+                    tenantId: tenant.id
+                  });
+                  const savedBooking: Booking = (res && res.data) ? {
+                    ...tempBooking,
+                    id: res.data.id || tempBooking.id,
+                    customerId: res.data.customerId || tempBooking.customerId
+                  } : tempBooking;
+
+                  setBookings(prev => [savedBooking, ...prev.filter(b => b.id !== savedBooking.id)]);
+                  setLastBookingId(savedBooking.id);
+                  setBasket([]);
+                  setBasketCoupon('');
+                  setIsProcessingPayment(false);
+                  setPaymentGatewayOpen(false);
+                  setBookingSubmitted(true);
+                  showToast('🎉 Payment verified via Razorpay! Booking confirmed.', 'success');
+                } catch (err: any) {
+                  showToast(err.response?.data?.message || 'Payment verification failed', 'error');
+                  setIsProcessingPayment(false);
+                }
+              },
+              prefill: {
+                name: tempBooking.customerName,
+                contact: tempBooking.customerPhone,
+                email: ''
+              },
+              theme: {
+                color: pc
+              },
+              modal: {
+                ondismiss: function () {
+                  setIsProcessingPayment(false);
+                  showToast('Checkout window closed', 'info');
+                }
+              }
+            };
+
+            const rzp = new (window as any).Razorpay(rzpOptions);
+            rzp.on('payment.failed', function (response: any) {
+              showToast(`Payment Failed: ${response.error.description}`, 'error');
+              setIsProcessingPayment(false);
+            });
+            rzp.open();
+            return;
+          }
+        }
+      } catch (err: any) {
+        console.warn('Razorpay checkout error, falling back to direct booking:', err.message);
+      }
+    }
+
+    // Direct booking / COD fallback
     try {
-      // 1. Save booking directly to PostgreSQL Database
       const res = await api.createBooking({
         ...tempBooking,
         tenantId: tenant.id
@@ -401,14 +534,12 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
       setLastBookingId(savedBooking.id);
       showToast('🎉 Booking confirmed and saved to database!', 'success');
     } catch (err) {
-      console.error('Error saving booking to DB:', err);
-      // Fallback local persistence
       setBookings(prev => [tempBooking, ...prev.filter(b => b.id !== tempBooking.id)]);
       setLastBookingId(tempBooking.id);
       showToast('🎉 Booking confirmed and scheduled!', 'success');
     }
 
-    // 2. Also register lead for notification & CRM
+    // Lead registration
     const exists = leads.some(l => l.phone === tempBooking.customerPhone && l.tenantId === tenant.id);
     if (!exists) {
       const newL = {

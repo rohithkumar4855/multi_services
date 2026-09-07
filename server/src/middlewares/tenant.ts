@@ -68,23 +68,43 @@ export const publicTenantResolverMiddleware = async (
     // 1. Try slug from route param, query param, or header
     let identifier = (req.params.slug || req.params.tenantId || req.query.tenant || req.query.tenantId || req.headers['x-tenant-slug'] || req.headers['x-tenant-id']) as string;
 
-    // 2. Try host/subdomain if no explicit param
-    if (!identifier && req.hostname) {
-      const hostParts = req.hostname.split('.');
-      if (hostParts.length > 2 && hostParts[0] !== 'www' && hostParts[0] !== 'localhost') {
-        identifier = hostParts[0];
-      }
+    // 2. Try host/domain header from Vercel / edge proxy
+    const rawHost = (req.headers['x-forwarded-host'] as string) || (req.headers['host'] as string) || req.hostname || '';
+    const normalizedHost = rawHost.toLowerCase().split(':')[0].trim();
+
+    if (!identifier && normalizedHost && normalizedHost !== 'localhost' && normalizedHost !== '127.0.0.1') {
+      // Check if it matches a custom domain or vercel subdomain directly
+      identifier = normalizedHost;
     }
 
     if (identifier) {
-      const clean = identifier.trim().toLowerCase();
+      const clean = identifier.trim().toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+      
+      // Also extract subdomain if it's tenant-slug.vercel.app or tenant-slug.domain.com
+      const hostParts = clean.split('.');
+      const candidateSlug = (hostParts.length > 2 && hostParts[0] !== 'www') ? hostParts[0] : null;
+
       const tenant = await prisma.tenant.findFirst({
         where: {
           OR: [
+            { customDomain: clean },
+            { defaultDomain: clean },
             { slug: clean },
             { id: identifier },
-            { customDomain: clean }
+            ...(candidateSlug ? [{ slug: candidateSlug }, { defaultDomain: `${candidateSlug}.vercel.app` }] : []),
+            {
+              domains: {
+                some: { domain: clean }
+              }
+            }
           ]
+        },
+        include: {
+          websites: {
+            include: {
+              pages: { where: { isPublished: true }, orderBy: { orderIndex: 'asc' } }
+            }
+          }
         }
       });
 

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import type { AuthSession, Tenant, Service, Worker, Lead, Booking, SupportTicket, TicketReply } from '../types';
 import type { SharedStore } from '../App';
-import { THEME_CONFIGS, INDUSTRY_PACKS } from '../initialData';
+import { THEME_CONFIGS } from '../initialData';
 import { generateThemeTokens, getContrastRatio } from '../utils/themeEngine';
 import { api } from '../utils/api';
 import AnalyticsTab      from './admin/AnalyticsTab';
@@ -11,9 +11,13 @@ import AITab             from './admin/AITab';
 import CustomersTab      from './admin/CustomersTab';
 import QuotationsTab     from './admin/QuotationsTab';
 import WebsiteManagerTab from './admin/WebsiteManagerTab';
+import DomainSettingsTab from './admin/DomainSettingsTab';
+import { PaymentSettingsTab } from './admin/PaymentSettingsTab';
+import { InvoicesLedgerTab } from './admin/InvoicesLedgerTab';
+import { getTenantPublicUrl, getTenantSlug } from '../utils/domain';
 import {
   LayoutDashboard, Globe, Link, Calendar, Wrench, Users, UserCircle,
-  CreditCard, Settings, LogOut, Eye, CheckCircle, XCircle, Tag, Brain, BarChart3, Library, LifeBuoy,
+  CreditCard, Settings, LogOut, Eye, CheckCircle, XCircle, Tag, Brain, BarChart3, LifeBuoy,
   TrendingUp, Clock, Activity, ShieldAlert
 } from 'lucide-react';
 
@@ -37,7 +41,6 @@ type SidebarTab =
   | 'ai'
   | 'analytics'
   | 'system'
-  | 'templates'
   | 'support';
 
 export default function TenantAdmin(props: Props) {
@@ -67,9 +70,9 @@ function TenantAdminContent({ session, store, onLogout, navigateTo, tenant }: Pr
     try {
       const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
       const tabParam = hashParams.get('tab');
-      if (tabParam) return tabParam as SidebarTab;
+      if (tabParam && tabParam !== 'templates') return tabParam as SidebarTab;
       const saved = sessionStorage.getItem('anarav_admin_tab') || localStorage.getItem('anarav_admin_tab');
-      if (saved) return saved as SidebarTab;
+      if (saved && saved !== 'templates') return saved as SidebarTab;
     } catch {}
     return 'dashboard';
   });
@@ -242,28 +245,29 @@ function TenantAdminContent({ session, store, onLogout, navigateTo, tenant }: Pr
   const availableWkrs = myWorkers.filter(w => w.availability === 'available').length;
 
   // ─── Website Builder States ───────────────────────────────
-  const [heroTitle,     setHeroTitle]     = useState(tenant.config.heroTitle);
-  const [heroSubtitle,  setHeroSubtitle]  = useState(tenant.config.heroSubtitle);
-  const [primaryColor,  setPrimaryColor]  = useState(tenant.config.primaryColor);
-  const [secondaryColor, setSecondaryColor] = useState(tenant.config.secondaryColor || '#2563eb');
-  const [selectedTheme, setSelectedTheme] = useState<string>(tenant.theme);
-  const [_themeMode, _setThemeMode] = useState<'light' | 'dark' | 'auto'>(tenant.config.themeMode || 'light');
-  const [_themeFont, _setThemeFont] = useState<string>(tenant.config.themeFont || 'Inter, sans-serif');
-  const [_themeRadius, _setThemeRadius] = useState<'modern' | 'rounded' | 'square'>(tenant.config.themeRadius || 'modern');
-  const [_themeButtonStyle, _setThemeButtonStyle] = useState<'filled' | 'outline' | 'soft'>(tenant.config.themeButtonStyle || 'filled');
+  const tc = tenant?.config || ({} as any);
+  const [heroTitle,     setHeroTitle]     = useState(tc.heroTitle || '');
+  const [heroSubtitle,  setHeroSubtitle]  = useState(tc.heroSubtitle || '');
+  const [primaryColor,  setPrimaryColor]  = useState(tc.primaryColor || '#2563eb');
+  const [secondaryColor, setSecondaryColor] = useState(tc.secondaryColor || '#2563eb');
+  const [selectedTheme, setSelectedTheme] = useState<string>(tenant.theme || 'modern');
+  const [_themeMode, _setThemeMode] = useState<'light' | 'dark' | 'auto'>(tc.themeMode || 'light');
+  const [_themeFont, _setThemeFont] = useState<string>(tc.themeFont || 'Inter, sans-serif');
+  const [_themeRadius, _setThemeRadius] = useState<'modern' | 'rounded' | 'square'>(tc.themeRadius || 'modern');
+  const [_themeButtonStyle, _setThemeButtonStyle] = useState<'filled' | 'outline' | 'soft'>(tc.themeButtonStyle || 'filled');
   const [contrastFailures, setContrastFailures] = useState<Array<{ pair: string; ratio: number; target: number; mode: string }>>([]);
   const [showContrastWarningModal, setShowContrastWarningModal] = useState(false);
-  const [whatsApp,      setWhatsApp]      = useState(tenant.config.whatsAppNumber);
-  const [darkMode,      setDarkMode]      = useState(tenant.config.websiteDarkMode);
-  const [seoTitle,      setSeoTitle]      = useState(tenant.config.seoTitle);
-  const [seoDesc,       setSeoDesc]       = useState(tenant.config.seoDescription);
-  const [sections,      setSections]      = useState(tenant.config.sections);
+  const [whatsApp,      setWhatsApp]      = useState(tc.whatsAppNumber || '');
+  const [darkMode,      setDarkMode]      = useState(tc.websiteDarkMode || false);
+  const [seoTitle,      setSeoTitle]      = useState(tc.seoTitle || '');
+  const [seoDesc,       setSeoDesc]       = useState(tc.seoDescription || '');
+  const [sections,      setSections]      = useState(tc.sections || {});
 
   // Dynamic Web Builder Engine states
-  const [campaignsList, _setCampaignsList] = useState<any[]>(tenant.config.campaigns || []);
-  const [cmsPagesList, _setCmsPagesList] = useState<any[]>(tenant.config.cmsPages || []);
-  const [mediaLibraryList, _setMediaLibraryList] = useState<any[]>(tenant.config.mediaLibrary || []);
-  const [footerWidgetsList, _setFooterWidgetsList] = useState<any[]>(tenant.config.footerWidgets || []);
+  const [campaignsList, _setCampaignsList] = useState<any[]>(tc.campaigns || []);
+  const [cmsPagesList, _setCmsPagesList] = useState<any[]>(tc.cmsPages || []);
+  const [mediaLibraryList, _setMediaLibraryList] = useState<any[]>(tc.mediaLibrary || []);
+  const [footerWidgetsList, _setFooterWidgetsList] = useState<any[]>(tc.footerWidgets || []);
 
   // Selected sub-items & form fields
   const [_selectedCmsPageId, _setSelectedCmsPageId] = useState<string>('home');
@@ -283,18 +287,18 @@ function TenantAdminContent({ session, store, onLogout, navigateTo, tenant }: Pr
   const [_newMediaTags, _setNewMediaTags] = useState('banner');
 
   // New advanced website config local states
-  const [seoKeywords, setSeoKeywords] = useState(tenant.config.seoKeywords || 'local repairs, services');
-  const [announceActive, setAnnounceActive] = useState(tenant.config.announcementActive ?? true);
-  const [announceText, setAnnounceText] = useState(tenant.config.announcementText || '🎉 Special offer: Book online today!');
-  const [navLinks, setNavLinks] = useState(tenant.config.navLinks || []);
-  const [trustBadges, setTrustBadges] = useState(tenant.config.trustBadgesActive ?? true);
-  const [faqs, setFaqs] = useState(tenant.config.faqs || []);
+  const [seoKeywords, setSeoKeywords] = useState(tc.seoKeywords || 'local repairs, services');
+  const [announceActive, setAnnounceActive] = useState(tc.announcementActive ?? true);
+  const [announceText, setAnnounceText] = useState(tc.announcementText || '🎉 Special offer: Book online today!');
+  const [navLinks, setNavLinks] = useState(tc.navLinks || []);
+  const [trustBadges, setTrustBadges] = useState(tc.trustBadgesActive ?? true);
+  const [faqs, setFaqs] = useState(tc.faqs || []);
   const [_newFaqQuestion, _setNewFaqQuestion] = useState('');
   const [_newFaqAnswer, _setNewFaqAnswer] = useState('');
   const [_previewDevice, _setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [homepageSectionsOrder, setHomepageSectionsOrder] = useState<string[]>(
-    tenant.config.homepageSectionsOrder && tenant.config.homepageSectionsOrder.length > 0
-      ? tenant.config.homepageSectionsOrder 
+    tc.homepageSectionsOrder && tc.homepageSectionsOrder.length > 0
+      ? tc.homepageSectionsOrder 
       : ['announcement', 'hero', 'badges', 'stats', 'services', 'portfolio', 'video', 'crew', 'reviews', 'founder', 'coverage', 'faq', 'awards', 'offers', 'about']
   );
   const [_newNavLinkLabel, _setNewNavLinkLabel] = useState('');
@@ -517,40 +521,6 @@ function TenantAdminContent({ session, store, onLogout, navigateTo, tenant }: Pr
         console.error(err);
         showToast('Failed to save documents', 'error');
       });
-  };
-
-  const handleApplyTemplate = (pack: typeof INDUSTRY_PACKS[0]) => {
-    // Generate configurations from industry template
-    const confirm = window.confirm(`Overwrite existing services and website profiles to load the "${pack.name}" pack?`);
-    if (!confirm) return;
-
-    // Load default services
-    const baseServices: Service[] = pack.defaultServices.map((ds, idx) => ({
-      id: `srv-template-${idx}-${Date.now()}`,
-      tenantId: tenant.id,
-      name: ds.name,
-      category: ds.category,
-      description: ds.desc,
-      icon: ds.icon,
-      basePrice: ds.price,
-      durationMin: ds.duration,
-      emergencyAllowed: true,
-      requiredSkills: pack.workerSkills,
-      formFields: [],
-      isActive: true
-    }));
-
-    // Update global state
-    setServices(prev => [...prev.filter(s => s.tenantId !== tenant.id), ...baseServices]);
-    
-    // Update website text configs
-    setHeroTitle(`Professional ${pack.name} Services`);
-    setHeroSubtitle(`Local, certified, background-checked ${pack.name.toLowerCase()} experts ready to serve you inside Nellore.`);
-    setSelectedTheme(pack.theme);
-    setPrimaryColor(pack.color);
-    setSecondaryColor(pack.color);
-
-    showToast(`Loaded "${pack.name}" industry template pack!`, 'success');
   };
 
   const handleAiCopywriter = () => {
@@ -804,7 +774,6 @@ Manager Signature: ________________________
   // Left sidebar menu items
   const sidebarItems: { id: SidebarTab; label: string; icon: React.ElementType }[] = [
     { id: 'dashboard',  label: 'Dashboard',             icon: LayoutDashboard },
-    { id: 'templates',  label: 'Industry Templates',    icon: Library },
     { id: 'setup',      label: 'Business Setup',        icon: Settings },
     { id: 'website',    label: 'Website Builder',       icon: Globe },
     { id: 'services',   label: 'Services & Areas',      icon: Wrench },
@@ -831,7 +800,7 @@ Manager Signature: ________________________
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-white truncate">{tenant.name}</p>
-              <p className="text-[10px] text-slate-500 font-mono truncate">{tenant.subdomain}.servos.in</p>
+              <p className="text-[10px] text-slate-500 font-mono truncate">{tenant.customDomain || tenant.defaultDomain || `${tenant.slug || tenant.subdomain}.vercel.app`}</p>
             </div>
           </div>
           <div className="mt-2 flex items-center justify-between bg-emerald-950/20 border border-emerald-900/30 p-1.5 rounded text-[9px] text-emerald-400 font-bold">
@@ -865,7 +834,11 @@ Manager Signature: ________________________
                 sessionStorage.setItem('anarav_site_tenant_id', tenant.id);
                 localStorage.setItem('anarav_site_tenant_id', tenant.id);
               } catch {}
-              navigateTo(`#/site?tenant=${tenant.id}`);
+              if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                window.open(`${window.location.origin}/#/site?tenant=${getTenantSlug(tenant)}`, '_blank');
+              } else {
+                window.open(getTenantPublicUrl(tenant), '_blank', 'noopener,noreferrer');
+              }
             }} 
             className="w-full btn-secondary py-2 text-[10px] font-bold flex items-center justify-center gap-1"
           >
@@ -1024,42 +997,7 @@ Manager Signature: ________________________
           )}
 
           {/* =======================================================
-              2. TEMPLATES MARKETPLACE
-              ======================================================= */}
-          {tab === 'templates' && (
-            <div className="space-y-6 animate-fadeIn">
-              <div>
-                <h2 className="text-lg font-black text-white font-mono">Industry Templates Marketplace</h2>
-                <p className="text-slate-500 mt-1 text-xs">Load pre-configured industry profiles to deploy instant service rate cards, checklists, customer questions, and worker skills.</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {INDUSTRY_PACKS.map(pack => (
-                  <div key={pack.id} className="admin-card flex flex-col justify-between border-2 border-slate-800 hover:border-slate-700 transition-all">
-                    <div>
-                      <div className="flex justify-between items-start mb-3">
-                        <span className="text-3xl">{pack.icon}</span>
-                        <span className="badge font-mono" style={{ background: pack.color + '20', color: pack.color, border: `1px solid ${pack.color}40` }}>{pack.theme}</span>
-                      </div>
-                      <h3 className="text-sm font-bold text-white">{pack.name} Pack</h3>
-                      <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">{pack.description}</p>
-                      <div className="mt-3 bg-slate-900/60 p-2.5 rounded-lg border border-slate-850 text-[10px]">
-                        <p className="font-bold text-slate-350">Dynamic services included:</p>
-                        <ul className="list-disc list-inside mt-1 text-slate-500 space-y-0.5">
-                          {pack.defaultServices.map((ds, i) => <li key={i}>{ds.name} (Starts ₹{ds.price})</li>)}
-                        </ul>
-                      </div>
-                    </div>
-                    <button onClick={() => handleApplyTemplate(pack)} className="btn-primary w-full py-2.5 text-xs font-bold mt-4" style={{ background: pack.color }}>
-                      Load Industry Template
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* =======================================================
-              3. BUSINESS SETUP
+              2. BUSINESS SETUP
               ======================================================= */}
           {tab === 'setup' && (
             <div className="space-y-6 animate-fadeIn max-w-3xl">
@@ -1727,23 +1665,11 @@ Manager Signature: ________________________
               </div>
 
               {finSubTab === 'payments' && (
-                <div className="admin-card space-y-4 max-w-xl font-sans text-slate-300">
-                  <p className="section-title">Payment Settlement configuration</p>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-850">
-                      <div><p className="font-bold text-white text-xs">Direct UPI QR checkout code</p><p className="text-slate-500 text-[10px]">Auto-generates UPI link on customer checkout.</p></div>
-                      <span className="badge badge-completed">Enabled</span>
-                    </div>
-                    <div className="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-850">
-                      <div><p className="font-bold text-white text-xs">Razorpay payment link checkout</p><p className="text-slate-500 text-[10px]">Generate Razorpay dynamic checkout links.</p></div>
-                      <span className="badge badge-completed">Enabled</span>
-                    </div>
-                    <div className="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-850">
-                      <div><p className="font-bold text-white text-xs">Stripe card Payments gateway</p><p className="text-slate-500 text-[10px]">Collect global card checkouts.</p></div>
-                      <button onClick={() => showToast('Connecting Stripe requires Professional plan.', 'error')} className="text-blue-400 font-bold hover:underline text-xs">Activate Link</button>
-                    </div>
-                  </div>
-                </div>
+                <PaymentSettingsTab
+                  tenantId={tenant.id}
+                  showToast={showToast}
+                  primaryColor={pc}
+                />
               )}
 
               {finSubTab === 'quotations' && (
@@ -1755,27 +1681,13 @@ Manager Signature: ________________________
               )}
 
               {finSubTab === 'invoices' && (
-                <div className="admin-card overflow-hidden p-0 max-w-3xl font-sans">
-                  <table className="data-table text-xs">
-                    <thead>
-                      <tr><th>Invoice Prefix</th><th>Client details</th><th>Date</th><th>Tax Rate (GST)</th><th>Total paid</th><th>Download status</th></tr>
-                    </thead>
-                    <tbody>
-                      {myBookings.filter(b => b.status === 'completed').map(b => (
-                        <tr key={b.id}>
-                          <td className="font-mono text-xs font-bold text-slate-400">INV-2026-{b.id.split('-')[1]}</td>
-                          <td className="font-bold text-slate-200">{b.customerName}</td>
-                          <td className="text-slate-500">{b.scheduledDate}</td>
-                          <td className="font-mono">18% GST</td>
-                          <td className="font-black text-emerald-400">₹{b.priceDetails.total.toLocaleString()}</td>
-                          <td>
-                            <button onClick={() => showToast('Downloading invoice PDF details...')} className="text-xs text-blue-400 font-bold hover:underline">Download PDF</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <InvoicesLedgerTab
+                  tenantId={tenant.id}
+                  tenantName={tenant.name}
+                  tenantGst={tenant.config?.gstNumber || ''}
+                  showToast={showToast}
+                  primaryColor={pc}
+                />
               )}
             </div>
           )}
@@ -1860,7 +1772,7 @@ Manager Signature: ________________________
               13. SYSTEM & INTEGRATIONS
               ======================================================= */}
           {tab === 'system' && (
-            <div className="space-y-6 animate-fadeIn max-w-2xl">
+            <div className="space-y-6 animate-fadeIn max-w-5xl">
               <div className="flex gap-2 border-b border-slate-800 pb-3">
                 {[
                   { id: 'domains', label: 'Domain Settings' },
@@ -1873,29 +1785,12 @@ Manager Signature: ________________________
               </div>
 
               {sysSubTab === 'domains' && (
-                <div className="admin-card space-y-5">
-                  <div>
-                    <p className="section-title">Active Domain configuration</p>
-                    <div className="mt-3 bg-slate-800 rounded-xl p-4 flex items-center justify-between">
-                      <div><p className="text-xs text-slate-500 uppercase font-bold">Default Subdomain</p><p className="text-blue-400 font-mono font-bold mt-1">{tenant.subdomain}.servos.in</p></div>
-                      <span className="badge badge-active">Active</span>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-slate-800 pt-4">
-                    <p className="text-sm font-bold text-white mb-1">Connect Custom Domain</p>
-                    <p className="text-xs text-slate-500 mb-4">Map your domain (e.g. www.mybusiness.com) to your Anarav workspace.</p>
-                    <div><label className="form-label">Custom Domain name</label><input className="form-input" placeholder="www.mybusiness.com" value={customDomain} onChange={e => setCustomDomain(e.target.value)} /></div>
-                    <button onClick={handleVerifyDomain} disabled={!customDomain || dnsStatus === 'checking'} className="btn-primary mt-3">
-                      {dnsStatus === 'checking' ? '⏳ Verifying DNS records...' : '🔗 Verify Domain mapping'}
-                    </button>
-                    {dnsStatus === 'verified' && (
-                      <div className="mt-3 bg-emerald-950 border border-emerald-800 rounded-xl p-3 flex items-center gap-2 text-emerald-400 text-sm font-semibold">
-                        <CheckCircle className="w-5 h-5" /> Domain verification success! SSL certificate provisioned automatically.
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <DomainSettingsTab
+                  tenant={tenant}
+                  setTenants={setTenants}
+                  showToast={showToast}
+                  primaryColor={pc}
+                />
               )}
 
               {sysSubTab === 'integrations' && (
@@ -2297,12 +2192,12 @@ Manager Signature: ________________________
                   <p className="text-sm font-bold text-white font-sans">Your website is LIVE!</p>
                   <p className="text-[11px] text-slate-400 mt-1">Public address:</p>
                   <a 
-                    href={`#/site?tenant=${tenant.id}`} 
+                    href={getTenantPublicUrl(tenant)} 
                     target="_blank" 
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="text-xs text-blue-400 font-mono font-bold hover:underline block mt-1"
                   >
-                    {tenant.subdomain}.servos.in
+                    {tenant.customDomain || tenant.defaultDomain || `${tenant.slug || tenant.subdomain}.vercel.app`}
                   </a>
                 </div>
                 <div className="flex justify-center bg-white p-2 rounded-xl w-24 h-24 mx-auto border border-slate-200">
@@ -2325,9 +2220,9 @@ Manager Signature: ________________________
               </button>
               {launchStep === 4 && (
                 <a 
-                  href={`#/site?tenant=${tenant.id}`} 
+                  href={getTenantPublicUrl(tenant)} 
                   target="_blank" 
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="btn-primary py-2 px-4 font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1 font-sans"
                 >
                   Visit Live Site ➔

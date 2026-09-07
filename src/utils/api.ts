@@ -1,7 +1,7 @@
 // @ts-nocheck
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? '/api' : 'http://localhost:5000/api');
 
 const client = axios.create({
   baseURL: API_BASE,
@@ -180,13 +180,69 @@ export const api = {
     return res.data;
   },
 
-  // ── Payments ──────────────────────────────────────
-  processPayment: async (paymentData) => {
+  // ── Payments & Razorpay Gateway ──────────────────────────────────────
+  processPayment: async (paymentData: any) => {
     const res = await client.post('/payments/process', paymentData);
     return res.data;
   },
   getPayments: async () => {
     const res = await client.get('/payments');
+    return res.data;
+  },
+  getPaymentGatewayConfig: async (provider: string = 'razorpay') => {
+    const res = await client.get(`/payments/config?provider=${provider}`);
+    return res.data;
+  },
+  testRazorpayConnection: async (data: { keyId: string; keySecret: string; mode?: string }) => {
+    const res = await client.post('/payments/razorpay/test-connection', data);
+    return res.data;
+  },
+  connectRazorpayGateway: async (data: {
+    mode: 'test' | 'live';
+    keyId: string;
+    keySecret: string;
+    webhookSecret?: string;
+    accountType?: 'standard' | 'route';
+    accountId?: string;
+  }) => {
+    const res = await client.post('/payments/razorpay/connect', data);
+    return res.data;
+  },
+  switchPaymentGatewayMode: async (mode: 'test' | 'live') => {
+    const res = await client.put('/payments/razorpay/mode', { mode });
+    return res.data;
+  },
+  togglePaymentGateway: async (enabled: boolean) => {
+    const res = await client.put('/payments/razorpay/toggle', { enabled });
+    return res.data;
+  },
+  getPaymentStats: async () => {
+    const res = await client.get('/payments/stats');
+    return res.data;
+  },
+  getInvoicesLedger: async (params?: {
+    search?: string;
+    status?: string;
+    paymentMethod?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const query = new URLSearchParams(params as any).toString();
+    const res = await client.get(`/payments/invoices${query ? `?${query}` : ''}`);
+    return res.data;
+  },
+  createRazorpayOrder: async (data: any) => {
+    const res = await client.post('/payments/razorpay/create-order', data);
+    return res.data;
+  },
+  verifyRazorpayPayment: async (data: any) => {
+    const res = await client.post('/payments/razorpay/verify', data);
+    return res.data;
+  },
+  getPublicPaymentConfig: async (tenantId?: string) => {
+    const res = await client.get(`/payments/public-config${tenantId ? `?tenantId=${tenantId}` : ''}`);
     return res.data;
   },
 
@@ -275,6 +331,28 @@ export const api = {
   },
   deleteLead: async (id: string) => {
     const res = await client.delete(`/leads/${id}`);
+    return res.data;
+  },
+
+  // ── Custom Domains & Vercel Mapping ───────────────
+  getDomainStatus: async (tenantId: string) => {
+    const res = await client.get(`/domains/status?tenantId=${encodeURIComponent(tenantId)}`);
+    return res.data;
+  },
+  addDomain: async (tenantId: string, domain: string) => {
+    const res = await client.post('/domains/add', { tenantId, domain });
+    return res.data;
+  },
+  verifyDomain: async (tenantId: string, domain: string) => {
+    const res = await client.post('/domains/verify', { tenantId, domain });
+    return res.data;
+  },
+  removeDomain: async (tenantId: string, domain?: string) => {
+    const res = await client.delete('/domains/remove', { data: { tenantId, domain } });
+    return res.data;
+  },
+  resolveDomain: async (domain: string) => {
+    const res = await client.get(`/domains/resolve?domain=${encodeURIComponent(domain)}`);
     return res.data;
   }
 };

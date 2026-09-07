@@ -65,7 +65,15 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 // ── App root ────────────────────────────────────────────────
 export default function App() {
   // ── Router ──
-  const [route, setRoute] = useState<string>(window.location.hash || ROUTE_LANDING);
+  const [route, setRoute] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname.toLowerCase();
+      if (host && host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('app.') && !window.location.hash) {
+        return ROUTE_SITE;
+      }
+    }
+    return window.location.hash || ROUTE_LANDING;
+  });
 
   // ── Auth session (persisted in sessionStorage) ──
   const [session, setSession] = useState<AuthSession>(() => {
@@ -165,6 +173,11 @@ export default function App() {
               ownerEmail: mergedCfg.ownerEmail || dbT.users?.[0]?.email || existing?.ownerEmail || '',
               ownerPhone: mergedCfg.ownerPhone || mergedCfg.phone || existing?.ownerPhone || '',
               subdomain: dbT.subdomain || existing?.subdomain || dbT.id.replace(/^tenant-/, ''),
+              defaultDomain: dbT.defaultDomain || existing?.defaultDomain || `${dbT.slug || dbT.subdomain}.vercel.app`,
+              customDomain: dbT.customDomain || existing?.customDomain,
+              domainStatus: dbT.domainStatus || existing?.domainStatus || 'active',
+              domainVerified: dbT.domainVerified ?? existing?.domainVerified ?? false,
+              lastDomainVerifiedAt: dbT.lastDomainVerifiedAt || existing?.lastDomainVerifiedAt,
               status: dbT.status || mergedCfg.status || existing?.status || 'active',
               plan: dbT.plan || existing?.plan || 'starter',
               industries: mergedCfg.industries || existing?.industries || ['Electrician'],
@@ -296,7 +309,13 @@ export default function App() {
 
   // ── Hash routing ──
   useEffect(() => {
-    const onHash = () => { setRoute(window.location.hash || ROUTE_LANDING); window.scrollTo(0, 0); };
+    const onHash = () => {
+      const h = window.location.hash || ROUTE_LANDING;
+      setRoute(h);
+      if (h === ROUTE_LANDING || h === ROUTE_SUPERADMIN || h === ROUTE_ADMIN || h === ROUTE_SITE || h === '') {
+        window.scrollTo(0, 0);
+      }
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -304,7 +323,9 @@ export default function App() {
   const navigateTo = (hash: string) => {
     window.location.hash = hash;
     setRoute(hash);
-    window.scrollTo(0, 0);
+    if (hash === ROUTE_LANDING || hash === ROUTE_SUPERADMIN || hash === ROUTE_ADMIN || hash === ROUTE_SITE || hash === '') {
+      window.scrollTo(0, 0);
+    }
   };
 
   // ── Auth helpers ──
