@@ -12,6 +12,8 @@ import CustomersTab      from './admin/CustomersTab';
 import QuotationsTab     from './admin/QuotationsTab';
 import WebsiteManagerTab from './admin/WebsiteManagerTab';
 import DomainSettingsTab from './admin/DomainSettingsTab';
+import { PaymentSettingsTab } from './admin/PaymentSettingsTab';
+import { InvoicesLedgerTab } from './admin/InvoicesLedgerTab';
 import { getTenantPublicUrl, getTenantSlug } from '../utils/domain';
 import {
   LayoutDashboard, Globe, Link, Calendar, Wrench, Users, UserCircle,
@@ -243,6 +245,7 @@ function TenantAdminContent({ session, store, onLogout, navigateTo, tenant }: Pr
   const availableWkrs = myWorkers.filter(w => w.availability === 'available').length;
 
   // ─── Website Builder States ───────────────────────────────
+  const tc = tenant?.config || ({} as any);
   const [heroTitle,     setHeroTitle]     = useState(tc.heroTitle || '');
   const [heroSubtitle,  setHeroSubtitle]  = useState(tc.heroSubtitle || '');
   const [primaryColor,  setPrimaryColor]  = useState(tc.primaryColor || '#2563eb');
@@ -1662,23 +1665,11 @@ Manager Signature: ________________________
               </div>
 
               {finSubTab === 'payments' && (
-                <div className="admin-card space-y-4 max-w-xl font-sans text-slate-300">
-                  <p className="section-title">Payment Settlement configuration</p>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-850">
-                      <div><p className="font-bold text-white text-xs">Direct UPI QR checkout code</p><p className="text-slate-500 text-[10px]">Auto-generates UPI link on customer checkout.</p></div>
-                      <span className="badge badge-completed">Enabled</span>
-                    </div>
-                    <div className="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-850">
-                      <div><p className="font-bold text-white text-xs">Razorpay payment link checkout</p><p className="text-slate-500 text-[10px]">Generate Razorpay dynamic checkout links.</p></div>
-                      <span className="badge badge-completed">Enabled</span>
-                    </div>
-                    <div className="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-850">
-                      <div><p className="font-bold text-white text-xs">Stripe card Payments gateway</p><p className="text-slate-500 text-[10px]">Collect global card checkouts.</p></div>
-                      <button onClick={() => showToast('Connecting Stripe requires Professional plan.', 'error')} className="text-blue-400 font-bold hover:underline text-xs">Activate Link</button>
-                    </div>
-                  </div>
-                </div>
+                <PaymentSettingsTab
+                  tenantId={tenant.id}
+                  showToast={showToast}
+                  primaryColor={pc}
+                />
               )}
 
               {finSubTab === 'quotations' && (
@@ -1690,27 +1681,13 @@ Manager Signature: ________________________
               )}
 
               {finSubTab === 'invoices' && (
-                <div className="admin-card overflow-hidden p-0 max-w-3xl font-sans">
-                  <table className="data-table text-xs">
-                    <thead>
-                      <tr><th>Invoice Prefix</th><th>Client details</th><th>Date</th><th>Tax Rate (GST)</th><th>Total paid</th><th>Download status</th></tr>
-                    </thead>
-                    <tbody>
-                      {myBookings.filter(b => b.status === 'completed').map(b => (
-                        <tr key={b.id}>
-                          <td className="font-mono text-xs font-bold text-slate-400">INV-2026-{b.id.split('-')[1]}</td>
-                          <td className="font-bold text-slate-200">{b.customerName}</td>
-                          <td className="text-slate-500">{b.scheduledDate}</td>
-                          <td className="font-mono">18% GST</td>
-                          <td className="font-black text-emerald-400">₹{b.priceDetails.total.toLocaleString()}</td>
-                          <td>
-                            <button onClick={() => showToast('Downloading invoice PDF details...')} className="text-xs text-blue-400 font-bold hover:underline">Download PDF</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <InvoicesLedgerTab
+                  tenantId={tenant.id}
+                  tenantName={tenant.name}
+                  tenantGst={tenant.config?.gstNumber || ''}
+                  showToast={showToast}
+                  primaryColor={pc}
+                />
               )}
             </div>
           )}

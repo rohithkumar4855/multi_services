@@ -4,7 +4,7 @@ import { api } from '../../utils/api';
 import { getTenantPublicUrl, getTenantVercelDomain, getTenantSlug, normalizeDomain, isValidDomainFormat } from '../../utils/domain';
 import {
   Globe, CheckCircle2, AlertCircle, Clock, Copy, ExternalLink,
-  ShieldCheck, Trash2, RefreshCw, Server, Check, ArrowRight
+  ShieldCheck, Trash2, RefreshCw, Server, Check
 } from 'lucide-react';
 
 interface Props {

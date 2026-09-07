@@ -117,7 +117,7 @@ export default function SuperAdminDashboard({ session, store, onLogout, navigate
               <Shield className="w-4 h-4 text-white" />
             </div>
             <div>
-              <span className="text-sm font-black text-white">Anarav OS</span>
+              <span className="text-sm font-bold text-white tracking-tight">AevonOS</span>
               <span className="text-[10px] text-slate-500 ml-2 font-mono">/ Operator console</span>
             </div>
           </div>

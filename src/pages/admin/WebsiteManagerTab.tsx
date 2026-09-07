@@ -1696,24 +1696,44 @@ function MiniSitePreview({
                   <label style={{ display: 'block', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', marginBottom: '4px' }}>
                     Create Password
                   </label>
-                  <input 
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="At least 6 characters"
-                    value={authPassword}
-                    onChange={e => setAuthPassword(e.target.value)}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '9px 12px',
-                      borderRadius: '10px',
-                      background: '#020617',
-                      border: '1px solid #334155',
-                      color: '#fff',
-                      fontSize: '12px',
-                      outline: 'none'
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type={showAuthPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      placeholder="At least 6 characters"
+                      value={authPassword}
+                      onChange={e => setAuthPassword(e.target.value)}
+                      style={{
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        padding: '9px 38px 9px 12px',
+                        borderRadius: '10px',
+                        background: '#020617',
+                        border: '1px solid #334155',
+                        color: '#fff',
+                        fontSize: '12px',
+                        outline: 'none'
+                      }}
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowAuthPassword(v => !v)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        fontSize: '13px'
+                      }}
+                      aria-label={showAuthPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showAuthPassword ? '👁️' : '🙈'}
+                    </button>
+                  </div>
                 </div>
 
                 <div>

@@ -309,7 +309,13 @@ export default function App() {
 
   // ── Hash routing ──
   useEffect(() => {
-    const onHash = () => { setRoute(window.location.hash || ROUTE_LANDING); window.scrollTo(0, 0); };
+    const onHash = () => {
+      const h = window.location.hash || ROUTE_LANDING;
+      setRoute(h);
+      if (h === ROUTE_LANDING || h === ROUTE_SUPERADMIN || h === ROUTE_ADMIN || h === ROUTE_SITE || h === '') {
+        window.scrollTo(0, 0);
+      }
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -317,7 +323,9 @@ export default function App() {
   const navigateTo = (hash: string) => {
     window.location.hash = hash;
     setRoute(hash);
-    window.scrollTo(0, 0);
+    if (hash === ROUTE_LANDING || hash === ROUTE_SUPERADMIN || hash === ROUTE_ADMIN || hash === ROUTE_SITE || hash === '') {
+      window.scrollTo(0, 0);
+    }
   };
 
   // ── Auth helpers ──

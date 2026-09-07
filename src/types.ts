@@ -219,6 +219,7 @@ export interface Tenant {
   ownerEmail: string;
   ownerPhone: string;
   subdomain: string;
+  slug?: string;
   defaultDomain?: string;
   customDomain?: string;
   domainStatus?: 'active' | 'pending' | 'failed';

@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 
 async function seedRealData() {
-  console.log('🧹 Purging all old/demo/test data from database...');
+  console.log(' Purging all old/demo/test data from database...');
 
   // Purge all existing tables safely in correct dependency order
   await prisma.auditLog.deleteMany();
@@ -23,7 +23,7 @@ async function seedRealData() {
   await prisma.user.deleteMany();
   await prisma.tenant.deleteMany();
 
-  console.log('🌱 Seeding production-ready SaaS data with realistic businesses...');
+  console.log(' Seeding production-ready SaaS data with realistic businesses...');
 
   const passwordHashAdmin = await bcrypt.hash('admin123', 10);
   const passwordHashBusiness = await bcrypt.hash('business123', 10);
@@ -42,7 +42,7 @@ async function seedRealData() {
     }
   });
 
-  console.log('✓ Super Admin created: admin@servos.in (pass: admin123)');
+  console.log(' Super Admin created: admin@servos.in (pass: admin123)');
 
   // 2. TENANT 1: VoltPro Electrical & Energy
   const tenant1 = await prisma.tenant.create({
@@ -124,7 +124,7 @@ async function seedRealData() {
         hero: {
           headline: 'Next-Gen Power & Smart Energy Infrastructure',
           subheadline: 'Certified Master Electricians delivering enterprise-grade electrical installations, smart automation, and renewable energy integrations.',
-          badge: '⚡ ISO 9001:2015 & IEEE Certified Engineers',
+          badge: ' ISO 9001:2015 & IEEE Certified Engineers',
           primaryCta: 'Book Service',
           secondaryCta: 'Browse Products'
         },
@@ -234,7 +234,7 @@ async function seedRealData() {
       description: 'Centralized smart panel, app configuration, voice assistants, and automated lighting circuits.',
       basePrice: 180.00,
       durationMin: 120,
-      icon: '🏠',
+      icon: '',
       isActive: true
     }
   });
@@ -247,7 +247,7 @@ async function seedRealData() {
       description: 'Infrared thermal imaging, load balance analysis, and MCB breaker safety testing.',
       basePrice: 95.00,
       durationMin: 60,
-      icon: '🔍',
+      icon: '',
       isActive: true
     }
   });
@@ -260,7 +260,7 @@ async function seedRealData() {
       description: 'Dedicated 240V 40A/50A line installation with weatherproof exterior enclosure and surge bypass.',
       basePrice: 350.00,
       durationMin: 180,
-      icon: '⚡',
+      icon: '',
       isActive: true
     }
   });
@@ -393,7 +393,7 @@ async function seedRealData() {
     }
   });
 
-  console.log('✓ Tenant 1 (VoltPro) seeded with real catalog, orders, and payments.');
+  console.log(' Tenant 1 (VoltPro) seeded with real catalog, orders, and payments.');
 
   // 3. TENANT 2: ApexCare Health & Senior Wellness
   const tenant2 = await prisma.tenant.create({
@@ -475,7 +475,7 @@ async function seedRealData() {
         hero: {
           headline: 'Compassionate, Certified Healthcare at Home',
           subheadline: 'Connecting families with background-verified registered nurses, licensed physiotherapists, and specialized elder care assistants.',
-          badge: '🩺 NABH Certified & Government Licensed',
+          badge: ' NABH Certified & Government Licensed',
           primaryCta: 'Request Nursing Care',
           secondaryCta: 'Medical Store'
         },
@@ -585,7 +585,7 @@ async function seedRealData() {
       description: 'Comprehensive vital monitoring, IV administration, catheter care, and wound dressing by certified nurses.',
       basePrice: 120.00,
       durationMin: 480,
-      icon: '🩺',
+      icon: '',
       isActive: true
     }
   });
@@ -598,7 +598,7 @@ async function seedRealData() {
       description: 'Custom mobility exercises, joint rehabilitation, and electrotherapy pain management.',
       basePrice: 65.00,
       durationMin: 60,
-      icon: '🏃',
+      icon: '',
       isActive: true
     }
   });
@@ -668,7 +668,7 @@ async function seedRealData() {
     }
   });
 
-  console.log('✓ Tenant 2 (ApexCare) seeded with real catalog, orders, and payments.');
+  console.log(' Tenant 2 (ApexCare) seeded with real catalog, orders, and payments.');
 
   // 4. TENANT 3: Nexus Tech & CCTV Systems
   const tenant3 = await prisma.tenant.create({
@@ -750,7 +750,7 @@ async function seedRealData() {
         hero: {
           headline: 'Enterprise 4K Security & Smart Access Control',
           subheadline: 'Protecting your commercial facilities, warehouses, and homes with AI-powered cameras, license plate recognition, and encrypted cloud backups.',
-          badge: '🛡️ NDAA Compliant & 3-Year Hardware Warranty',
+          badge: ' NDAA Compliant & 3-Year Hardware Warranty',
           primaryCta: 'Request System Quote',
           secondaryCta: 'Explore Hardware'
         },
@@ -837,7 +837,7 @@ async function seedRealData() {
       description: '4-camera high definition installation with concealed Cat6 wiring, POE switch, and remote smartphone live view setup.',
       basePrice: 240.00,
       durationMin: 180,
-      icon: '📹',
+      icon: '',
       isActive: true
     }
   });
@@ -920,7 +920,7 @@ async function seedRealData() {
     }
   });
 
-  console.log('✓ Tenant 3 (Nexus Tech) seeded with real catalog, orders, and payments.');
+  console.log(' Tenant 3 (Nexus Tech) seeded with real catalog, orders, and payments.');
 
   // Create Subscriptions for all tenants
   const nextYear = new Date();
@@ -974,20 +974,20 @@ async function seedRealData() {
   }
 
   console.log('\n======================================================');
-  console.log('🎉 REAL PRODUCTION DATA SEEDING COMPLETED SUCCESSFULLY!');
+  console.log(' REAL PRODUCTION DATA SEEDING COMPLETED SUCCESSFULLY!');
   console.log('======================================================');
   console.log('\nAccess Credentials:');
-  console.log('👑 Super Admin: admin@servos.in / admin123');
-  console.log('🏢 Tenant 1 (VoltPro): vikram@voltpro.in / business123 (Site: voltpro)');
-  console.log('🏢 Tenant 2 (ApexCare): sunita@apexcare.in / business123 (Site: apexcare)');
-  console.log('🏢 Tenant 3 (NexusTech): arjun@nexustech.in / business123 (Site: nexustech)');
-  console.log('👤 Customer: ananya.rao@gmail.com / customer123');
+  console.log(' Super Admin: admin@servos.in / admin123');
+  console.log(' Tenant 1 (VoltPro): vikram@voltpro.in / business123 (Site: voltpro)');
+  console.log(' Tenant 2 (ApexCare): sunita@apexcare.in / business123 (Site: apexcare)');
+  console.log(' Tenant 3 (NexusTech): arjun@nexustech.in / business123 (Site: nexustech)');
+  console.log(' Customer: ananya.rao@gmail.com / customer123');
   console.log('======================================================\n');
 }
 
 seedRealData()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error('❌ Seeding failed:', err);
+    console.error(' Seeding failed:', err);
     process.exit(1);
   });

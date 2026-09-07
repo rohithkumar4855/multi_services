@@ -174,34 +174,6 @@ export default function CmsRenderer({
     }, 50);
   };
 
-  /* Resolve page or isolated section based on activePageSlug */
-  const isIsolatedSection = activePageSlug !== 'home' && activePageSlug !== 'hero' && Boolean(activePageSlug);
-
-  const getSectionMetadata = (slug: string) => {
-    switch (slug) {
-      case 'services':
-        return { title: 'Our Services Catalogue', icon: '🛠️', desc: 'Browse, filter, and book all verified home services in your area' };
-      case 'offers':
-        return { title: 'Special Offers & Promotions', icon: '🔥', desc: 'Limited-time deals, discount coupon codes, and exclusive packages' };
-      case 'team':
-        return { title: 'Our Verified Team & Specialists', icon: '👥', desc: 'Meet our trained, Aadhaar-verified, and background-checked technicians' };
-      case 'gallery':
-        return { title: 'Project Transformation Gallery', icon: '📸', desc: 'Explore our latest verified project executions and before & after highlights' };
-      case 'reviews':
-      case 'testimonials':
-        return { title: 'Customer Ratings & Reviews', icon: '⭐', desc: 'Verified reviews and feedback from happy customers across your city' };
-      case 'faqs':
-      case 'faq':
-        return { title: 'Frequently Asked Questions', icon: '❓', desc: 'Instant answers to pricing, booking, warranties, and service details' };
-      case 'coverage':
-      case 'contact':
-      case 'map':
-        return { title: 'Service Coverage & Contact Us', icon: '📍', desc: 'Direct contact details, operational hours, and serviceable locations' };
-      default:
-        return { title: 'Section', icon: '📄', desc: '' };
-    }
-  };
-
   const getActiveComponents = () => {
     // Check if custom page is configured
     const customPage = (c.cmsPages || []).find(p => p.slug === activePageSlug);
@@ -263,60 +235,32 @@ export default function CmsRenderer({
   };
 
   const activeComponents = getActiveComponents();
-  const sectionMeta = getSectionMetadata(activePageSlug);
 
   return (
     <>
-      {/* Isolated Section Header Breadcrumb Banner */}
-      {isIsolatedSection && (
+      {/* Top Left Back Navigation Button for Sub-pages */}
+      {activePageSlug !== 'home' && activePageSlug !== 'hero' && (
         <div 
-          className="border-b py-8 px-4 sm:px-6 relative transition-all animate-fadeIn"
-          style={{ 
-            backgroundColor: localDark ? '#0b1120' : '#f1f5f9',
-            borderColor: 'var(--color-border)' 
-          }}
+          className="px-4 sm:px-6 pt-6 pb-2 transition-colors"
+          style={{ backgroundColor: bg0 }}
         >
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1 text-left">
-              <div className="flex items-center gap-2 text-xs font-bold" style={{ color: textMuted }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePageSlug('home');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="hover:underline flex items-center gap-1"
-                  style={{ color: pc }}
-                >
-                  🏠 Home
-                </button>
-                <span>/</span>
-                <span className="capitalize" style={{ color: textPrimary }}>{activePageSlug}</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black flex items-center gap-2" style={{ color: textPrimary }}>
-                <span>{sectionMeta.icon}</span> <span>{sectionMeta.title}</span>
-              </h1>
-              {sectionMeta.desc && (
-                <p className="text-xs sm:text-sm max-w-2xl" style={{ color: textMuted }}>
-                  {sectionMeta.desc}
-                </p>
-              )}
-            </div>
-
+          <div className="max-w-7xl mx-auto flex items-center justify-start">
             <button
               type="button"
               onClick={() => {
                 setActivePageSlug('home');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:scale-105 shadow-sm shrink-0"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105 shadow-sm border cursor-pointer group"
               style={{
-                borderColor: pc,
-                color: pc,
-                background: `${pc}15`
+                borderColor: `${pc}40`,
+                color: localDark ? '#e2e8f0' : '#1e293b',
+                backgroundColor: localDark ? '#1e293b' : '#ffffff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
               }}
             >
-              ← Back to Full Homepage
+              <span className="text-sm group-hover:-translate-x-0.5 transition-transform" style={{ color: pc }}>←</span>
+              <span>Back to Home</span>
             </button>
           </div>
         </div>
@@ -578,12 +522,12 @@ export default function CmsRenderer({
                   }
                 }}
               >
-                <div className={`max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-${Math.min(items.length, 6)} gap-4 sm:gap-6 text-center`}>
+                <div className="max-w-7xl mx-auto grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-6 text-center items-center">
                   {items.map((stat: any, i: number) => (
                     <div key={i} className="flex flex-col items-center gap-1">
-                      {stat.icon && <span className="text-2xl">{stat.icon}</span>}
-                      <span className="text-xl sm:text-2xl font-black leading-none" style={{ color: stat.color }}>{stat.value}</span>
-                      <span className="text-[10px] text-slate-400 font-medium leading-tight">{stat.sub}</span>
+                      {stat.icon && <span className="text-xl sm:text-2xl">{stat.icon}</span>}
+                      <span className="text-lg sm:text-xl md:text-2xl font-black leading-none" style={{ color: stat.color }}>{stat.value}</span>
+                      <span className="text-[10px] sm:text-xs text-slate-400 font-medium leading-tight whitespace-nowrap">{stat.sub}</span>
                     </div>
                   ))}
                 </div>
@@ -607,7 +551,7 @@ export default function CmsRenderer({
               : (isServicesPage ? myServices : homeCards);
 
             return (
-              <section key={comp.id} id="services" className="py-20 px-4 sm:px-6" style={{ backgroundColor: bg0 }}>
+              <section key={comp.id} id="services" className={`${isServicesPage ? "pt-4 pb-20" : "py-20"} px-4 sm:px-6`} style={{ backgroundColor: bg0 }}>
                 <div className="max-w-7xl mx-auto">
 
                   {/* Header */}
@@ -621,19 +565,6 @@ export default function CmsRenderer({
                         ? "Browse our full range of certified services, verified technicians & upfront pricing"
                         : "Solutions for every corner of your home, delivered by verified professionals"}
                     </p>
-                    {isServicesPage && (
-                      <div className="mt-4">
-                        <button
-                          onClick={() => {
-                            setActivePageSlug('home');
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-slate-400 hover:text-white bg-slate-850 border border-slate-750 transition-colors"
-                        >
-                          ← Back to Homepage
-                        </button>
-                      </div>
-                    )}
                   </div>
 
                   {/* Search & Filter */}
@@ -832,7 +763,7 @@ export default function CmsRenderer({
                     )}
                   </div>
 
-                  <div className={`grid grid-cols-1 sm:grid-cols-${Math.min(stepsList.length, 3)} gap-8 relative`}>
+                  <div className={`grid grid-cols-1 ${stepsList.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-8 relative`}>
                     {/* Connecting line (desktop) */}
                     {stepsList.length > 1 && (
                       <div className="hidden sm:block absolute top-12 left-[22%] right-[22%] h-0.5"

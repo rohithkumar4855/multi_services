@@ -180,13 +180,69 @@ export const api = {
     return res.data;
   },
 
-  // ── Payments ──────────────────────────────────────
-  processPayment: async (paymentData) => {
+  // ── Payments & Razorpay Gateway ──────────────────────────────────────
+  processPayment: async (paymentData: any) => {
     const res = await client.post('/payments/process', paymentData);
     return res.data;
   },
   getPayments: async () => {
     const res = await client.get('/payments');
+    return res.data;
+  },
+  getPaymentGatewayConfig: async (provider: string = 'razorpay') => {
+    const res = await client.get(`/payments/config?provider=${provider}`);
+    return res.data;
+  },
+  testRazorpayConnection: async (data: { keyId: string; keySecret: string; mode?: string }) => {
+    const res = await client.post('/payments/razorpay/test-connection', data);
+    return res.data;
+  },
+  connectRazorpayGateway: async (data: {
+    mode: 'test' | 'live';
+    keyId: string;
+    keySecret: string;
+    webhookSecret?: string;
+    accountType?: 'standard' | 'route';
+    accountId?: string;
+  }) => {
+    const res = await client.post('/payments/razorpay/connect', data);
+    return res.data;
+  },
+  switchPaymentGatewayMode: async (mode: 'test' | 'live') => {
+    const res = await client.put('/payments/razorpay/mode', { mode });
+    return res.data;
+  },
+  togglePaymentGateway: async (enabled: boolean) => {
+    const res = await client.put('/payments/razorpay/toggle', { enabled });
+    return res.data;
+  },
+  getPaymentStats: async () => {
+    const res = await client.get('/payments/stats');
+    return res.data;
+  },
+  getInvoicesLedger: async (params?: {
+    search?: string;
+    status?: string;
+    paymentMethod?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const query = new URLSearchParams(params as any).toString();
+    const res = await client.get(`/payments/invoices${query ? `?${query}` : ''}`);
+    return res.data;
+  },
+  createRazorpayOrder: async (data: any) => {
+    const res = await client.post('/payments/razorpay/create-order', data);
+    return res.data;
+  },
+  verifyRazorpayPayment: async (data: any) => {
+    const res = await client.post('/payments/razorpay/verify', data);
+    return res.data;
+  },
+  getPublicPaymentConfig: async (tenantId?: string) => {
+    const res = await client.get(`/payments/public-config${tenantId ? `?tenantId=${tenantId}` : ''}`);
     return res.data;
   },
 

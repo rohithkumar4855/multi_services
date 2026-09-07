@@ -156,7 +156,7 @@ export class TenantService {
 
     const defaultSettings = {
       currency: 'INR',
-      currencySymbol: '₹',
+      currencySymbol: 'INR',
       taxRate: 18,
       allowOnlineBooking: true,
       allowOnlinePayments: true,
@@ -187,7 +187,7 @@ export class TenantService {
       font,
       theme,
       headerStyle: 'glassmorphism',
-      footerText: `© ${new Date().getFullYear()} ${name}. All rights reserved.`
+      footerText: `(c) ${new Date().getFullYear()} ${name}. All rights reserved.`
     };
 
     // Execute atomic transaction
@@ -295,7 +295,7 @@ export class TenantService {
             hero: {
               headline: `Excellence in ${industryType}`,
               subheadline: `Delivering trusted, premium solutions for all your requirements with prompt delivery and 100% satisfaction guarantee.`,
-              badge: '✨ Verified & Certified Partner',
+              badge: 'Verified & Certified Partner',
               primaryCta: 'Explore Services',
               secondaryCta: 'Shop Catalog'
             },
@@ -419,7 +419,7 @@ export class TenantService {
           description: 'Comprehensive system check, diagnostic testing, and detailed quote assessment.',
           basePrice: 49.00,
           durationMin: 45,
-          icon: '🔍'
+          icon: 'search'
         },
         {
           name: 'Premium Full-Service Package',
@@ -427,7 +427,7 @@ export class TenantService {
           description: 'Complete expert repair, component optimization, replacement, and warranty coverage.',
           basePrice: 129.00,
           durationMin: 90,
-          icon: '⚡'
+          icon: 'zap'
         },
         {
           name: 'Emergency Priority Response',
@@ -435,7 +435,7 @@ export class TenantService {
           description: 'Guaranteed under 60-minute on-site arrival by a senior technician.',
           basePrice: 89.00,
           durationMin: 30,
-          icon: '🚨'
+          icon: 'alert'
         }
       ];
 
@@ -529,6 +529,14 @@ export class TenantService {
 
       return { tenant, adminUser, website };
     });
+
+    // Automatically initialize Razorpay payment configuration for the new tenant
+    try {
+      const { PaymentGatewayService } = await import('./paymentGateway.service');
+      await PaymentGatewayService.autoInitTenantGateway(result.tenant.id);
+    } catch (err: any) {
+      console.error('Error auto-initializing payment gateway for new tenant:', err.message);
+    }
 
     // Record Audit Log outside transaction
     await AuditService.log({
@@ -672,8 +680,7 @@ export class TenantService {
       config,
       customDomain,
       status,
-      plan,
-      config
+      plan
     } = data;
 
     const mergedSettings = { ...((existing.settings as any) || {}), ...(settings || {}), ...(config || {}) };
@@ -720,12 +727,13 @@ export class TenantService {
 
     // Also update TenantRegistration table so it stays in sync
     try {
+      const gstNum = data.gstNumber || (data.config as any)?.gstNumber || (existing.businessInfo as any)?.gstNumber || null;
       await prisma.tenantRegistration.upsert({
         where: { id: existing.id },
         update: {
           ...(name && { businessName: name }),
-          ...(mergedConfig && { config: mergedConfig }),
-          ...(gstNumber !== undefined && { gstNumber }),
+          ...(mergedSettings && { config: mergedSettings }),
+          ...(gstNum !== undefined && { gstNumber: gstNum }),
           ...(status && { status }),
           ...(plan && { plan }),
           primaryColor: updated.primaryColor,
@@ -746,8 +754,8 @@ export class TenantService {
           font: updated.font,
           plan: updated.plan,
           status: updated.status,
-          config: mergedConfig || updated.settings || {},
-          gstNumber: gstNumber || (mergedConfig as any)?.gstNumber || null
+          config: mergedSettings || updated.settings || {},
+          gstNumber: gstNum
         }
       });
     } catch (err) {

@@ -8,41 +8,45 @@ datasource db {
 }
 
 model Tenant {
-  id             String         @id
-  name           String
-  slug           String         @unique
-  customDomain   String?        @unique
-  plan           String         @default("starter")
-  status         String         @default("active")
-  primaryColor   String         @default("#2563eb")
-  secondaryColor String         @default("#4f46e5")
-  font           String         @default("Inter, sans-serif")
-  theme          String         @default("modern")
-  logo           String?
-  favicon        String?
-  businessInfo   Json?
-  settings       Json?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  auditLogs      AuditLog[]
-  bookings       Booking[]
-  files          FileRecord[]
-  leads          Lead[]
-  notifications  Notification[]
-  orders         Order[]
-  payments       Payment[]
-  products       Product[]
-  services       Service[]
-  subscriptions  Subscription[]
-  users          User[]
-  websites       Website[]
-  websitePages   WebsitePage[]
-  workers        Worker[]
+  id              String                 @id
+  name            String
+  slug            String                 @unique
+  customDomain    String?                @unique
+  defaultDomain   String?
+  plan            String                 @default("starter")
+  status          String                 @default("active")
+  primaryColor    String                 @default("#2563eb")
+  secondaryColor  String                 @default("#4f46e5")
+  font            String                 @default("Inter, sans-serif")
+  theme           String                 @default("modern")
+  logo            String?
+  favicon         String?
+  businessInfo    Json?
+  settings        Json?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  auditLogs       AuditLog[]
+  bookings        Booking[]
+  files           FileRecord[]
+  leads           Lead[]
+  notifications   Notification[]
+  orders          Order[]
+  payments        Payment[]
+  products        Product[]
+  services        Service[]
+  subscriptions   Subscription[]
+  users           User[]
+  websites        Website[]
+  websitePages    WebsitePage[]
+  workers         Worker[]
+  domains         TenantDomain[]
+  paymentGateways TenantPaymentGateway[]
+  invoices        Invoice[]
+  refunds         Refund[]
 
   @@index([slug])
   @@index([status])
   @@index([customDomain])
-  @@index([defaultDomain])
 }
 
 model TenantDomain {
@@ -62,6 +66,29 @@ model TenantDomain {
   @@index([tenantId])
   @@index([domain])
   @@index([status])
+}
+
+model TenantPaymentGateway {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider           String    @default("razorpay") // "razorpay" | "stripe" etc.
+  enabled            Boolean   @default(false)
+  mode               String    @default("test") // "test" | "live"
+  keyId              String? // rzp_test_... or rzp_live_...
+  encryptedKeySecret String? // AES-256-GCM encrypted
+  webhookSecret      String? // Webhook secret token
+  connectionStatus   String    @default("not_connected") // "not_connected" | "connected" | "failed" | "disabled"
+  accountType        String    @default("standard") // "standard" | "route"
+  accountId          String? // Linked Account ID for Razorpay Route
+  connectedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([tenantId, provider])
+  @@index([tenantId])
+  @@index([provider])
+  @@index([connectionStatus])
 }
 
 model User {
@@ -155,7 +182,7 @@ model Service {
   name        String
   category    String
   description String
-  icon        String?   @default("🔧")
+  icon        String?   @default("wrench")
   basePrice   Float
   durationMin Int
   isActive    Boolean   @default(true)
@@ -205,6 +232,7 @@ model Order {
   tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user            User?         @relation(fields: [userId], references: [id])
   payments        Payment[]
+  invoices        Invoice[]
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId])
@@ -214,39 +242,105 @@ model Order {
 }
 
 model Payment {
-  id             String        @id @default(uuid())
-  tenantId       String
-  userId         String?
-  orderId        String?
-  paymentGateway String        @default("simulated")
-  paymentId      String        @unique
-  amount         Float
-  currency       String        @default("INR")
-  status         PaymentStatus @default(PENDING)
-  utrNumber      String?
-  metadata       Json?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  order          Order?        @relation(fields: [orderId], references: [id])
-  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user           User?         @relation(fields: [userId], references: [id])
+  id                 String        @id @default(uuid())
+  tenantId           String
+  userId             String?
+  orderId            String?
+  paymentGateway     String        @default("razorpay")
+  paymentId          String        @unique // Internal / gateway payment identifier
+  razorpayOrderId    String?
+  razorpayPaymentId  String?
+  razorpaySignature  String?
+  paymentMethod      String?       @default("UPI") // UPI, card, netbanking, wallet
+  amount             Float
+  currency           String        @default("INR")
+  status             PaymentStatus @default(PENDING)
+  utrNumber          String?
+  refundStatus       String?       @default("none") // "none" | "partial" | "full"
+  capturedAt         DateTime?
+  metadata           Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  order              Order?        @relation(fields: [orderId], references: [id])
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user               User?         @relation(fields: [userId], references: [id])
+  invoices           Invoice[]
+  refunds            Refund[]
 
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([paymentId])
+  @@index([razorpayOrderId])
+  @@index([razorpayPaymentId])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  tenantId      String
+  orderId       String?
+  paymentId     String?
+  invoiceNumber String
+  customerName  String
+  customerEmail String?
+  customerPhone String?
+  amount        Float
+  tax           Float         @default(0)
+  currency      String        @default("INR")
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod String?       @default("UPI")
+  gateway       String        @default("razorpay")
+  refundStatus  String?       @default("none")
+  pdfUrl        String?
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order         Order?        @relation(fields: [orderId], references: [id])
+  payment       Payment?      @relation(fields: [paymentId], references: [id])
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([paymentId])
+  @@index([paymentStatus])
+  @@index([createdAt])
+}
+
+model Refund {
+  id               String   @id @default(uuid())
+  tenantId         String
+  paymentId        String
+  orderId          String?
+  razorpayRefundId String?  @unique
+  amount           Float
+  currency         String   @default("INR")
+  status           String   @default("processed") // "pending" | "processed" | "failed"
+  reason           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payment          Payment  @relation(fields: [paymentId], references: [id])
+
+  @@index([tenantId])
+  @@index([paymentId])
 }
 
 model PaymentWebhook {
-  id        String   @id @default(uuid())
-  tenantId  String?
-  gateway   String
-  event     String
-  payload   Json
-  signature String?
-  status    String   @default("processed")
-  createdAt DateTime @default(now())
+  id             String    @id @default(uuid())
+  tenantId       String?
+  webhookEventId String?   @unique
+  gateway        String    @default("razorpay")
+  event          String
+  payload        Json
+  signature      String?
+  status         String    @default("processed")
+  processed      Boolean   @default(true)
+  processedAt    DateTime?
+  createdAt      DateTime  @default(now())
 
   @@index([tenantId])
+  @@index([webhookEventId])
+  @@index([event])
 }
 
 model Booking {
@@ -409,9 +503,13 @@ enum OrderStatus {
 }
 
 enum PaymentStatus {
+  CREATED
   PENDING
-  PROCESSING
+  AUTHORIZED
+  CAPTURED
   SUCCESS
   FAILED
   REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
 }
