@@ -47,10 +47,9 @@ export function isValidDomainFormat(domain: string): boolean {
  *
  * Priority:
  * 1. Verified Custom Domain (https://www.prservices.com)
- * 2. Tenant Default Vercel Domain (https://prservices.vercel.app)
- * 3. Platform fallback (https://vercel.com/)
- *
- * NEVER returns localhost or hardcoded dev URLs.
+ * 2. Active deployment host URL (https://your-app.vercel.app/#/site?tenant=slug)
+ * 3. Fallback from tenant slug / subdomain
+ * 4. Platform fallback (https://vercel.com/)
  */
 export function getTenantPublicUrl(tenant: Partial<Tenant> | null | undefined): string {
   if (!tenant) return 'https://vercel.com/';
@@ -62,14 +61,14 @@ export function getTenantPublicUrl(tenant: Partial<Tenant> | null | undefined): 
     return `https://${customDomain}`;
   }
 
-  // 2. Tenant Default Vercel Domain
-  const defaultDomain = normalizeDomain(tenant.defaultDomain);
-  if (defaultDomain) {
-    return `https://${defaultDomain}`;
+  const slug = getTenantSlug(tenant);
+
+  // 2. Active application hosting URL (works seamlessly on Vercel, custom platform domains, and localhost)
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return `${window.location.origin}/#/site?tenant=${slug}`;
   }
 
   // 3. Fallback from tenant slug / subdomain
-  const slug = (tenant.slug || tenant.subdomain || '').trim().toLowerCase();
   if (slug) {
     return `https://${slug}.vercel.app`;
   }
@@ -79,13 +78,19 @@ export function getTenantPublicUrl(tenant: Partial<Tenant> | null | undefined): 
 }
 
 /**
- * Generates the tenant's default Vercel domain.
- * e.g. "prservices.vercel.app"
+ * Generates the tenant's default active domain or path.
+ * e.g. "your-app.vercel.app/#/site?tenant=prservices" or custom domain
  */
 export function getTenantVercelDomain(tenant: Partial<Tenant> | null | undefined): string {
   if (!tenant) return '';
-  if (tenant.defaultDomain) return normalizeDomain(tenant.defaultDomain);
+  if (tenant.customDomain && (tenant.domainVerified === true || tenant.domainStatus === 'active')) {
+    return normalizeDomain(tenant.customDomain);
+  }
   const slug = getTenantSlug(tenant);
+  if (typeof window !== 'undefined' && window.location.host) {
+    return `${window.location.host}/#/site?tenant=${slug}`;
+  }
+  if (tenant.defaultDomain) return normalizeDomain(tenant.defaultDomain);
   return slug ? `${slug}.vercel.app` : '';
 }
 

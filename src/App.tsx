@@ -68,7 +68,12 @@ export default function App() {
   const [route, setRoute] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const host = window.location.hostname.toLowerCase();
-      if (host && host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('app.') && !window.location.hash) {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('tenant')) {
+        return ROUTE_SITE;
+      }
+      const isPlatformHost = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.vercel.app') || host.startsWith('app.');
+      if (host && !isPlatformHost && !window.location.hash) {
         return ROUTE_SITE;
       }
     }

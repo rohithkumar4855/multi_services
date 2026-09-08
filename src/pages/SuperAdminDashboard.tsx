@@ -21,7 +21,7 @@ export default function SuperAdminDashboard({ session, store, onLogout, navigate
     try {
       const saved = sessionStorage.getItem('anarav_superadmin_tab') || localStorage.getItem('anarav_superadmin_tab');
       if (saved) return saved as any;
-    } catch {}
+    } catch { }
     return 'dashboard';
   });
 
@@ -29,7 +29,7 @@ export default function SuperAdminDashboard({ session, store, onLogout, navigate
     try {
       sessionStorage.setItem('anarav_superadmin_tab', activeTab);
       localStorage.setItem('anarav_superadmin_tab', activeTab);
-    } catch {}
+    } catch { }
   }, [activeTab]);
 
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
@@ -117,7 +117,7 @@ export default function SuperAdminDashboard({ session, store, onLogout, navigate
               <Shield className="w-4 h-4 text-white" />
             </div>
             <div>
-              <span className="text-sm font-bold text-white tracking-tight">AevonOS</span>
+              <span className="text-sm font-bold text-white tracking-tight">AnaravOS</span>
               <span className="text-[10px] text-slate-500 ml-2 font-mono">/ Operator console</span>
             </div>
           </div>

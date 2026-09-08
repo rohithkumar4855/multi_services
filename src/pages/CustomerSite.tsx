@@ -58,7 +58,19 @@ export default function CustomerSite(props: Props) {
     ) || null;
   };
 
-  const initialTenantId = getUrlTenantId() || session.tenantId || (() => {
+  const initialTenantId = (() => {
+    const urlTenant = getUrlTenantId();
+    if (urlTenant) {
+      const matched = findTenant(urlTenant);
+      if (matched) return matched.id;
+      return urlTenant;
+    }
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname.toLowerCase();
+      const matchedHost = findTenant(host);
+      if (matchedHost) return matchedHost.id;
+    }
+    if (session.tenantId) return session.tenantId;
     try {
       const saved = sessionStorage.getItem('anarav_site_tenant_id') || localStorage.getItem('anarav_site_tenant_id');
       if (saved) return saved;
@@ -75,6 +87,11 @@ export default function CustomerSite(props: Props) {
         const matched = findTenant(urlTenant);
         if (matched && matched.id !== activeTenantId) {
           setActiveTenantId(matched.id);
+        }
+      } else if (typeof window !== 'undefined') {
+        const hostMatched = findTenant(window.location.hostname);
+        if (hostMatched && hostMatched.id !== activeTenantId) {
+          setActiveTenantId(hostMatched.id);
         }
       }
     };
@@ -93,8 +110,9 @@ export default function CustomerSite(props: Props) {
   }, [activeTenantId]);
 
   const tenant =
-    tenants.find(t => t.id === activeTenantId) ||
-    tenants.find(t => t.id === getUrlTenantId()) ||
+    findTenant(activeTenantId) ||
+    findTenant(getUrlTenantId()) ||
+    (typeof window !== 'undefined' ? findTenant(window.location.hostname) : null) ||
     tenants.find(t => session.tenantId && t.id === session.tenantId) ||
     tenants.find(t => session.email && t.ownerEmail === session.email) ||
     tenants.find(t => session.tenantName && t.name === session.tenantName) ||

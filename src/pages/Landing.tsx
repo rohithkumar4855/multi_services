@@ -353,7 +353,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
               <circle cx="5.8" cy="16.5" r="1.5" fill="#60A5FA" />
               <circle cx="18.2" cy="16.5" r="1.5" fill="#60A5FA" />
             </svg>
-            <span className="text-lg font-bold text-white tracking-tight">AevonOS</span>
+            <span className="text-lg font-bold text-white tracking-tight">AnaravOS</span>
           </div>
           <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-slate-300">
             <button
@@ -449,10 +449,10 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
             {/* Cosmic Ambient Atmospheric Glows & Orbital Rings */}
             <div className="absolute -top-24 -right-24 w-[520px] h-[520px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute top-1/3 -left-16 w-80 h-80 bg-cyan-500/15 rounded-full blur-[100px] pointer-events-none" />
-            
+
             {/* Rotating Outer Dashed Orbital Ring */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[580px] h-[580px] rounded-full border border-blue-500/15 border-dashed animate-spin-slow pointer-events-none hidden md:block" />
-            
+
             {/* Pulsing Inner Glowing Halo Ring */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full border border-blue-400/25 animate-pulse-ring pointer-events-none hidden md:block shadow-[0_0_80px_rgba(59,130,246,0.18)]" />
 
@@ -463,7 +463,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
 
             {/* 3D Perspective Floating Wrapper */}
             <div className="relative animate-hero-3d transition-transform duration-500 hover:scale-[1.02] cursor-default">
-              
+
               {/* Floating 3D Badge 1 (Top Left - New Bookings) */}
               <div className="animate-badge-1 absolute -top-8 -left-8 z-30 bg-[#081026]/95 border border-purple-500/30 hover:border-purple-400/60 px-4 py-2.5 rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.7)] backdrop-blur-xl flex items-center gap-3 hidden sm:flex transition-all">
                 <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-inner shrink-0">
@@ -1528,9 +1528,8 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                 <div
                   key={thm.key}
                   onClick={() => setSelectedThemeKey(thm.key)}
-                  className={`group rounded-2xl p-4 border transition-all duration-300 cursor-pointer transform hover:-translate-y-2 hover:shadow-2xl ${thm.bgClass} ${
-                    isSelected ? thm.activeGlow : `${thm.borderClass} hover:border-slate-600`
-                  }`}
+                  className={`group rounded-2xl p-4 border transition-all duration-300 cursor-pointer transform hover:-translate-y-2 hover:shadow-2xl ${thm.bgClass} ${isSelected ? thm.activeGlow : `${thm.borderClass} hover:border-slate-600`
+                    }`}
                 >
                   {/* Theme Header Bar */}
                   <div className="flex justify-between items-center mb-3">
@@ -1634,11 +1633,10 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                   key={plan.key}
                   onMouseEnter={() => setSelectedPlan(plan.key)}
                   onClick={() => setSelectedPlan(plan.key)}
-                  className={`rounded-3xl p-7 flex flex-col justify-between transition-all duration-300 cursor-pointer relative ${
-                    isSelected
+                  className={`rounded-3xl p-7 flex flex-col justify-between transition-all duration-300 cursor-pointer relative ${isSelected
                       ? 'bg-gradient-to-b from-blue-900/30 via-[#070e24] to-slate-950 border-2 border-blue-500 shadow-2xl shadow-blue-500/25 md:scale-105 z-10'
                       : 'bg-slate-950/80 border border-slate-800/90 hover:border-slate-700 md:scale-100 z-0'
-                  }`}
+                    }`}
                 >
                   {plan.badge && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold px-3.5 py-0.5 rounded-full shadow-lg shadow-blue-600/40 uppercase tracking-wider">
@@ -1673,11 +1671,10 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                       setRegPlan(plan.key);
                       setShowRegModal(true);
                     }}
-                    className={`w-full py-3 rounded-xl text-xs font-bold transition-all ${
-                      isSelected
+                    className={`w-full py-3 rounded-xl text-xs font-bold transition-all ${isSelected
                         ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98]'
                         : 'bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-700/80 hover:border-slate-600'
-                    }`}
+                      }`}
                   >
                     Start 14-Day Free Trial
                   </button>
@@ -1706,10 +1703,10 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto">
             {[
-              { q: 'What is AevonOS?', a: 'AevonOS is a comprehensive, multi-tenant operating system designed for modern service businesses. It provides complete booking pipelines, technician management, dynamic website builders, payments, and analytics in one unified platform.' },
+              { q: 'What is AnaravOS?', a: 'AnaravOS is a comprehensive, multi-tenant operating system designed for modern service businesses. It provides complete booking pipelines, technician management, dynamic website builders, payments, and analytics in one unified platform.' },
               { q: 'Do you provide booking management?', a: 'Yes, our 10-state booking engine handles guest & customer flows, instant/scheduled/emergency bookings, slot allocations, technician assignments, and live status tracking.' },
               { q: 'How quickly can I launch?', a: 'You can launch your digital platform in under 5 minutes! Simply select your industry pack, configure your branding, and your site and booking engine are immediately live.' },
-              { q: 'Can I accept online payments?', a: 'Yes, AevonOS integrates with UPI, Razorpay, Stripe, and Cash on Delivery with automated GST invoices and direct bank settlements.' },
+              { q: 'Can I accept online payments?', a: 'Yes, AnaravOS integrates with UPI, Razorpay, Stripe, and Cash on Delivery with automated GST invoices and direct bank settlements.' },
               { q: 'Can I customize my website?', a: 'Yes, fully! You have access to our dynamic website builder, 6 premium themes, custom colors, fonts, SEO configurations, hero banners, and section toggles.' },
               { q: 'Can multiple employees use the platform?', a: 'Yes, you can add unlimited technicians and staff with role-based access control, skill matching, attendance tracking, and payout calculations.' },
               { q: 'Can I connect my own domain?', a: 'Absolutely. You can connect any custom domain (e.g., yourbrand.com) with automated 1-click SSL provisioning and zero DevOps configuration needed.' },
@@ -1751,7 +1748,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                 <circle cx="5.8" cy="16.5" r="1.5" fill="#60A5FA" />
                 <circle cx="18.2" cy="16.5" r="1.5" fill="#60A5FA" />
               </svg>
-              <span className="text-lg font-bold text-white tracking-tight">AevonOS</span>
+              <span className="text-lg font-bold text-white tracking-tight">AnaravOS</span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed max-w-sm">
               The all-in-one digital engine for modern service businesses.
@@ -1815,7 +1812,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
         </div>
 
         <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© 2026 AevonOS. All rights reserved.</p>
+          <p>© 2026 AnaravOS. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowSuperAdminLogin(true)}
@@ -1897,7 +1894,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
       {showTenantLogin && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-300" onClick={() => setShowTenantLogin(false)}>
           <div className="relative w-full max-w-4xl bg-[#060c1d]/95 border border-slate-800/90 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.9)] overflow-hidden backdrop-blur-2xl grid grid-cols-1 lg:grid-cols-12 animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
-            
+
             {/* Close Button */}
             <button
               onClick={() => setShowTenantLogin(false)}
@@ -1916,7 +1913,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
               <div className="space-y-4 relative z-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400 text-[10px] font-extrabold uppercase tracking-widest">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  AEVON TELEMETRY
+                  Anarav TELEMETRY
                 </div>
 
                 {/* Floating Widget 1: Service Operations */}
@@ -1987,7 +1984,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                       <circle cx="5.8" cy="16.5" r="1.5" fill="#60A5FA" />
                       <circle cx="18.2" cy="16.5" r="1.5" fill="#60A5FA" />
                     </svg>
-                    <span className="text-base font-black text-white tracking-tight">AevonOS</span>
+                    <span className="text-base font-black text-white tracking-tight">AnaravOS</span>
                   </div>
 
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[9px] font-bold uppercase tracking-wider">
@@ -1997,7 +1994,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
 
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Welcome back</h2>
-                  <p className="text-xs text-slate-400 mt-1">Sign in to continue to your AevonOS workspace.</p>
+                  <p className="text-xs text-slate-400 mt-1">Sign in to continue to your AnaravOS workspace.</p>
                 </div>
 
                 {/* Social Login Buttons */}
@@ -2008,10 +2005,10 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                     className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-sm hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-                      <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
+                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z" />
+                      <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z" />
+                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" />
                     </svg>
                     <span>Continue with Google</span>
                   </button>
@@ -2022,7 +2019,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                     className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-sm hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <svg className="w-4 h-4 fill-current text-slate-900" viewBox="0 0 24 24">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 0.92-2.85-.9.04-2 .6-2.64 1.35-.56.65-1.06 1.71-.93 2.73 1 .08 2.03-.49 2.65-1.23"/>
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 0.92-2.85-.9.04-2 .6-2.64 1.35-.56.65-1.06 1.71-.93 2.73 1 .08 2.03-.49 2.65-1.23" />
                     </svg>
                     <span>Continue with Apple</span>
                   </button>
