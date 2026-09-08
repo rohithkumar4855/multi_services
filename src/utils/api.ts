@@ -6,7 +6,9 @@ const API_BASE = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' 
 const client = axios.create({
   baseURL: API_BASE,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Bypass-Tunnel-Reminder': 'true',
+    'ngrok-skip-browser-warning': 'true'
   }
 });
 
