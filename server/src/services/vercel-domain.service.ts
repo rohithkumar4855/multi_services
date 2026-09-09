@@ -178,9 +178,7 @@ export class VercelDomainService {
     await prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        customDomain: domain,
-        domainStatus: 'pending',
-        domainVerified: false
+        customDomain: domain
       }
     });
 
@@ -270,10 +268,7 @@ export class VercelDomainService {
     await prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        customDomain: domain,
-        domainStatus: status,
-        domainVerified: isVerified,
-        lastDomainVerifiedAt: isVerified ? now : undefined
+        customDomain: domain
       }
     });
 
@@ -347,10 +342,7 @@ export class VercelDomainService {
     await prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        customDomain: null,
-        domainStatus: 'active',
-        domainVerified: false,
-        lastDomainVerifiedAt: null
+        customDomain: null
       }
     });
 
@@ -374,9 +366,10 @@ export class VercelDomainService {
       throw new AppError('Tenant not found', 404);
     }
 
+    const primaryDomain = tenant.domains.find(d => d.isPrimary) || tenant.domains[0];
     const defaultDomain = tenant.defaultDomain || `${tenant.slug}.vercel.app`;
-    const customDomain = tenant.customDomain;
-    const isVerified = tenant.domainVerified === true;
+    const customDomain = tenant.customDomain || primaryDomain?.domain || null;
+    const isVerified = primaryDomain?.verified === true;
     const dnsConfig = customDomain ? this.getDnsInstructions(customDomain) : [];
 
     return {
@@ -385,9 +378,9 @@ export class VercelDomainService {
       slug: tenant.slug,
       defaultDomain,
       customDomain: customDomain || null,
-      domainStatus: tenant.domainStatus || (customDomain && isVerified ? 'active' : 'pending'),
+      domainStatus: primaryDomain?.status || (customDomain && isVerified ? 'active' : 'pending'),
       domainVerified: isVerified,
-      lastDomainVerifiedAt: tenant.lastDomainVerifiedAt,
+      lastDomainVerifiedAt: primaryDomain?.verifiedAt || null,
       platform: 'Vercel',
       platformStatus: 'connected',
       dnsConfig,
