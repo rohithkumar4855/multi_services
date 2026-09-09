@@ -6,9 +6,8 @@ import { api } from '../utils/api';
 import {
   Shield, Laptop, CheckCircle, XCircle, Eye, EyeOff, Check, Users, Calendar,
   Package, Palette, Workflow, ShieldCheck, LayoutDashboard, FileText, Settings, Sparkles,
-  ArrowRight, BarChart3, CreditCard, Bot, Globe, Target, HardHat, Clock, AlertCircle, Loader2
+  ArrowRight, BarChart3, CreditCard, Bot, Globe, Target, HardHat
 } from 'lucide-react';
-import { toast } from '../context/ToastContext';
 
 interface Props {
   onLogin: (session: AuthSession) => void;
@@ -27,6 +26,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
   const [selectedPlan, setSelectedPlan] = useState<'starter' | 'professional' | 'enterprise'>('professional');
   const [expandedFaq, setExpandedFaq] = useState<Record<number, boolean>>({ 0: true });
   const [selectedThemeKey, setSelectedThemeKey] = useState<string>('luxury');
+  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
 
   const [activeNav, setActiveNav] = useState<string>('');
 
@@ -131,161 +131,6 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
   const [regPlan, setRegPlan] = useState<'starter' | 'professional' | 'enterprise'>('starter');
   const [regSubmitted, setRegSubmitted] = useState(false);
 
-  // Real Secure Email OTP States
-  const [isEmailVerified, setIsEmailVerified] = useState(false);
-  const [emailOtpSent, setEmailOtpSent] = useState(false);
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [otpExpirySeconds, setOtpExpirySeconds] = useState(300);
-  const [otpError, setOtpError] = useState('');
-
-  // Countdown timer for OTP expiry & resend cooldown
-  useEffect(() => {
-    let timer: any;
-    if (emailOtpSent && !isEmailVerified) {
-      timer = setInterval(() => {
-        setOtpExpirySeconds(prev => (prev > 0 ? prev - 1 : 0));
-        setResendCooldown(prev => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [emailOtpSent, isEmailVerified]);
-
-  const handleSendEmailOtp = async () => {
-    if (!regEmail || !regEmail.includes('@')) {
-      toast.error({ title: 'Invalid Email', message: 'Please enter a valid email address first.' });
-      return;
-    }
-    setIsSendingOtp(true);
-    setOtpError('');
-    try {
-      const res = await api.sendOtp(regEmail, regName || 'ServOS Workspace');
-      setEmailOtpSent(true);
-      setOtpDigits(['', '', '', '', '', '']);
-      setOtpExpirySeconds(300);
-      setResendCooldown(60);
-      toast.info({
-        title: 'Verification Code Dispatched',
-        message: res.message || `A 6-digit code has been sent to ${regEmail}.`
-      });
-      setTimeout(() => {
-        const firstInput = document.getElementById('reg-otp-0');
-        firstInput?.focus();
-      }, 100);
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to send verification code. Please try again.';
-      setOtpError(msg);
-      toast.error({ title: 'Failed to Send Code', message: msg });
-    } finally {
-      setIsSendingOtp(false);
-    }
-  };
-
-  const handleVerifyInlineOtp = async () => {
-    const code = otpDigits.join('').trim();
-    if (code.length !== 6 || !/^\d{6}$/.test(code)) {
-      setOtpError('Please enter all 6 digits of your verification code.');
-      toast.error({ title: 'Incomplete Code', message: 'Please enter all 6 digits of the verification code.' });
-      return;
-    }
-    setIsVerifyingOtp(true);
-    setOtpError('');
-    try {
-      const res = await api.verifyOtp(regEmail, code);
-      if (res.verified || res.success) {
-        setIsEmailVerified(true);
-        setEmailOtpSent(false);
-        toast.success({
-          title: 'Email Verified',
-          message: `✓ ${regEmail} has been verified successfully.`
-        });
-      } else {
-        const msg = res.message || 'Invalid verification code.';
-        setOtpError(msg);
-        toast.error({ title: 'Verification Failed', message: msg });
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Invalid verification code.';
-      setOtpError(msg);
-      toast.error({ title: 'Verification Failed', message: msg });
-    } finally {
-      setIsVerifyingOtp(false);
-    }
-  };
-
-  const handleVerifyDirectCode = async (code: string) => {
-    if (code.length !== 6) return;
-    setIsVerifyingOtp(true);
-    setOtpError('');
-    try {
-      const res = await api.verifyOtp(regEmail, code);
-      if (res.verified || res.success) {
-        setIsEmailVerified(true);
-        setEmailOtpSent(false);
-        toast.success({
-          title: 'Email Verified',
-          message: `✓ ${regEmail} verified successfully.`
-        });
-      } else {
-        const msg = res.message || 'Invalid verification code.';
-        setOtpError(msg);
-        toast.error({ title: 'Verification Failed', message: msg });
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Invalid verification code.';
-      setOtpError(msg);
-      toast.error({ title: 'Verification Failed', message: msg });
-    } finally {
-      setIsVerifyingOtp(false);
-    }
-  };
-
-  const handleOtpDigitChange = (index: number, val: string) => {
-    const digit = val.replace(/\D/g, '').slice(-1);
-    const newDigits = [...otpDigits];
-    newDigits[index] = digit;
-    setOtpDigits(newDigits);
-    setOtpError('');
-
-    // If digit entered, jump to next box
-    if (digit && index < 5) {
-      const nextInput = document.getElementById(`reg-otp-${index + 1}`);
-      nextInput?.focus();
-    }
-
-    // Auto verify if all 6 digits are filled
-    if (digit && index === 5 && newDigits.every(d => d !== '')) {
-      setTimeout(() => {
-        handleVerifyDirectCode(newDigits.join(''));
-      }, 50);
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      const prevInput = document.getElementById(`reg-otp-${index - 1}`);
-      prevInput?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!pasted) return;
-    const newDigits = [...otpDigits];
-    for (let i = 0; i < 6; i++) {
-      newDigits[i] = pasted[i] || '';
-    }
-    setOtpDigits(newDigits);
-    const focusIndex = Math.min(pasted.length, 5);
-    document.getElementById(`reg-otp-${focusIndex}`)?.focus();
-    if (pasted.length === 6) {
-      handleVerifyDirectCode(pasted);
-    }
-  };
-
   const handleSuperAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saEmail === 'admin@servos.in' && saPass === 'admin123') {
@@ -338,29 +183,12 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
     e.preventDefault();
     if (!regName) return;
     if (regPhone.length !== 10) {
-      toast.error({ title: 'Invalid Phone Number', message: 'Owner phone number must be exactly 10 digits.' });
+      showToast('Owner phone number must be exactly 10 digits.', 'error');
       return;
     }
-    if (!regEmail || !regEmail.includes('@')) {
-      toast.error({ title: 'Invalid Email', message: 'Please enter a valid email address.' });
-      return;
-    }
-
-    // Require email OTP verification before creating workspace
-    if (!isEmailVerified) {
-      if (!emailOtpSent) {
-        handleSendEmailOtp();
-      }
-      toast.warning({
-        title: 'Verify Email Required',
-        message: `Please confirm the 6-digit OTP sent to ${regEmail} above to verify your email first.`
-      });
-      return;
-    }
-
     const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
     if (regGstNumber && !GSTIN_REGEX.test(regGstNumber)) {
-      toast.error({ title: 'Invalid GSTIN', message: 'Please enter a valid 15-character GSTIN.' });
+      showToast('Please enter a valid 15-character GSTIN.', 'error');
       return;
     }
 
@@ -502,17 +330,8 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
     });
 
     setTenants(prev => [...prev, newT]);
-    setTenantEmail(newT.ownerEmail);
-    setTenantPass(regPassword || 'business123');
-
-    // Close registration and open Sign In page directly!
-    setShowRegModal(false);
-    setShowTenantLogin(true);
-
-    toast.success({
-      title: 'Workspace Created Successfully',
-      message: `Your business "${regName}" has been registered with verified email ${regEmail}. Sign in to enter your dashboard!`
-    });
+    setTenantEmail(newT.ownerEmail); // set as selected
+    setRegSubmitted(true);
   };
 
   return (
@@ -2236,7 +2055,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                       <button
                         type="button"
                         className="text-[10.5px] text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-                        onClick={() => toast.info({ title: 'Password Reset', message: 'Please use your workspace password (default: business123).' })}
+                        onClick={() => alert('Demo: Use your configured workspace password')}
                       >
                         Forgot password?
                       </button>
@@ -2404,226 +2223,150 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
               ✕
             </button>
 
-            <div className="text-center space-y-1 pb-1">
-              <div className="flex justify-center mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                  <Sparkles className="w-5 h-5" />
+            {regSubmitted ? (
+              <div className="text-center space-y-4 py-2">
+                <div className="w-14 h-14 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl flex items-center justify-center text-emerald-400 mx-auto text-2xl animate-bounce">
+                  ✓
+                </div>
+                <h3 className="text-lg font-black text-white">Workspace Registration Initiated!</h3>
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  Your business <strong className="text-white">{regName}</strong> is registered. You can verify your email or log in via the console.
+                </p>
+                <div className="bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] p-3 rounded-xl font-mono">
+                  Operator credentials:<br /> admin@servos.in / admin123
+                </div>
+                <div className="flex gap-2.5 pt-1">
+                  <button
+                    onClick={() => { setShowRegModal(false); setShowVerifyModal(true); }}
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/30 transition-all"
+                  >
+                    Verify Email
+                  </button>
+                  <button
+                    onClick={() => { setShowRegModal(false); setRegSubmitted(false); setShowSuperAdminLogin(true); }}
+                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all"
+                  >
+                    Operator Console
+                  </button>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-white tracking-tight">Create your account</h3>
-              <p className="text-slate-400 text-xs">Build your business platform in minutes.</p>
-            </div>
-
-            <form onSubmit={handleRegisterSubmit} className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 mb-1">Full Name</label>
-                <input
-                  className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
-                  placeholder="Alex Johnson"
-                  value={regOwner}
-                  onChange={e => setRegOwner(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 mb-1">Business Name</label>
-                <input
-                  className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
-                  placeholder="e.g. Apex Electrical & HVAC"
-                  value={regName}
-                  onChange={e => setRegName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-bold text-slate-300">Email</label>
-                  {isEmailVerified ? (
-                    <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                      ✓ Verified
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleSendEmailOtp}
-                      disabled={!regEmail || isSendingOtp || (emailOtpSent && resendCooldown > 0)}
-                      className="text-[11px] font-bold text-blue-400 hover:text-blue-300 hover:underline disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {isSendingOtp ? 'Sending...' : emailOtpSent ? (resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend') : 'Verify'}
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    className={`w-full bg-[#030712] border ${isEmailVerified ? 'border-emerald-500/60 focus:border-emerald-500' : 'border-slate-800 focus:border-blue-500'} focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 ${isEmailVerified ? 'pr-9' : ''} text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner`}
-                    type="email"
-                    placeholder="alex@apexservices.com"
-                    value={regEmail}
-                    onChange={e => {
-                      setRegEmail(e.target.value);
-                      if (isEmailVerified) setIsEmailVerified(false);
-                      if (emailOtpSent) setEmailOtpSent(false);
-                    }}
-                    required
-                  />
-                  {isEmailVerified && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 pointer-events-none">
-                      <Check className="w-4 h-4 stroke-[3]" />
+            ) : (
+              <>
+                <div className="text-center space-y-1 pb-1">
+                  <div className="flex justify-center mb-2">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                      <Sparkles className="w-5 h-5" />
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Inline Email Verification Card */}
-              {emailOtpSent && !isEmailVerified && (
-                <div className="bg-[#0b132b]/90 border border-blue-500/40 rounded-2xl p-4 space-y-3 animate-fadeIn text-left shadow-2xl backdrop-blur-md">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5 text-blue-300 font-bold text-xs">
-                      <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span>Verify Your Email</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-mono truncate max-w-[170px]">Sent to {regEmail}</span>
                   </div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">Create your account</h3>
+                  <p className="text-slate-400 text-xs">Build your business platform in minutes.</p>
+                </div>
 
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    Enter the 6-digit code sent to your email to verify your address:
-                  </p>
-
-                  {/* 6 Individual Digit Inputs */}
-                  <div className="flex justify-between items-center gap-1.5 sm:gap-2">
-                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">Full Name</label>
+                    <input
+                      className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
+                      placeholder="Alex Johnson"
+                      value={regOwner}
+                      onChange={e => setRegOwner(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">Business Name</label>
+                    <input
+                      className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
+                      placeholder="e.g. Apex Electrical & HVAC"
+                      value={regName}
+                      onChange={e => setRegName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Email address</label>
                       <input
-                        key={index}
-                        id={`reg-otp-${index}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={otpDigits[index]}
-                        onChange={(e) => handleOtpDigitChange(index, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                        onPaste={handleOtpPaste}
-                        className="w-10 h-11 text-center font-mono font-bold text-base bg-[#030712] border border-blue-500/40 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 rounded-xl text-white outline-none shadow-inner transition-all"
-                        disabled={isVerifyingOtp}
-                        autoFocus={index === 0}
+                        className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
+                        type="email"
+                        placeholder="alex@apexservices.com"
+                        value={regEmail}
+                        onChange={e => setRegEmail(e.target.value)}
+                        required
                       />
-                    ))}
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Phone number</label>
+                      <input
+                        className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
+                        type="tel"
+                        maxLength={10}
+                        placeholder="9876543210"
+                        value={regPhone}
+                        onChange={e => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">Password</label>
+                    <div className="relative">
+                      <input
+                        className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 pr-10 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
+                        type={showRegPass ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={regPassword}
+                        onChange={e => setRegPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegPass(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1"
+                      >
+                        {showRegPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
-                  {otpError && (
-                    <div className="text-[11px] text-red-400 font-medium flex items-center gap-1.5 bg-red-950/40 border border-red-500/30 rounded-lg px-2.5 py-1.5">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-400" />
-                      <span>{otpError}</span>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">Select your industry</label>
+                    <select
+                      className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 text-xs text-white outline-none transition-all shadow-inner"
+                      value={regIndustries[0] || 'Electrician'}
+                      onChange={e => setRegIndustries([e.target.value])}
+                    >
+                      {INDUSTRY_PACKS.map(p => (
+                        <option key={p.id} value={p.name} className="bg-slate-900 text-white">{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
-                    <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      <span>
-                        Expires in {Math.floor(otpExpirySeconds / 60).toString().padStart(2, '0')}:{(otpExpirySeconds % 60).toString().padStart(2, '0')}
-                      </span>
-                    </div>
+                  <div className="flex items-start gap-2 pt-0.5">
+                    <input type="checkbox" id="termsAgree" className="mt-0.5 rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0 cursor-pointer" defaultChecked required />
+                    <label htmlFor="termsAgree" className="text-[10px] text-slate-400 leading-tight select-none">
+                      I agree to the <span className="text-blue-400 underline cursor-pointer">Terms of Service</span> and <span className="text-blue-400 underline cursor-pointer">Privacy Policy</span>
+                    </label>
+                  </div>
 
+                  <button type="submit" className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all">
+                    Create Workspace
+                  </button>
+
+                  <div className="text-center text-[11px] text-slate-400 pt-1">
+                    Already have an account?{' '}
                     <button
                       type="button"
-                      onClick={handleSendEmailOtp}
-                      disabled={resendCooldown > 0 || isSendingOtp}
-                      className="text-[11px] font-bold text-blue-400 hover:text-blue-300 hover:underline disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      onClick={() => { setShowRegModal(false); setShowTenantLogin(true); }}
+                      className="text-blue-400 hover:text-blue-300 font-bold hover:underline"
                     >
-                      {isSendingOtp ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                      Sign In
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handleVerifyInlineOtp}
-                    disabled={isVerifyingOtp || otpDigits.join('').length !== 6}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    {isVerifyingOtp ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Verifying...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        <span>Verify Code</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 mb-1">Phone number</label>
-                <input
-                  className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
-                  type="tel"
-                  maxLength={10}
-                  placeholder="9876543210"
-                  value={regPhone}
-                  onChange={e => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 mb-1">Password</label>
-                <div className="relative">
-                  <input
-                    className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 pr-10 text-xs text-white placeholder-slate-500 outline-none transition-all shadow-inner"
-                    type={showRegPass ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={regPassword}
-                    onChange={e => setRegPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRegPass(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1"
-                  >
-                    {showRegPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 mb-1">Select your industry</label>
-                <select
-                  className="w-full bg-[#030712] border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-2 text-xs text-white outline-none transition-all shadow-inner"
-                  value={regIndustries[0] || 'Electrician'}
-                  onChange={e => setRegIndustries([e.target.value])}
-                >
-                  {INDUSTRY_PACKS.map(p => (
-                    <option key={p.id} value={p.name} className="bg-slate-900 text-white">{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-start gap-2 pt-0.5">
-                <input type="checkbox" id="termsAgree" className="mt-0.5 rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0 cursor-pointer" defaultChecked required />
-                <label htmlFor="termsAgree" className="text-[10px] text-slate-400 leading-tight select-none">
-                  I agree to the <span className="text-blue-400 underline cursor-pointer">Terms of Service</span> and <span className="text-blue-400 underline cursor-pointer">Privacy Policy</span>
-                </label>
-              </div>
-
-              <button type="submit" className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all cursor-pointer">
-                Create Workspace
-              </button>
-
-              <div className="text-center text-[11px] text-slate-400 pt-1">
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => { setShowRegModal(false); setShowTenantLogin(true); }}
-                  className="text-blue-400 hover:text-blue-300 font-bold hover:underline"
-                >
-                  Sign In
-                </button>
-              </div>
-            </form>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -2648,9 +2391,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                 </div>
               </div>
               <h3 className="text-lg font-bold text-white tracking-tight">Verify your email</h3>
-              <p className="text-slate-400 text-xs">
-                Enter the 6-digit code sent to <strong className="text-blue-400 font-mono">{regEmail || 'your email'}</strong>
-              </p>
+              <p className="text-slate-400 text-xs">Enter the 6-digit code sent to your email</p>
             </div>
 
             <div className="space-y-5 pt-1">
@@ -2677,46 +2418,37 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                 ))}
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <p className="text-xs text-slate-400">Resend code in <span className="font-bold text-blue-400 font-mono">00:45</span></p>
-                <div className="flex items-center justify-center gap-3 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOtp(['4', '9', '2', '8', '1', '7']);
-                      toast.info({ title: 'Code Refreshed', message: 'OTP code 492817 pre-filled for testing.' });
-                    }}
-                    className="text-slate-400 hover:text-white underline text-[11px]"
-                  >
-                    Auto-fill Demo OTP
-                  </button>
-                  <span className="text-slate-700">•</span>
-                  <button
-                    type="button"
-                    onClick={() => toast.info({ title: 'New Code Dispatched', message: `Verification code sent again to ${regEmail || 'your email'}.` })}
-                    className="font-bold text-blue-400 hover:underline text-[11px]"
-                  >
-                    Resend Code
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => showToast('New OTP code sent to your email!', 'info')}
+                  className="text-xs font-bold text-blue-400 hover:underline"
+                >
+                  Didn't receive the code? Resend
+                </button>
               </div>
 
               <button
                 type="button"
                 onClick={() => {
                   setShowVerifyModal(false);
-                  toast.success({
-                    title: 'Email Verified',
-                    message: `Welcome to ${regName || 'your workspace'}! Email ${regEmail} is verified and active.`
-                  });
+                  showToast('Email verified successfully! Workspace ready.', 'success');
                   setShowTenantLogin(true);
                 }}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all"
               >
                 Verify &amp; Continue
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`toast ${toast.type}`}>
+          {toast.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
+          {toast.msg}
         </div>
       )}
     </div>

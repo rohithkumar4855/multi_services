@@ -1,21 +1,21 @@
 import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
-import { authenticate, authorize, optionalAuthenticate, AuthenticatedRequest } from '../middlewares/auth';
-import { tenantContextMiddleware, optionalTenantContextMiddleware } from '../middlewares/tenant';
+import { authenticate, authorize, AuthenticatedRequest } from '../middlewares/auth';
+import { tenantContextMiddleware } from '../middlewares/tenant';
 import { sendResponse } from '../utils/response';
 import { AppError } from '../utils/errors';
 import { gstinSchema } from '../utils/validators';
 
 const router = Router();
+router.use(authenticate);
+router.use(tenantContextMiddleware);
 
 // 1. SERVICES CRUD
-router.post('/services', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.post('/services', authorize('TENANT_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tenantId = req.user?.tenantId || (req as any).tenantId || req.body.tenantId;
-    if (!tenantId) return next(new AppError('Tenant ID is required', 400));
     const service = await prisma.service.create({
       data: {
-        tenantId,
+        tenantId: req.user!.tenantId!,
         name: req.body.name,
         category: req.body.category,
         description: req.body.description,
@@ -28,7 +28,7 @@ router.post('/services', optionalAuthenticate, optionalTenantContextMiddleware, 
   } catch (err) { next(err); }
 });
 
-router.put('/services/:id', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.put('/services/:id', authorize('TENANT_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const service = await prisma.service.update({
       where: { id: req.params.id },
@@ -39,21 +39,19 @@ router.put('/services/:id', optionalAuthenticate, optionalTenantContextMiddlewar
 });
 
 // 2. WORKERS CRUD
-router.get('/workers', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/workers', authorize('TENANT_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tenantId = (req.query.tenantId as string) || req.user?.tenantId || (req as any).tenantId;
-    const where = tenantId ? { tenantId } : {};
     const workers = await prisma.worker.findMany({
-      where,
+      where: { tenantId: req.user!.tenantId! },
       include: { user: { select: { name: true, email: true, phone: true } } }
     });
     sendResponse(res, 200, 'Workers retrieved successfully', workers);
   } catch (err) { next(err); }
 });
 
-router.post('/workers', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.post('/workers', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tenantId = req.user?.tenantId || (req as any).tenantId || req.body.tenantId;
+    const tenantId = req.user!.tenantId || req.body.tenantId;
     if (!tenantId) {
       return next(new AppError('Tenant ID is required', 400));
     }
@@ -86,7 +84,7 @@ router.post('/workers', optionalAuthenticate, optionalTenantContextMiddleware, a
 });
 
 // 3. TENANT CONFIG UPDATES
-router.put('/tenant/config', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.put('/tenant/config', authorize('TENANT_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { gstNumber, businessName, ...configData } = req.body;
 
@@ -97,23 +95,22 @@ router.put('/tenant/config', optionalAuthenticate, optionalTenantContextMiddlewa
       }
     }
 
-    const tenantId = req.user?.tenantId || (req as any).tenantId || req.body.tenantId;
-    if (!tenantId) return next(new AppError('Tenant ID is required', 400));
+    const tenantId = req.user!.tenantId!;
     const { TenantService } = await import('../services/tenant.service');
     const updated = await TenantService.updateTenantConfig(tenantId, {
       name: businessName,
       gstNumber,
       config: configData
-    }, req.user?.id);
+    }, req.user!.id);
 
     sendResponse(res, 200, 'Tenant configuration saved', updated);
   } catch (err) { next(err); }
 });
 
 // 4. LEADS CRUD
-router.post('/leads', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.post('/leads', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tenantId = req.user?.tenantId || (req as any).tenantId || req.body.tenantId;
+    const tenantId = req.user!.tenantId || req.body.tenantId;
     if (!tenantId) {
       return next(new AppError('Tenant ID is required', 400));
     }
@@ -132,9 +129,9 @@ router.post('/leads', optionalAuthenticate, optionalTenantContextMiddleware, asy
   } catch (err) { next(err); }
 });
 
-router.get('/leads', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/leads', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tenantId = (req.query.tenantId as string) || req.user?.tenantId || (req as any).tenantId;
+    const tenantId = req.user!.tenantId;
     const where = tenantId ? { tenantId } : {};
     const leads = await prisma.lead.findMany({
       where,
@@ -144,7 +141,7 @@ router.get('/leads', optionalAuthenticate, optionalTenantContextMiddleware, asyn
   } catch (err) { next(err); }
 });
 
-router.put('/leads/:id', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.put('/leads/:id', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const lead = await prisma.lead.update({
       where: { id: req.params.id },
@@ -154,7 +151,7 @@ router.put('/leads/:id', optionalAuthenticate, optionalTenantContextMiddleware, 
   } catch (err) { next(err); }
 });
 
-router.delete('/leads/:id', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.delete('/leads/:id', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     await prisma.lead.delete({
       where: { id: req.params.id }
@@ -164,12 +161,11 @@ router.delete('/leads/:id', optionalAuthenticate, optionalTenantContextMiddlewar
 });
 
 // 5. SERVICES CRUD
-router.get('/services', optionalAuthenticate, optionalTenantContextMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+router.get('/services', authorize('TENANT_ADMIN', 'SUPER_ADMIN'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const tenantId = (req.query.tenantId as string) || req.user?.tenantId || (req as any).tenantId;
-    const where = tenantId ? { tenantId } : {};
+    const tenantId = req.user!.tenantId!;
     const services = await prisma.service.findMany({
-      where,
+      where: { tenantId },
       orderBy: { createdAt: 'desc' }
     });
     sendResponse(res, 200, 'Services retrieved successfully', services);

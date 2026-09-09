@@ -3,12 +3,11 @@ import { useState, useEffect } from 'react';
 import type { AuthSession, Booking, BasketItem } from '../types';
 import type { SharedStore } from '../App';
 
-import { Phone, MessageCircle, ArrowLeft, Moon, Sun, Search, ShoppingBag, MapPin, ChevronDown, LogOut, Eye, EyeOff, Lock, User, Mail, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Phone, MessageCircle, ArrowLeft, Moon, Sun, Search, ShoppingBag, MapPin, ChevronDown, LogOut, Eye, EyeOff, Lock, User, Mail, ShieldCheck } from 'lucide-react';
 import CmsRenderer from './CmsRenderer';
 import { generateThemeTokens } from '../utils/themeEngine';
 import { api } from '../utils/api';
 import { getTenantSlug } from '../utils/domain';
-import { useToast, toast } from '../context/ToastContext';
 
 interface Props {
   session: AuthSession;
@@ -135,12 +134,8 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
     return luma > 175 ? '#020617' : '#ffffff';
   };
 
-  const showToast = (msg: string | { title: string; message?: string }, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    if (typeof msg === 'string') {
-      toast.show(msg, type);
-    } else {
-      toast.show({ ...msg, variant: type });
-    }
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    alert(`${type.toUpperCase()}: ${msg}`);
   };
 
   const directServices = services.filter(s => s.tenantId === tenant.id && s.isActive);
@@ -487,34 +482,10 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
                   setIsProcessingPayment(false);
                   setPaymentGatewayOpen(false);
                   setBookingSubmitted(true);
-
-                  // Trigger Rich Payment Success Toast
-                  toast.success({
-                    title: 'Payment Successful',
-                    message: 'Your booking has been confirmed.',
-                    serviceName: tempBooking.serviceName,
-                    amount: tempBooking.priceDetails?.total || tempBooking.basePrice,
-                    bookingId: savedBooking.id,
-                    securityBadge: 'Payment verified securely',
-                    duration: 6000,
-                    action: {
-                      label: 'View Booking',
-                      onClick: () => {
-                        setViewMode('dashboard');
-                        setCustomerActiveTab('bookings');
-                      }
-                    }
-                  });
+                  showToast('🎉 Payment verified via Razorpay! Booking confirmed.', 'success');
                 } catch (err: any) {
+                  showToast(err.response?.data?.message || 'Payment verification failed', 'error');
                   setIsProcessingPayment(false);
-                  toast.error({
-                    title: 'Payment Verification Failed',
-                    message: err.response?.data?.message || 'We could not verify your payment signature with the server.',
-                    action: {
-                      label: 'Retry Payment',
-                      onClick: () => handleProcessPayment()
-                    }
-                  });
                 }
               },
               prefill: {
@@ -528,25 +499,15 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
               modal: {
                 ondismiss: function () {
                   setIsProcessingPayment(false);
-                  toast.info({
-                    title: 'Checkout Window Closed',
-                    message: 'Transaction was dismissed. You can complete checkout anytime.'
-                  });
+                  showToast('Checkout window closed', 'info');
                 }
               }
             };
 
             const rzp = new (window as any).Razorpay(rzpOptions);
             rzp.on('payment.failed', function (response: any) {
+              showToast(`Payment Failed: ${response.error.description}`, 'error');
               setIsProcessingPayment(false);
-              toast.error({
-                title: 'Payment Failed',
-                message: response.error?.description || 'Transaction was declined by bank or gateway.',
-                action: {
-                  label: 'Retry Payment',
-                  onClick: () => handleProcessPayment()
-                }
-              });
             });
             rzp.open();
             return;
@@ -571,48 +532,11 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
 
       setBookings(prev => [savedBooking, ...prev.filter(b => b.id !== savedBooking.id)]);
       setLastBookingId(savedBooking.id);
-      setIsProcessingPayment(false);
-      setPaymentGatewayOpen(false);
-      setBookingSubmitted(true);
-
-      toast.success({
-        title: 'Booking Confirmed',
-        message: 'Your service booking has been scheduled successfully.',
-        serviceName: tempBooking.serviceName,
-        amount: tempBooking.priceDetails?.total || tempBooking.basePrice,
-        bookingId: savedBooking.id,
-        securityBadge: selectedPaymentMethod === 'cod' ? 'Cash on Delivery' : 'Booking Recorded',
-        duration: 6000,
-        action: {
-          label: 'View Booking',
-          onClick: () => {
-            setViewMode('dashboard');
-            setCustomerActiveTab('bookings');
-          }
-        }
-      });
+      showToast('🎉 Booking confirmed and saved to database!', 'success');
     } catch (err) {
       setBookings(prev => [tempBooking, ...prev.filter(b => b.id !== tempBooking.id)]);
       setLastBookingId(tempBooking.id);
-      setIsProcessingPayment(false);
-      setPaymentGatewayOpen(false);
-      setBookingSubmitted(true);
-
-      toast.success({
-        title: 'Booking Confirmed',
-        message: 'Your service has been scheduled successfully.',
-        serviceName: tempBooking.serviceName,
-        amount: tempBooking.priceDetails?.total || tempBooking.basePrice,
-        bookingId: tempBooking.id,
-        duration: 6000,
-        action: {
-          label: 'View Booking',
-          onClick: () => {
-            setViewMode('dashboard');
-            setCustomerActiveTab('bookings');
-          }
-        }
-      });
+      showToast('🎉 Booking confirmed and scheduled!', 'success');
     }
 
     // Lead registration
@@ -1334,14 +1258,14 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
                           <p className="text-xs text-slate-400 leading-relaxed">Scope: 30-Day satisfaction guarantee covering parts and labor execution faults on <strong style={{ color: 'var(--color-text-primary)' }}>{b.serviceName}</strong>.</p>
                           <div className="flex gap-2 pt-2">
                             <button
-                              onClick={() => toast.success({ title: 'Warranty Claim Registered', message: 'Our dispatch executive will call you shortly to confirm technician inspection.' })}
-                              className="flex-1 py-1.5 rounded-lg bg-red-955/40 border border-red-900/60 text-[10px] font-bold text-center text-red-400 hover:bg-red-900/20 transition-colors"
+                              onClick={() => alert('Warranty Claim Registered!\nOur dispatch executive will call you shortly.')}
+                              className="flex-1 py-1.5 rounded-lg bg-red-950/40 border border-red-900/60 text-[10px] font-bold text-center text-red-400 hover:bg-red-900/20 transition-colors"
                               style={{ borderRadius: 'var(--border-radius)' }}
                             >
                               ⚠️ Raise Free Claim
                             </button>
                             <button
-                              onClick={() => toast.info({ title: 'Warranty Certificate', message: `Warranty certificate download started for #${b.id}` })}
+                              onClick={() => alert(`Warranty certificate download started for ${b.id}`)}
                               className="px-3 py-1.5 rounded-lg border text-[10px] font-bold text-slate-350"
                               style={{ borderColor: 'var(--color-border)', background: 'transparent', borderRadius: 'var(--border-radius)' }}
                             >
@@ -1373,10 +1297,7 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
                   <div className="flex gap-2">
                     <input className="form-input text-center font-mono select-all text-xs flex-1" readOnly value={`https://${tenant.subdomain}.servos.in/ref?code=REF-${customerSession.phone.slice(-4)}`} />
                     <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`https://${tenant.subdomain}.servos.in/ref?code=REF-${customerSession.phone.slice(-4)}`);
-                        toast.success({ title: 'Referral Link Copied', message: 'Share link with friends to earn reward credits on completed bookings.' });
-                      }}
+                      onClick={() => { navigator.clipboard.writeText(`https://${tenant.subdomain}.servos.in/ref?code=REF-${customerSession.phone.slice(-4)}`); alert('Referral link copied to clipboard!'); }}
                       className="px-4 py-1.5 rounded-lg font-bold text-xs"
                       style={{ background: 'var(--color-button)', color: 'var(--color-button-text)', borderRadius: 'var(--border-radius)' }}
                     >
@@ -1474,11 +1395,7 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
                 </div>
 
                 <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    toast.success({ title: 'Complaint Ticket Raised', message: 'Our support controller will review your ticket and contact you within 2 hours.' });
-                    e.currentTarget.reset();
-                  }}
+                  onSubmit={(e) => { e.preventDefault(); alert('Complaint Raised Successfully!\nOur support specialist will review your ticket and contact you shortly.'); e.currentTarget.reset(); }}
                   className="p-6 rounded-2xl border space-y-3 font-sans"
                   style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', borderRadius: 'var(--border-radius)' }}
                 >
@@ -1716,7 +1633,7 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
                       required
                     />
                     <label htmlFor="terms" className="leading-relaxed select-none">
-                      I agree to the <span className="underline cursor-pointer text-slate-300 font-bold" onClick={() => toast.info({ title: 'Terms & Policies', message: `Cancellation: ${c.cancellationPolicy || 'Cancel up to 2 hours before schedule.'} • Warranty: ${c.warrantyPolicy || '30 days warranty coverage.'}` })}>Terms of Service & Warranty Policies</span>. *
+                      I agree to the <span className="underline cursor-pointer text-slate-300 font-bold" onClick={() => alert(`Terms & Conditions:\n\n- Cancellation Policy: ${c.cancellationPolicy || 'Cancel up to 2 hours before schedule.'}\n- Service Warranty: ${c.warrantyPolicy || '30 days warranty coverage.'}`)}>Terms of Service & Warranty Policies</span>. *
                     </label>
                   </div>
 
@@ -2181,7 +2098,7 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Select Payment Method</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Select Demo Payment Method</p>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { id: 'upi', label: '📱 UPI / QR', desc: 'GPay, PhonePe' },
@@ -2210,10 +2127,10 @@ function CustomerSiteContent({ session, store, navigateTo, tenant, activeTenantI
               <button
                 type="button"
                 onClick={handleProcessPayment}
-                className="w-full py-2.5 rounded-xl font-bold text-white text-center text-xs shadow-lg transition-all hover:opacity-90"
+                className="w-full py-2.5 rounded-xl font-bold text-white text-center text-xs"
                 style={{ background: pc }}
               >
-                Complete Payment ➔
+                Complete Payment (Demo Mode) ➔
               </button>
             )}
 

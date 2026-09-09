@@ -1,7 +1,6 @@
 import { prisma } from '../config/db';
 import { AppError } from '../utils/errors';
 import { AuditService } from './audit.service';
-import { OtpService } from './otp.service';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -125,12 +124,6 @@ export class TenantService {
       throw new AppError('Business name and valid owner email are required', 400);
     }
 
-    // Check if email has been verified via OTP
-    const isEmailVerified = await OtpService.isEmailRecentlyVerified(cleanEmail);
-    if (!isEmailVerified && process.env.NODE_ENV === 'production') {
-      throw new AppError('Email address must be verified with OTP before registering.', 403);
-    }
-
     // Check if user already exists as an admin
     const existingUser = await prisma.user.findFirst({
       where: { email: cleanEmail, role: 'TENANT_ADMIN' }
@@ -234,8 +227,6 @@ export class TenantService {
           font,
           plan,
           status,
-          emailVerified: isEmailVerified,
-          emailVerifiedAt: isEmailVerified ? new Date() : null,
           config: defaultSettings.config,
           gstNumber: gstNumber || null
         },
@@ -253,8 +244,6 @@ export class TenantService {
           font,
           plan,
           status,
-          emailVerified: isEmailVerified,
-          emailVerifiedAt: isEmailVerified ? new Date() : null,
           config: defaultSettings.config,
           gstNumber: gstNumber || null
         }
@@ -269,9 +258,7 @@ export class TenantService {
           phone: ownerPhone || null,
           passwordHash,
           role: 'TENANT_ADMIN',
-          status: 'active',
-          emailVerified: isEmailVerified,
-          emailVerifiedAt: isEmailVerified ? new Date() : null
+          status: 'active'
         }
       });
 
@@ -696,18 +683,8 @@ export class TenantService {
       plan
     } = data;
 
-    const mergedBusinessInfo = {
-      ...((existing.businessInfo as any) || {}),
-      ...(businessInfo || {}),
-      ...(data.ownerName && { ownerName: data.ownerName }),
-      ...(data.ownerEmail && { email: data.ownerEmail }),
-      ...(data.ownerPhone && { phone: data.ownerPhone }),
-      ...(data.industries && { industries: data.industries }),
-      ...(data.industryType && { industryType: data.industryType })
-    };
-
     const mergedSettings = { ...((existing.settings as any) || {}), ...(settings || {}), ...(config || {}) };
-    console.log("TenantService.updateTenantConfig - received config:", (JSON.stringify(config || {}, null, 2) || '{}').slice(0, 500));
+    console.log("TenantService.updateTenantConfig - received config:", JSON.stringify(config, null, 2).slice(0, 500));
     console.log("mergedSettings keys:", Object.keys(mergedSettings));
 
     const updated = await prisma.tenant.update({
@@ -725,7 +702,7 @@ export class TenantService {
         ...(logo !== undefined && { logo }),
         ...(!logo && config?.logoImage && { logo: config.logoImage }),
         ...(favicon !== undefined && { favicon }),
-        ...(Object.keys(mergedBusinessInfo).length > 0 && { businessInfo: mergedBusinessInfo }),
+        ...(businessInfo && { businessInfo: { ...((existing.businessInfo as any) || {}), ...businessInfo } }),
         settings: Object.keys(mergedSettings).length > 0 ? mergedSettings : (existing.settings || {}),
         ...(customDomain !== undefined && { customDomain }),
         ...(status && { status }),

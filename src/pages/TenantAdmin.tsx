@@ -18,7 +18,7 @@ import { getTenantPublicUrl, getTenantSlug } from '../utils/domain';
 import {
   LayoutDashboard, Globe, Link, Calendar, Wrench, Users, UserCircle,
   CreditCard, Settings, LogOut, Eye, CheckCircle, XCircle, Tag, Brain, BarChart3, LifeBuoy,
-  TrendingUp, Clock, Activity, ShieldAlert, MapPin, Phone, User, X, CheckCircle2
+  TrendingUp, Clock, Activity, ShieldAlert
 } from 'lucide-react';
 
 interface Props {
@@ -151,9 +151,10 @@ function TenantAdminContent({ session, store, onLogout, navigateTo, tenant }: Pr
       }
     }).catch(err => console.error('Failed to load workers', err));
 
-    api.getServices(tenant.id).then(res => {
+    api.getServices().then(res => {
       if (res && res.data && Array.isArray(res.data)) {
         setServices(prev => {
+          // Merge with any existing mock data, preferring DB
           const map = new Map(prev.map(item => [item.id, item]));
           for (const dbSvc of res.data) {
             map.set(dbSvc.id, {
@@ -175,51 +176,6 @@ function TenantAdminContent({ session, store, onLogout, navigateTo, tenant }: Pr
         });
       }
     }).catch(err => console.error('Failed to load services', err));
-
-    api.getBookings(tenant.id).then(res => {
-      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-        setBookings(prev => {
-          const map = new Map(prev.map(b => [b.id, b]));
-          for (const dbB of res.data) {
-            const formData = (dbB.formData || {}) as any;
-            const price = Number(dbB.priceTotal) || 350;
-            const tax = Number(dbB.taxTotal) || Math.round(price * 0.18);
-            const discount = Number(dbB.discountTotal) || 0;
-            const net = Number(dbB.netTotal) || (price + tax - discount + 150);
-
-            map.set(dbB.id, {
-              id: dbB.id,
-              tenantId: dbB.tenantId,
-              customerId: dbB.customerId,
-              customerName: formData.customerName || dbB.customer?.name || 'Customer',
-              customerPhone: formData.customerPhone || '9876543210',
-              customerAddress: formData.customerAddress || 'Direct site visit',
-              serviceId: dbB.serviceId,
-              serviceName: formData.serviceName || dbB.service?.name || 'General Service',
-              status: (dbB.status || 'requested').toLowerCase() as any,
-              scheduledDate: dbB.scheduledDate || new Date().toISOString().split('T')[0],
-              scheduledTime: dbB.scheduledTime || '10:00 AM',
-              isEmergency: !!formData.isEmergency,
-              formData,
-              priceDetails: {
-                baseVisit: price,
-                distanceCharge: 50,
-                labour: 100,
-                material: 0,
-                emergencySurcharge: 0,
-                tax,
-                discount,
-                total: net
-              },
-              workerId: dbB.workerId || '',
-              workerName: dbB.worker?.user?.name || undefined,
-              createdAt: dbB.createdAt || new Date().toISOString()
-            });
-          }
-          return Array.from(map.values());
-        });
-      }
-    }).catch(err => console.error('Failed to load bookings', err));
   }, [tenant?.id]);
 
   const showToast = (msg: string, type = 'success') => {
@@ -1358,16 +1314,7 @@ Manager Signature: ________________________
                 <div className="admin-card overflow-hidden p-0">
                   <table className="data-table">
                     <thead>
-                      <tr>
-                        <th>Booking ID</th>
-                        <th>Customer info</th>
-                        <th>Delivery Address</th>
-                        <th>Service requested</th>
-                        <th>Date / Slot</th>
-                        <th>Est. Total</th>
-                        <th>Workforce assigned</th>
-                        <th>Action status</th>
-                      </tr>
+                      <tr><th>Booking ID</th><th>Customer info</th><th>Service requested</th><th>Date / Slot</th><th>Est. Total</th><th>Workforce assigned</th><th>Action status</th></tr>
                     </thead>
                     <tbody>
                       {myBookings.map(b => (
@@ -1383,22 +1330,7 @@ Manager Signature: ________________________
                           </td>
                           <td>
                             <p className="font-bold text-white text-sm">{b.customerName}</p>
-                            <p className="text-[11px] text-blue-400 font-mono mt-0.5">{b.customerPhone}</p>
-                          </td>
-                          <td>
-                            <div className="flex items-start gap-1.5 max-w-[220px]">
-                              <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
-                              <div>
-                                <p className="text-xs text-slate-200 font-semibold leading-snug line-clamp-2" title={b.customerAddress || (b.formData?.address as string) || (b.formData?.customerAddress as string) || 'Nellore, AP'}>
-                                  {b.customerAddress || (b.formData?.address as string) || (b.formData?.customerAddress as string) || 'Nellore, AP'}
-                                </p>
-                                {b.formData?.notes ? (
-                                  <p className="text-[10px] text-amber-400 font-medium truncate max-w-[190px] mt-0.5" title={String(b.formData.notes)}>
-                                    📝 {String(b.formData.notes)}
-                                  </p>
-                                ) : null}
-                              </div>
-                            </div>
+                            <p className="text-[10px] text-slate-500">{b.customerPhone} · {b.customerAddress.slice(0, 20)}...</p>
                           </td>
                           <td><span className="font-bold text-slate-300">{b.serviceName}</span></td>
                           <td>
@@ -2405,89 +2337,6 @@ Manager Signature: ________________________
                 className="btn-primary w-full py-2.5 font-bold text-xs bg-red-650 hover:bg-red-750 text-white"
               >
                 Acknowledge & Adjust Styles
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* BOOKING DETAILS MODAL WITH FULL DELIVERY ADDRESS */}
-      {selectedBookingDetails && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl space-y-5 font-sans text-left text-slate-200 animate-scaleIn">
-            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-blue-400 bg-blue-950/60 border border-blue-800/40 px-2 py-0.5 rounded">
-                  Booking #{selectedBookingDetails.id}
-                </span>
-                <h3 className="text-base font-black text-white mt-1.5">{selectedBookingDetails.serviceName}</h3>
-                <p className="text-xs text-slate-400">Scheduled: <strong className="text-white">{selectedBookingDetails.scheduledDate}</strong> at <strong className="text-white">{selectedBookingDetails.scheduledTime}</strong></p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedBookingDetails(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Delivery / Service Address Highlight Card */}
-            <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-400">
-                <span className="flex items-center gap-1 text-rose-400 uppercase tracking-wider text-[10px]">
-                  <MapPin className="w-3.5 h-3.5" /> Service / Delivery Location
-                </span>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedBookingDetails.customerAddress || (selectedBookingDetails.formData?.address as string) || (selectedBookingDetails.formData?.customerAddress as string) || 'Nellore, AP')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-blue-400 hover:underline flex items-center gap-1"
-                >
-                  Open in Maps ↗
-                </a>
-              </div>
-              <p className="text-sm font-semibold text-white leading-relaxed">
-                {selectedBookingDetails.customerAddress || (selectedBookingDetails.formData?.address as string) || (selectedBookingDetails.formData?.customerAddress as string) || 'Nellore, Andhra Pradesh'}
-              </p>
-              {selectedBookingDetails.formData?.notes && (
-                <div className="bg-amber-950/30 border border-amber-900/40 rounded-xl p-2.5 mt-2 text-xs text-amber-300">
-                  <strong>Customer Instructions:</strong> {String(selectedBookingDetails.formData.notes)}
-                </div>
-              )}
-            </div>
-
-            {/* Customer & Technician Grid */}
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl space-y-1">
-                <p className="text-[10px] uppercase font-bold text-slate-500">Customer</p>
-                <p className="font-bold text-white text-sm">{selectedBookingDetails.customerName}</p>
-                <p className="text-blue-400 font-mono text-[11px]">{selectedBookingDetails.customerPhone}</p>
-              </div>
-
-              <div className="bg-slate-950 border border-slate-800/80 p-3.5 rounded-xl space-y-1">
-                <p className="text-[10px] uppercase font-bold text-slate-500">Technician Assigned</p>
-                <p className="font-bold text-white text-sm">
-                  {selectedBookingDetails.workerName ? `👷 ${selectedBookingDetails.workerName}` : 'Unassigned'}
-                </p>
-                <p className="text-slate-400 capitalize text-[11px]">Status: <strong className="text-emerald-400">{selectedBookingDetails.status}</strong></p>
-              </div>
-            </div>
-
-            {/* Price Total */}
-            <div className="flex justify-between items-center bg-slate-950/70 border border-slate-800/80 px-4 py-3 rounded-xl text-xs">
-              <span className="text-slate-400 font-bold">Total Job Amount (incl. Tax)</span>
-              <span className="text-base font-black text-emerald-400">₹{selectedBookingDetails.priceDetails.total.toLocaleString()}</span>
-            </div>
-
-            <div className="flex gap-2 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setSelectedBookingDetails(null)}
-                className="btn-primary w-full py-2.5 font-bold text-xs"
-                style={{ backgroundColor: pc }}
-              >
-                Close Job Card
               </button>
             </div>
           </div>

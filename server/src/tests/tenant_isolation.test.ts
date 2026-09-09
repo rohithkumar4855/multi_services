@@ -201,14 +201,10 @@ async function runTenantIsolationTests() {
     // Attempt to process payment for Order B under Tenant A (tampering attack)
     let caughtTamperError = false;
     try {
-      await PaymentService.createRazorpayOrder({
+      await PaymentService.processPayment({
         tenantId: adminA.tenant.id, // Mismatched tenant
         orderId: orderB.id,         // Belongs to Tenant B
-        customerDetails: {
-          name: 'Hacker',
-          email: 'hacker@example.com',
-          phone: '9999999999'
-        }
+        amount: 161.66
       });
     } catch (err: any) {
       if (err.statusCode === 403 || err.message.includes('Forbidden') || err.message.includes('does not belong')) {

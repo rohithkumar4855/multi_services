@@ -45,58 +45,7 @@ body {
   background: #475569;
 }
 
-/* Date / Time Input Calendar & Clock Icons (Pure White Icon Only) */
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-input[type="month"]::-webkit-calendar-picker-indicator,
-input[type="week"]::-webkit-calendar-picker-indicator {
-  filter: brightness(0) invert(1) !important;
-  cursor: pointer;
-  opacity: 1 !important;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator:hover,
-input[type="time"]::-webkit-calendar-picker-indicator:hover,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
-input[type="month"]::-webkit-calendar-picker-indicator:hover,
-input[type="week"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 0.8 !important;
-  transform: scale(1.1);
-}
-
 /* ======================== ANIMATIONS ======================== */
-@keyframes toastSlideInRight {
-  from {
-    transform: translateX(115%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes toastSlideOutRight {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(115%);
-    opacity: 0;
-  }
-}
-
-.toast-enter {
-  animation: toastSlideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.toast-exit {
-  animation: toastSlideOutRight 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
