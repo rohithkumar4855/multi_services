@@ -73,9 +73,13 @@ app.get('/health', (req, res) => {
 // Centralized Error Handling Middleware
 app.use(errorHandler);
 
+import { EmailService } from './services/email.service';
+
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     logger.info(`🚀 ServOS Multi-Tenant SaaS Backend Server running on port ${PORT}`);
+    // Verify SMTP configuration on startup
+    await EmailService.verifyConnection();
   });
 }
 
