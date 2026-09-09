@@ -41,6 +41,20 @@ export const api = {
     return res.data;
   },
 
+  // ── Email OTP Verification ───────────────────────
+  sendOtp: async (email: string, businessName?: string) => {
+    const res = await client.post('/auth/send-email-otp', { email, businessName });
+    return res.data;
+  },
+  verifyOtp: async (email: string, otp: string) => {
+    const res = await client.post('/auth/verify-email-otp', { email, otp });
+    return res.data;
+  },
+  resendOtp: async (email: string, businessName?: string) => {
+    const res = await client.post('/auth/resend-email-otp', { email, businessName });
+    return res.data;
+  },
+
   // ── Customer Auth Scoped to Tenant ────────────────
   customerRegister: async (data) => {
     const res = await client.post('/auth/customer/register', data);

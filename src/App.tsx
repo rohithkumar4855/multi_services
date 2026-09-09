@@ -9,6 +9,7 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import TenantAdmin from './pages/TenantAdmin';
 import CustomerSite from './pages/CustomerSite';
 import { api } from './utils/api';
+import { ToastProvider } from './context/ToastContext';
 
 // ── Route constants ─────────────────────────────────────────
 const ROUTE_LANDING    = '#/';
@@ -302,6 +303,40 @@ export default function App() {
         });
       }
     }).catch(() => {});
+
+    // 5. Sync workers from database
+    api.getWorkers().then(res => {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setWorkers(prev => {
+          const map = new Map(prev.map(item => [item.id, item]));
+          for (const dbWrk of res.data) {
+            map.set(dbWrk.id, {
+              id: dbWrk.id,
+              tenantId: dbWrk.tenantId,
+              name: dbWrk.user?.name || dbWrk.name || 'Worker',
+              phone: dbWrk.user?.phone || dbWrk.phone || '',
+              skills: dbWrk.skills || [],
+              availability: dbWrk.availability || 'available',
+              rating: dbWrk.rating || 5.0,
+              aadhaarStatus: dbWrk.aadhaarValid ? 'verified' : 'pending',
+              panStatus: dbWrk.panValid ? 'verified' : 'pending',
+              currentJobsCount: 0,
+              photoUrl: '',
+              completedJobs: 0,
+              earningsToday: 0,
+              earningsMonth: 0,
+              joinedDate: (dbWrk.createdAt ? new Date(dbWrk.createdAt) : new Date()).toISOString().split('T')[0],
+              attendanceToday: 'present',
+            });
+          }
+          const merged = Array.from(map.values());
+          try {
+            localStorage.setItem('anarav_cached_workers', JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+    }).catch(() => {});
     
     };
     syncData();
@@ -388,21 +423,29 @@ export default function App() {
   // ── Render ──
   const norm = route.split('?')[0];
 
-  switch (norm) {
-    case ROUTE_SUPERADMIN:
-      return requireSuperAdmin(
-        <SuperAdminDashboard session={session} store={store} onLogout={handleLogout} navigateTo={navigateTo} />
-      ) ?? <Landing onLogin={handleLogin} navigateTo={navigateTo} store={store} />;
+  const renderContent = () => {
+    switch (norm) {
+      case ROUTE_SUPERADMIN:
+        return requireSuperAdmin(
+          <SuperAdminDashboard session={session} store={store} onLogout={handleLogout} navigateTo={navigateTo} />
+        ) ?? <Landing onLogin={handleLogin} navigateTo={navigateTo} store={store} />;
 
-    case ROUTE_ADMIN:
-      return requireTenant(
-        <TenantAdmin session={session} store={store} onLogout={handleLogout} navigateTo={navigateTo} />
-      ) ?? <Landing onLogin={handleLogin} navigateTo={navigateTo} store={store} />;
+      case ROUTE_ADMIN:
+        return requireTenant(
+          <TenantAdmin session={session} store={store} onLogout={handleLogout} navigateTo={navigateTo} />
+        ) ?? <Landing onLogin={handleLogin} navigateTo={navigateTo} store={store} />;
 
-    case ROUTE_SITE:
-      return <CustomerSite session={session} store={store} navigateTo={navigateTo} />;
+      case ROUTE_SITE:
+        return <CustomerSite session={session} store={store} navigateTo={navigateTo} />;
 
-    default:
-      return <Landing onLogin={handleLogin} navigateTo={navigateTo} store={store} />;
-  }
+      default:
+        return <Landing onLogin={handleLogin} navigateTo={navigateTo} store={store} />;
+    }
+  };
+
+  return (
+    <ToastProvider>
+      {renderContent()}
+    </ToastProvider>
+  );
 }
