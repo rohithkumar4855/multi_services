@@ -55,7 +55,6 @@ export const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [progress, setProgress] = useState(100);
   const [isPaused, setIsPaused] = useState(false);
-  const startTimeRef = useRef<number>(Date.now());
   const remainingTimeRef = useRef<number>(duration);
   const animationFrameRef = useRef<number | null>(null);
 

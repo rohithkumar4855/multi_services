@@ -4,7 +4,7 @@ import type { SharedStore } from '../App';
 import { INDUSTRY_PACKS } from '../initialData';
 import { api } from '../utils/api';
 import {
-  Shield, Laptop, CheckCircle, XCircle, Eye, EyeOff, Check, Users, Calendar,
+  Shield, Laptop, CheckCircle, Eye, EyeOff, Check, Users, Calendar,
   Package, Palette, Workflow, ShieldCheck, LayoutDashboard, FileText, Settings, Sparkles,
   ArrowRight, BarChart3, CreditCard, Bot, Globe, Target, HardHat, Clock, AlertCircle, Loader2
 } from 'lucide-react';
@@ -69,10 +69,6 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const showToast = (msg: string, type = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   useEffect(() => {
     api.getTenants().then(res => {
@@ -129,7 +125,6 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
   const [regSecondaryColor] = useState('#4f46e5');
   const [regFont] = useState('Inter, sans-serif');
   const [regPlan, setRegPlan] = useState<'starter' | 'professional' | 'enterprise'>('starter');
-  const [regSubmitted, setRegSubmitted] = useState(false);
 
   // Real Secure Email OTP States
   const [isEmailVerified, setIsEmailVerified] = useState(false);
@@ -2182,7 +2177,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
                 <div className="space-y-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => showToast('Google authentication initialized', 'info')}
+                    onClick={() => toast.info('Google authentication initialized')}
                     className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-sm hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -2196,7 +2191,7 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
 
                   <button
                     type="button"
-                    onClick={() => showToast('Apple ID authentication initialized', 'info')}
+                    onClick={() => toast.info('Apple ID authentication initialized')}
                     className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-sm hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <svg className="w-4 h-4 fill-current text-slate-900" viewBox="0 0 24 24">
@@ -2392,10 +2387,10 @@ export default function Landing({ onLogin, navigateTo, store }: Props) {
           CREATE ACCOUNT MODAL (REGISTRATION)
           =========================== */}
       {showRegModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300" onClick={() => { setShowRegModal(false); setRegSubmitted(false); }}>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300" onClick={() => setShowRegModal(false)}>
           <div className="relative w-full max-w-md bg-[#060c1d]/95 border border-slate-800/90 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.9)] p-6 sm:p-7 space-y-4 backdrop-blur-2xl animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
             <button
-              onClick={() => { setShowRegModal(false); setRegSubmitted(false); }}
+              onClick={() => setShowRegModal(false)}
               className="absolute top-4 right-4 z-10 w-7 h-7 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
             >
               ✕
